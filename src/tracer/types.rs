@@ -1,13 +1,35 @@
+use std::fmt;
+
 pub struct Color {
     pub r: u8,
     pub g: u8,
     pub b: u8,
 }
 
-pub struct Position {
-    pub x: u64,
-    pub y: u64,
-    pub z: u64,
+impl fmt::Display for Color {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "\n{{\n  r: {}, \n  g: {}, \n  b: {},\n}}",
+            self.r, self.g, self.b
+        )
+    }
+}
+
+pub struct Point {
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+}
+
+impl fmt::Display for Point {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "\n{{\n  x: {}, \n  y: {}, \n  z: {},\n}}",
+            self.x, self.y, self.z
+        )
+    }
 }
 
 pub struct Fov {
@@ -15,9 +37,29 @@ pub struct Fov {
     pub vert: u8,
 }
 
+impl fmt::Display for Fov {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "\n{{\n  horz: {}, \n  vert: {},\n}}",
+            self.horz, self.vert
+        )
+    }
+}
+
 pub struct Screen {
     pub width: u64,
     pub height: u64,
+}
+
+impl fmt::Display for Screen {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "\n{{\n  width: {}, \n  height: {},\n}}",
+            self.width, self.height
+        )
+    }
 }
 
 pub struct Surface {
@@ -29,12 +71,17 @@ pub struct Surface {
     pub reflect: f64,
 }
 
-pub struct Sphere {
-    pub surface: Surface,
-    pub radius: f64,
-    pub position: Position,
+impl fmt::Display for Surface {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "\n{{\n  name: \"{}\",\n  ambient: {},\n  diffuse: {},\n  specular: {},\n  specpow: {},\n  reflect: {},\n}}",
+            self.name, self.ambient, self.diffuse, self.specular, self.specpow, self.reflect
+        )
+    }
 }
 
-pub enum Entity {
-    Sphere(Sphere),
+pub trait Entity {
+    fn calculate_intersections(&self, ray: &Point) -> Vec<Point>;
+    fn calculate_color(&self, intersection_point: &Point) -> Color;
 }

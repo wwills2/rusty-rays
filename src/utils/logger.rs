@@ -5,8 +5,8 @@ use slog::{Drain, Level, Logger, o};
 use slog_async;
 use slog_term;
 
-pub static GLOBAL_LOGGER: Lazy<Logger> = Lazy::new(|| {
-    let log_level = Level::Info;
+pub static LOGGER: Lazy<Logger> = Lazy::new(|| {
+    let log_level = Level::Trace;
     let decorator = slog_term::TermDecorator::new().build();
     let console_drain = slog_term::CompactFormat::new(decorator).build().fuse();
     let filtered_console_drain = slog::LevelFilter::new(console_drain, log_level).fuse();
@@ -18,7 +18,6 @@ pub static GLOBAL_LOGGER: Lazy<Logger> = Lazy::new(|| {
         let mut log_dir = maybe_log_dir.unwrap();
         let package_name = env!("CARGO_PKG_NAME");
         log_dir.push(package_name);
-        log_dir.push("application");
         log_dir.push("logs");
 
         match fs::create_dir_all(&log_dir) {
@@ -67,5 +66,6 @@ pub static GLOBAL_LOGGER: Lazy<Logger> = Lazy::new(|| {
         .build()
         .fuse()
     };
-    Logger::root(drain, o!())
+
+    return Logger::root(drain, o!());
 });

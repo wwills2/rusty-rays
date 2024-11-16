@@ -1,0 +1,54 @@
+use std::fmt;
+use std::fs::File;
+use std::io::BufReader;
+
+use crate::tracer::sphere::Sphere;
+use crate::tracer::types::{Color, Fov, Point, Screen};
+
+pub struct Model {
+    pub background: Color,
+    pub eyep: Point,
+    pub lookp: Point,
+    pub up: (u8, u8, u8),
+    pub fov: Fov,
+    pub screen: Screen,
+    pub spheres: Vec<Sphere>,
+}
+
+impl Model {
+    pub fn new(input_file_path: &str) -> Result<Self, ModelError> {
+        let open_file_result = match File::open(input_file_path) {
+            Ok(input_file) => input_file,
+            Err(error) => {
+                return Err(ModelError::FailedToOpenInputFile(error.to_string()));
+            }
+        };
+
+        let file_reader = BufReader::new(open_file_result);
+        return match crate::tracer::parse(file_reader) {
+            Ok(model) => Ok(model),
+            Err(error) => Err(error),
+        };
+    }
+}
+
+#[derive(Debug)]
+pub enum ModelError {
+    FailedToOpenInputFile(String),
+    ErrorParsingInputFile(String),
+}
+
+impl fmt::Display for ModelError {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            ModelError::FailedToOpenInputFile(error_message) => {
+                write!(f, "Failed to open input file: {}", error_message)
+            }
+            ModelError::ErrorParsingInputFile(error_message) => {
+                write!(f, "Error parsing input file: {}", error_message)
+            }
+        }
+    }
+}
+
+impl std::error::Error for ModelError {}
