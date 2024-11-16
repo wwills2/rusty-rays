@@ -406,6 +406,7 @@ dependencies = [
  "chrono",
  "clap",
  "dirs",
+ "dirs-next",
  "once_cell",
  "slog",
  "slog-async",
