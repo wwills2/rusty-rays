@@ -30,7 +30,7 @@ pub mod tracer {
             let file_reader = BufReader::new(open_file_result);
             return match parse(file_reader) {
                 Ok(model) => Ok(model),
-                Err(error) => Err(error)
+                Err(error) => Err(error),
             };
         }
     }
@@ -44,8 +44,12 @@ pub mod tracer {
     impl fmt::Display for ModelError {
         fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
             match self {
-                ModelError::FailedToOpenInputFile(error_message) => write!(f, "Failed to open input file: {}", error_message),
-                ModelError::ErrorParsingInputFile(error_message) => write!(f, "Error parsing input file: {}", error_message),
+                ModelError::FailedToOpenInputFile(error_message) => {
+                    write!(f, "Failed to open input file: {}", error_message)
+                }
+                ModelError::ErrorParsingInputFile(error_message) => {
+                    write!(f, "Error parsing input file: {}", error_message)
+                }
             }
         }
     }
@@ -61,14 +65,19 @@ pub mod tracer {
         let mut lookp = Position { x: 0, y: 0, z: 0 };
         let mut up = (0u8, 0u8, 0u8);
         let mut fov = Fov { horz: 0, vert: 0 };
-        let screen = Screen { width: 0, height: 0 };
+        let screen = Screen {
+            width: 0,
+            height: 0,
+        };
         let mut entities: Vec<Entity> = Vec::new();
         let mut surfaces: HashMap<String, Surface> = HashMap::new();
 
-
         for (line_number, line_read_result) in input_file_buf_reader.lines().enumerate() {
             if line_read_result.is_err() {
-                return Err(ModelError::ErrorParsingInputFile(format!("io error reading input file at line {}", line_number)));
+                return Err(ModelError::ErrorParsingInputFile(format!(
+                    "io error reading input file at line {}",
+                    line_number
+                )));
             }
 
             let line_iter = line_read_result.unwrap();

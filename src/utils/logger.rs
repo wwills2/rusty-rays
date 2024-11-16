@@ -3,7 +3,7 @@ use std::path::PathBuf;
 use std::process::exit;
 
 use once_cell::sync::Lazy;
-use slog::{Drain, Level, Logger, o};
+use slog::{o, Drain, Level, Logger};
 use slog_async;
 use slog_term;
 
@@ -58,30 +58,47 @@ fn init_logger(maybe_log_dir: Option<PathBuf>, log_level: Level) -> Logger {
         let log_dir = maybe_log_dir.unwrap();
         match fs::create_dir_all(&log_dir) {
             Err(error) => {
-                eprintln!("Failed to create log directory {:?}. Error: {}", log_dir.to_str(), error.to_string());
+                eprintln!(
+                    "Failed to create log directory {:?}. Error: {}",
+                    log_dir.to_str(),
+                    error.to_string()
+                );
                 exit(11);
             }
             _ => {}
         }
 
-        let log_file_path = log_dir.join(format!("log_{}.log", chrono::Local::now().format("%Y-%m-%d_%H-%M-%S")));
+        let log_file_path = log_dir.join(format!(
+            "log_{}.log",
+            chrono::Local::now().format("%Y-%m-%d_%H-%M-%S")
+        ));
         let log_file = match File::create(&log_file_path) {
             Ok(log_file) => log_file,
             Err(error) => {
-                eprintln!("Failed to create log file {:?}. Error: {}", log_file_path.to_str(), error.to_string());
+                eprintln!(
+                    "Failed to create log file {:?}. Error: {}",
+                    log_file_path.to_str(),
+                    error.to_string()
+                );
                 exit(12);
             }
         };
-        
-        let file_drain = slog_term::CompactFormat::new(slog_term::PlainDecorator::new(log_file)).build().fuse();
+
+        let file_drain = slog_term::CompactFormat::new(slog_term::PlainDecorator::new(log_file))
+            .build()
+            .fuse();
         let filtered_file_drain = slog::LevelFilter::new(file_drain, log_level).fuse();
-        let drain = slog_async::Async::new(slog::Duplicate::new(filtered_console_drain, filtered_file_drain).fuse()).build().fuse();
+        let drain = slog_async::Async::new(
+            slog::Duplicate::new(filtered_console_drain, filtered_file_drain).fuse(),
+        )
+        .build()
+        .fuse();
 
         return Logger::root(drain, o!());
     } else {
-        let drain = slog_async::Async::new(filtered_console_drain).build().fuse();
+        let drain = slog_async::Async::new(filtered_console_drain)
+            .build()
+            .fuse();
         return Logger::root(drain, o!());
     }
 }
-
-

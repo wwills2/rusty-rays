@@ -1,5 +1,5 @@
 use clap::Parser;
-use slog::info;
+use slog::{error, info, warn};
 
 use crate::utils::logger;
 
@@ -28,28 +28,37 @@ struct Args {
 
 fn main() {
     let args = Args::parse();
-    let logger =
-        if args.start {
-            &logger::GLOBAL_APPLICATION_LOGGER
-        } else if args.cli_no_log {
-            &logger::GLOBAL_CONSOLE_ONLY
-        } else {
-            &logger::GLOBAL_CLI_LOGGER
-        };
+    let logger = if args.start {
+        &logger::GLOBAL_APPLICATION_LOGGER
+    } else if args.cli_no_log {
+        &logger::GLOBAL_CONSOLE_ONLY
+    } else {
+        &logger::GLOBAL_CLI_LOGGER
+    };
 
-    info!(
-        logger,
-        "reading input file from {} and writing output file to {}",
-        args.input_file, args.output_file
-    );
+    if args.input_file {
+        info!(
+            logger,
+            "reading input file from {} and writing output file to {}",
+            args.input_file,
+            args.output_file
+        );
 
-    let init_result = tracer::tracer::Model::new(&args.input_file);
-    match init_result {
-        Ok(_) => {
-            println!("successfully read file");
+        let model_result = tracer::tracer::Model::new(&args.input_file);
+        match model_result {
+            Ok(_) => {
+                info!(logger, "successfully read input file");
+            }
+            Err(error) => {
+                error!(logger, "failed to read file, error: {}", error);
+            }
         }
-        Err(error) => {
-            println!("failed to read file, error: {}", error);
-        }
+    } else if args.start {
+        info!(logger, "when implemented this will start the application");
+    } else {
+        warn!(
+            logger,
+            "No functionality matching provided arguments. Exiting"
+        );
     }
 }
