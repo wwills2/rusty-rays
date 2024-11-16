@@ -1,6 +1,10 @@
 use clap::Parser;
+use slog::info;
+
+use crate::utils::logger;
 
 mod tracer;
+mod utils;
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -15,6 +19,8 @@ struct Args {
 }
 
 fn main() {
+    let logger = &logger::GLOBAL_CLI_LOGGER;
+    info!(logger, "welcome to rusty rays");
     let args = Args::parse();
 
     println!(
