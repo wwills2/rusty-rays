@@ -1,3 +1,6 @@
+use std::process::exit;
+
+use clap::error::ContextValue::Bool;
 use clap::Parser;
 use slog::{error, info, warn};
 
@@ -20,23 +23,13 @@ struct Args {
     /// Path to the output file
     #[arg(short, long, requires = "input_file", default_value = "./")]
     output_file: String,
-
-    /// Disables logging when invoking a single render from the CLI
-    #[arg(short, long, requires = "input_file")]
-    cli_no_log: bool,
 }
 
 fn main() {
     let args = Args::parse();
-    let logger = if args.start {
-        &logger::GLOBAL_APPLICATION_LOGGER
-    } else if args.cli_no_log {
-        &logger::GLOBAL_CONSOLE_ONLY
-    } else {
-        &logger::GLOBAL_CLI_LOGGER
-    };
+    let logger = &logger::GLOBAL_LOGGER;
 
-    if args.input_file {
+    if Some(&args.input_file).is_some() {
         info!(
             logger,
             "reading input file from {} and writing output file to {}",
@@ -46,13 +39,14 @@ fn main() {
 
         let model_result = tracer::tracer::Model::new(&args.input_file);
         match model_result {
-            Ok(_) => {
-                info!(logger, "successfully read input file");
-            }
             Err(error) => {
                 error!(logger, "failed to read file, error: {}", error);
+                exit(0);
             }
+            _ => {}
         }
+
+        let model = model_result.unwrap();
     } else if args.start {
         info!(logger, "when implemented this will start the application");
     } else {

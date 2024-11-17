@@ -6,6 +6,8 @@ pub mod tracer {
     use std::fs::File;
     use std::io::{BufRead, BufReader};
 
+    use slog::Logger;
+
     use crate::tracer::types::{Color, Entity, Fov, Position, Screen, Surface};
 
     pub struct Model {
@@ -56,7 +58,7 @@ pub mod tracer {
 
     impl std::error::Error for ModelError {}
 
-    pub fn render() {}
+    pub fn render(model: Model, logger: Logger) {}
     pub fn write() {}
 
     fn parse(input_file_buf_reader: BufReader<File>) -> Result<Model, ModelError> {
