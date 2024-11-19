@@ -67,5 +67,5 @@ pub static LOGGER: Lazy<Logger> = Lazy::new(|| {
         .fuse()
     };
 
-    return Logger::root(drain, o!());
+    Logger::root(drain, o!())
 });
