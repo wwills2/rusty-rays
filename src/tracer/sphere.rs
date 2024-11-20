@@ -6,6 +6,8 @@ use crate::tracer::types::{Color, Entity, Point, Surface};
 use crate::utils::logger;
 use crate::utils::logger::LOGGER;
 
+pub static NAME: &str = "sphere";
+
 pub struct Sphere {
     pub surface: Surface,
     pub radius: f64,

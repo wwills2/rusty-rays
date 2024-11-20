@@ -1,8 +1,8 @@
 use std::process::exit;
 
-use clap::{arg, Parser};
 use clap::error::ContextValue::Bool;
-use slog::{error, info, Logger, warn};
+use clap::{arg, Parser};
+use slog::{error, info, warn, Logger};
 
 use crate::tracer::model;
 use crate::utils::logger;

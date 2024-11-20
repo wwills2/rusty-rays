@@ -35,7 +35,7 @@ impl Model {
 #[derive(Debug)]
 pub enum ModelError {
     FailedToOpenInputFile(String),
-    ErrorParsingInputFile(String),
+    ErrorParsingInputFile(usize, String),
 }
 
 impl fmt::Display for ModelError {
@@ -44,8 +44,12 @@ impl fmt::Display for ModelError {
             ModelError::FailedToOpenInputFile(error_message) => {
                 write!(f, "Failed to open input file: {}", error_message)
             }
-            ModelError::ErrorParsingInputFile(error_message) => {
-                write!(f, "Error parsing input file: {}", error_message)
+            ModelError::ErrorParsingInputFile(line_number, error_message) => {
+                write!(
+                    f,
+                    "Error parsing input file at line {line_number}. Error: {}",
+                    error_message
+                )
             }
         }
     }

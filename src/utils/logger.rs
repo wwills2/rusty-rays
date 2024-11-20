@@ -1,7 +1,7 @@
 use std::fs::{self, File};
 
 use once_cell::sync::Lazy;
-use slog::{Drain, Level, Logger, o};
+use slog::{o, Drain, Level, Logger};
 use slog_async;
 use slog_term;
 
