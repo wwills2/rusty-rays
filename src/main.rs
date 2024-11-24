@@ -1,8 +1,8 @@
 use std::process::exit;
 
-use clap::error::ContextValue::Bool;
 use clap::{arg, Parser};
-use slog::{error, info, warn, Logger};
+use clap::error::ContextValue::Bool;
+use slog::{error, info, Logger, warn};
 
 use crate::tracer::model;
 use crate::utils::logger;
@@ -67,4 +67,6 @@ fn main() {
             "No functionality matching provided arguments. Exiting"
         );
     }
+
+    // flush all log messages
 }
