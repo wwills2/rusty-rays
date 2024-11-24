@@ -4,7 +4,7 @@ use slog::{debug, Logger};
 
 use crate::tracer::types::{Color, Entity, Point, Surface};
 use crate::utils::logger;
-use crate::utils::logger::LOGGER;
+use crate::utils::logger::LOG;
 
 pub static NAME: &str = "sphere";
 
@@ -23,7 +23,7 @@ impl fmt::Display for Sphere {
 impl Entity for Sphere {
     fn calculate_intersections(&self, ray: &Point) -> Vec<Point> {
         debug!(
-            LOGGER,
+            LOG,
             "calculating intersections between ray {} and sphere {}", ray, self
         );
         todo!()
@@ -31,7 +31,7 @@ impl Entity for Sphere {
 
     fn calculate_color(&self, intersection_point: &Point) -> Color {
         debug!(
-            LOGGER,
+            LOG,
             "calculating color of sphere {} at point {}", self, intersection_point
         );
         todo!()

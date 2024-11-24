@@ -9,7 +9,7 @@ use crate::tracer::model::{Model, ModelError};
 use crate::tracer::sphere::Sphere;
 use crate::tracer::types::{Color, Entity, Fov, Point, Screen, Surface};
 use crate::utils::logger;
-use crate::utils::logger::LOGGER;
+use crate::utils::logger::LOG;
 
 mod input_file_parser;
 pub mod model;
@@ -19,7 +19,7 @@ mod types;
 static ENTITY_NAMES: [&str; 1] = [sphere::NAME];
 
 pub fn render(model: &Model) {
-    info!(LOGGER, "Rendering model from input file");
+    info!(LOG, "Rendering model from input file");
 }
 
 pub fn write() {}

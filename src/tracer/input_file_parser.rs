@@ -9,7 +9,7 @@ use slog::{debug, warn};
 use crate::tracer::model::{Model, ModelError};
 use crate::tracer::sphere::Sphere;
 use crate::tracer::types::{Color, Fov, Point, Screen, Surface};
-use crate::utils::logger::LOGGER;
+use crate::utils::logger::LOG;
 
 static SCENE_META_DATA_KEYWORDS: [&str; 7] = [
     "background",
@@ -65,7 +65,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         line_number += 1;
 
         debug!(
-            LOGGER,
+            LOG,
             "attempting to retrieve input file line number {}", line_number
         );
 
@@ -76,10 +76,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 "input file is empty".to_string(),
             ));
         } else if maybe_line_read_result.is_none() {
-            debug!(
-                LOGGER,
-                "file iterator returned none. reached the end of file"
-            );
+            debug!(LOG, "file iterator returned none. reached the end of file");
             return Ok(None);
         }
 
@@ -96,7 +93,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
 
         let input_file_line = line_read_result.unwrap();
         debug!(
-            LOGGER,
+            LOG,
             "read \"{}\" from input file line{}", input_file_line, line_number
         );
 
@@ -160,7 +157,7 @@ fn process_surface(
     surfaces: &mut HashMap<String, Surface>,
     starting_line_number: usize,
 ) -> Result<(), ModelError> {
-    debug!(LOGGER, "processing surface");
+    debug!(LOG, "processing surface");
 
     //advance past surface keyword
     keyword_line_iter.next();
@@ -202,7 +199,7 @@ fn process_surface(
             "diffuse" => {}
             _ => {
                 debug!(
-                    LOGGER,
+                    LOG,
                     "key word {} on input file line {} is not associated with surfaces. stopping surface processing",
                     first_word_next_line,
                     next_line.line_number

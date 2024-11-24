@@ -1,4 +1,8 @@
+use std::mem::needs_drop;
 use std::process::exit;
+use std::ptr::drop_in_place;
+use std::thread::sleep;
+use std::time::Duration;
 
 use clap::{arg, Parser};
 use clap::error::ContextValue::Bool;
@@ -6,7 +10,7 @@ use slog::{error, info, Logger, warn};
 
 use crate::tracer::model;
 use crate::utils::logger;
-use crate::utils::logger::LOGGER;
+use crate::utils::logger::{ASYNC_LOGGER, LOG};
 
 mod tracer;
 mod utils;
@@ -35,14 +39,14 @@ struct Args {
 fn main() {
     let args = Args::parse();
 
-    info!(LOGGER, "welcome to rusty rays");
+    info!(LOG, "welcome to rusty rays");
 
     if args.input_file.is_some() {
         let present_input_file = args.input_file.unwrap();
         let present_output_file = args.output_file.unwrap();
 
         info!(
-            LOGGER,
+            LOG,
             "reading input file from {} and writing output file to {}",
             present_input_file,
             present_output_file
@@ -51,7 +55,7 @@ fn main() {
         let model_result = model::Model::new(&present_input_file);
         match model_result {
             Err(error) => {
-                error!(LOGGER, "failed to read file, error: {}", error);
+                error!(LOG, "failed to read file, error: {}", error);
                 exit(0);
             }
             _ => {}
@@ -59,14 +63,15 @@ fn main() {
 
         let model = model_result.unwrap();
     } else if args.start {
-        info!(LOGGER, "when implemented this will start the application");
+        info!(LOG, "when implemented this will start the application");
         todo!()
     } else {
-        warn!(
-            LOGGER,
-            "No functionality matching provided arguments. Exiting"
-        );
+        warn!(LOG, "No functionality matching provided arguments. Exiting");
     }
 
-    // flush all log messages
+    if let Ok(mut guard) = ASYNC_LOGGER.async_guard.lock() {
+        if let Some(guard) = guard.take() {
+            drop(guard);
+        }
+    }
 }

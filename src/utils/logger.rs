@@ -1,11 +1,20 @@
 use std::fs::{self, File};
+use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
-use slog::{o, Drain, Level, Logger};
+use slog::{Drain, Level, Logger, o};
 use slog_async;
+use slog_async::AsyncGuard;
 use slog_term;
 
-pub static LOGGER: Lazy<Logger> = Lazy::new(|| {
+pub struct AsyncLoggerWithGuard {
+    pub logger: Logger,
+    pub async_guard: Mutex<Option<AsyncGuard>>,
+}
+
+pub static LOG: Lazy<&Logger> = Lazy::new(|| &ASYNC_LOGGER.logger);
+
+pub static ASYNC_LOGGER: Lazy<AsyncLoggerWithGuard> = Lazy::new(|| {
     let log_level = Level::Trace;
     let decorator = slog_term::TermDecorator::new().build();
     let console_drain = slog_term::CompactFormat::new(decorator).build().fuse();
@@ -54,18 +63,18 @@ pub static LOGGER: Lazy<Logger> = Lazy::new(|| {
         }
     }
 
-    let drain = if maybe_filtered_file_drain.is_none() {
-        slog_async::Async::new(filtered_console_drain)
-            .build()
-            .fuse()
+    let (async_drain, async_guard) = if maybe_filtered_file_drain.is_none() {
+        slog_async::Async::new(filtered_console_drain).build_with_guard()
     } else {
         let filtered_file_drain = maybe_filtered_file_drain.unwrap();
         slog_async::Async::new(
             slog::Duplicate::new(filtered_console_drain, filtered_file_drain).fuse(),
         )
-        .build()
-        .fuse()
+        .build_with_guard()
     };
 
-    Logger::root(drain, o!())
+    AsyncLoggerWithGuard {
+        logger: Logger::root(async_drain.fuse(), o!()),
+        async_guard: Mutex::new(Some(async_guard)),
+    }
 });
