@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use clap::{arg, Parser};
 use clap::error::ContextValue::Bool;
-use slog::{error, info, Logger, warn};
+use slog::{debug, error, info, Logger, trace, warn};
 
 use crate::tracer::model;
 use crate::utils::logger;
@@ -54,14 +54,13 @@ fn main() {
 
         let model_result = model::Model::new(&present_input_file);
         match model_result {
+            Ok(model) => {
+                info!(LOG, "initialized model from input file");
+            }
             Err(error) => {
                 error!(LOG, "failed to read file, error: {}", error);
-                exit(0);
             }
-            _ => {}
         }
-
-        let model = model_result.unwrap();
     } else if args.start {
         info!(LOG, "when implemented this will start the application");
         todo!()
@@ -69,6 +68,7 @@ fn main() {
         warn!(LOG, "No functionality matching provided arguments. Exiting");
     }
 
+    // flush the async logger
     if let Ok(mut guard) = ASYNC_LOGGER.async_guard.lock() {
         if let Some(guard) = guard.take() {
             drop(guard);

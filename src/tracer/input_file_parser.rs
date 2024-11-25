@@ -6,9 +6,11 @@ use std::str::SplitWhitespace;
 
 use slog::{debug, warn};
 
+use crate::tracer::color::Color;
 use crate::tracer::model::{Model, ModelError};
+use crate::tracer::model::ModelError::ErrorParsingInputFile;
 use crate::tracer::sphere::Sphere;
-use crate::tracer::types::{Color, Fov, Point, Screen, Surface};
+use crate::tracer::types::{Fov, Point, Screen, Surface};
 use crate::utils::logger::LOG;
 
 static SCENE_META_DATA_KEYWORDS: [&str; 7] = [
@@ -32,10 +34,10 @@ type DetermineNextLineResult<'a> = Result<Option<NextLine>, ModelError>;
 
 pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, ModelError> {
     let mut background = Color {
-        r: 0,
-        g: 0,
-        b: 0,
-        a: 0,
+        r: 0.0,
+        g: 0.0,
+        b: 0.0,
+        a: 0.0,
     };
     let mut eyep = Point {
         x: 0.0,
@@ -71,7 +73,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
 
         let maybe_line_read_result = file_iterator.next();
         if maybe_line_read_result.is_none() && line_number == 1 {
-            return Err(ModelError::ErrorParsingInputFile(
+            return Err(ErrorParsingInputFile(
                 line_number,
                 "input file is empty".to_string(),
             ));
@@ -82,7 +84,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
 
         let mut line_read_result = maybe_line_read_result.unwrap();
         if line_read_result.is_err() {
-            return Err(ModelError::ErrorParsingInputFile(
+            return Err(ErrorParsingInputFile(
                 line_number,
                 format!(
                     "failed to read input file. Error: {}",
@@ -165,11 +167,35 @@ fn process_surface(
     let name = match keyword_line_iter.next() {
         Some(name) => name.to_string(),
         None => {
-            return Err(ModelError::ErrorParsingInputFile(
+            return Err(ErrorParsingInputFile(
                 starting_line_number,
                 "dangling \"surface\" keyword".to_string(),
             ))
         }
+    };
+
+    let mut surface = Surface {
+        name: "name".to_string(),
+        ambient: Color {
+            r: 0.1,
+            g: 0.1,
+            b: 0.1,
+            a: 1.0,
+        }, // Dark gray ambient, fully opaque
+        diffuse: Color {
+            r: 0.1,
+            g: 0.1,
+            b: 0.1,
+            a: 1.0,
+        }, // Light gray diffuse, fully opaque
+        specular: Color {
+            r: 0.5,
+            g: 0.5,
+            b: 0.5,
+            a: 1.0,
+        }, // Medium gray specular, fully opaque
+        specpow: 32.0, // Typical phong specular power
+        reflect: 0.0,  // Non-reflective
     };
 
     loop {
@@ -196,7 +222,27 @@ fn process_surface(
 
         let first_word_next_line = maybe_next_word.unwrap();
         match first_word_next_line {
-            "diffuse" => {}
+            "diffuse" => {
+                debug!(
+                    LOG,
+                    "processing diffuse color on line input file line {}", next_line.line_number
+                );
+
+                let rgba_vec: Vec<&str> = line_words_iter.take(4).collect();
+                let diffuse_color_result = Color::new_from_str_vec(rgba_vec);
+
+                match diffuse_color_result {
+                    Ok(diffuse_color) => {
+                        surface.diffuse = diffuse_color;
+                    }
+                    Err(error) => {
+                        return Err(ErrorParsingInputFile(
+                            next_line.line_number,
+                            error.to_string(),
+                        ))
+                    }
+                }
+            }
             _ => {
                 debug!(
                     LOG,

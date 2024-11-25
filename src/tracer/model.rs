@@ -2,8 +2,9 @@ use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
 
+use crate::tracer::color::Color;
 use crate::tracer::sphere::Sphere;
-use crate::tracer::types::{Color, Fov, Point, Screen};
+use crate::tracer::types::{Fov, Point, Screen};
 
 pub struct Model {
     pub background: Color,
@@ -29,6 +30,26 @@ impl Model {
             Ok(model) => Ok(model),
             Err(error) => Err(error),
         };
+    }
+}
+
+impl fmt::Display for Model {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "\n{{\n  background: {},\n  eyep: {},\n  lookp: {},\n  up: ({}, {}, {}),\n  fov: {},\n  screen: {},\n  spheres: [\n{}  ]\n}}",
+            self.background,
+            self.eyep,
+            self.lookp,
+            self.up.0, self.up.1, self.up.2,
+            self.fov,
+            self.screen,
+            self.spheres
+                .iter()
+                .map(|s| format!("    {},", s))
+                .collect::<Vec<String>>()
+                .join("\n")               
+        )
     }
 }
 

@@ -1,21 +1,6 @@
 use std::fmt;
 
-pub struct Color {
-    pub r: u8,
-    pub g: u8,
-    pub b: u8,
-    pub a: u8,
-}
-
-impl fmt::Display for Color {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "\n{{\n  r: {}, \n  g: {}, \n  b: {},\n, b: {},\n}}",
-            self.r, self.g, self.b, self.a
-        )
-    }
-}
+use crate::tracer::color::Color;
 
 pub struct Point {
     pub x: f64,

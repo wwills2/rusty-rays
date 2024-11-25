@@ -3,14 +3,15 @@ use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 
-use slog::{info, Logger};
+use slog::{info, Logger, trace};
 
 use crate::tracer::model::{Model, ModelError};
 use crate::tracer::sphere::Sphere;
-use crate::tracer::types::{Color, Entity, Fov, Point, Screen, Surface};
+use crate::tracer::types::{Entity, Fov, Point, Screen, Surface};
 use crate::utils::logger;
 use crate::utils::logger::LOG;
 
+mod color;
 mod input_file_parser;
 pub mod model;
 mod sphere;
@@ -25,5 +26,11 @@ pub fn render(model: &Model) {
 pub fn write() {}
 
 fn parse(input_file_buf_reader: BufReader<File>) -> Result<Model, ModelError> {
-    input_file_parser::iterate_input_data(input_file_buf_reader.lines().peekable())
+    return match input_file_parser::iterate_input_data(input_file_buf_reader.lines().peekable()) {
+        Ok(model) => {
+            trace!(LOG, "parsed model:\n{}", model);
+            Ok(model)
+        }
+        Err(error) => Err(error),
+    };
 }
