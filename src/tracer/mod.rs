@@ -5,15 +5,18 @@ use std::io::{BufRead, BufReader};
 
 use slog::{info, Logger, trace};
 
+use point::Point;
+
 use crate::tracer::model::{Model, ModelError};
 use crate::tracer::sphere::Sphere;
-use crate::tracer::types::{Entity, Fov, Point, Screen, Surface};
+use crate::tracer::types::{Entity, Fov, Screen, Surface};
 use crate::utils::logger;
 use crate::utils::logger::LOG;
 
 mod color;
 mod input_file_parser;
 pub mod model;
+mod point;
 mod sphere;
 mod types;
 

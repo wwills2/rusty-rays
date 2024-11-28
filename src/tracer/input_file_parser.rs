@@ -9,8 +9,9 @@ use slog::{debug, warn};
 use crate::tracer::color::Color;
 use crate::tracer::model::{Model, ModelError};
 use crate::tracer::model::ModelError::ErrorParsingInputFile;
+use crate::tracer::point::Point;
 use crate::tracer::sphere::Sphere;
-use crate::tracer::types::{Fov, Point, Screen, Surface};
+use crate::tracer::types::{Fov, Screen, Surface};
 use crate::utils::logger::LOG;
 
 static SCENE_META_DATA_KEYWORDS: [&str; 7] = [
@@ -63,7 +64,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
     /// closure which handles error and edge cases, returns a peekable iterator of the next line's
     /// content, and sets the while loop condition to false if need be.
     /// returns None when there are not more lines in the file.
-    let mut determine_next_line_iter: DetermineNextLineClosure = Box::new(move || {
+    let mut get_next_line: DetermineNextLineClosure = Box::new(move || {
         line_number += 1;
 
         debug!(
@@ -87,7 +88,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             return Err(ErrorParsingInputFile(
                 line_number,
                 format!(
-                    "failed to read input file. Error: {}",
+                    "failed to read input file from disk. Error: {}",
                     line_read_result.err().unwrap()
                 ),
             ));
@@ -106,7 +107,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
     });
 
     loop {
-        let line_words_result = determine_next_line_iter();
+        let line_words_result = get_next_line();
         if line_words_result.is_err() {
             return Err(line_words_result.err().unwrap());
         }
@@ -128,7 +129,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         match peeked_line_word {
             "surface" => {
                 match process_surface(
-                    &mut determine_next_line_iter,
+                    &mut get_next_line,
                     &mut line_words_iter,
                     &mut surfaces,
                     line_number,
@@ -136,6 +137,13 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                     Err(error) => return Err(error),
                     _ => {}
                 }
+            }
+            "sphere" => {
+                let sphere = match process_sphere(&mut line_words_iter, &surfaces, line_number) {
+                    Ok(sphere) => sphere,
+                    Err(error) => return Err(error),
+                };
+                spheres.push(sphere);
             }
             _ => {}
         }
@@ -152,6 +160,79 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
     });
 }
 
+fn process_sphere(
+    keyword_line_iter: &mut Peekable<SplitWhitespace>,
+    surfaces: &HashMap<String, Surface>,
+    line_number: usize,
+) -> Result<Sphere, ModelError> {
+    debug!(LOG, "processing sphere");
+
+    // advance past sphere keyword
+    keyword_line_iter.next();
+
+    let maybe_surface_name = keyword_line_iter.next();
+    let surface = match maybe_surface_name {
+        Some(surface_name) => {
+            let maybe_surface = surfaces.get(surface_name);
+            match maybe_surface {
+                Some(surface) => surface,
+                None => {
+                    return Err(ErrorParsingInputFile(
+                        line_number,
+                        format!("surface {} referenced before definition", surface_name),
+                    ))
+                }
+            }
+        }
+        None => {
+            return Err(ErrorParsingInputFile(
+                line_number,
+                "sphere declaration missing surface".to_string(),
+            ))
+        }
+    };
+
+    let maybe_radius_str = keyword_line_iter.next();
+    let radius = match maybe_radius_str {
+        Some(radius) => match radius.parse::<f64>() {
+            Ok(radius) => radius,
+            Err(_) => {
+                return Err(ErrorParsingInputFile(
+                    line_number,
+                    "invalid radius value".to_string(),
+                ))
+            }
+        },
+        None => {
+            return Err(ErrorParsingInputFile(
+                line_number,
+                "sphere missing radius".to_string(),
+            ))
+        }
+    };
+
+    let xyz_vec: Vec<&str> = keyword_line_iter.take(3).collect();
+    let point_result = Point::new_from_str_vec(xyz_vec);
+    let position = match point_result {
+        Ok(point) => point,
+        Err(error) => return Err(ErrorParsingInputFile(line_number, error.to_string())),
+    };
+
+    let invalid_value = keyword_line_iter.next();
+    if invalid_value.is_some() {
+        return Err(ErrorParsingInputFile(
+            line_number,
+            format!("value {} should be on a new line", invalid_value.unwrap()),
+        ));
+    }
+
+    Ok(Sphere {
+        surface: surface.clone(),
+        radius,
+        position,
+    })
+}
+
 /// expects that the keyword has already been consumed
 fn process_surface(
     determine_next_line_iter: &mut DetermineNextLineClosure,
@@ -161,7 +242,7 @@ fn process_surface(
 ) -> Result<(), ModelError> {
     debug!(LOG, "processing surface");
 
-    //advance past surface keyword
+    // advance past surface keyword
     keyword_line_iter.next();
 
     let name = match keyword_line_iter.next() {
@@ -173,6 +254,14 @@ fn process_surface(
             ))
         }
     };
+
+    let invalid_value = keyword_line_iter.next();
+    if invalid_value.is_some() {
+        return Err(ErrorParsingInputFile(
+            starting_line_number,
+            format!("value {} should be on a new line", invalid_value.unwrap()),
+        ));
+    }
 
     let mut surface = Surface {
         name: "name".to_string(),
@@ -193,7 +282,7 @@ fn process_surface(
             g: 0.5,
             b: 0.5,
             a: 1.0,
-        }, // Medium gray specular, fully opaque
+        },
         specpow: 32.0, // Typical phong specular power
         reflect: 0.0,  // Non-reflective
     };
@@ -207,6 +296,11 @@ fn process_surface(
         let mut maybe_next_line = line_read_result.unwrap();
         if maybe_next_line.is_none() {
             // next line is none, entire file has been processed
+            debug!(
+                LOG,
+                "process_surface() reached end of file. appending surface and returning"
+            );
+            surfaces.insert(name, surface);
             return Ok(());
         }
 
@@ -243,13 +337,18 @@ fn process_surface(
                     }
                 }
             }
+            "ambient" => warn!(LOG, "ambient is not currently supported"),
+            "specular" => warn!(LOG, "specular is not currently supported"),
+            "specpow" => warn!(LOG, "specpow is not currently supported"),
+            "reflect" => warn!(LOG, "reflect is not currently supported"),
             _ => {
                 debug!(
                     LOG,
-                    "key word {} on input file line {} is not associated with surfaces. stopping surface processing",
+                    "key word {} on input file line {} is not associated with surfaces. stopping surface processing and appending surface",
                     first_word_next_line,
                     next_line.line_number
                 );
+                surfaces.insert(name, surface);
                 return Ok(());
             }
         }

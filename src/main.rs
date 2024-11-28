@@ -6,7 +6,7 @@ use std::time::Duration;
 
 use clap::{arg, Parser};
 use clap::error::ContextValue::Bool;
-use slog::{debug, error, info, Logger, trace, warn};
+use slog::{debug, error, info, trace, warn};
 
 use crate::tracer::model;
 use crate::utils::logger;

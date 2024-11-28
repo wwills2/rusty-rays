@@ -3,8 +3,9 @@ use std::fs::File;
 use std::io::BufReader;
 
 use crate::tracer::color::Color;
+use crate::tracer::point::Point;
 use crate::tracer::sphere::Sphere;
-use crate::tracer::types::{Fov, Point, Screen};
+use crate::tracer::types::{Fov, Screen};
 
 pub struct Model {
     pub background: Color,

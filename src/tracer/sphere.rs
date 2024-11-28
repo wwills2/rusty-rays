@@ -3,7 +3,8 @@ use std::fmt;
 use slog::{debug, Logger};
 
 use crate::tracer::color::Color;
-use crate::tracer::types::{Entity, Point, Surface};
+use crate::tracer::point::Point;
+use crate::tracer::types::{Entity, Surface};
 use crate::utils::logger;
 use crate::utils::logger::LOG;
 

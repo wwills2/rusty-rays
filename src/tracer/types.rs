@@ -1,23 +1,9 @@
 use std::fmt;
 
 use crate::tracer::color::Color;
+use crate::tracer::point::Point;
 
-pub struct Point {
-    pub x: f64,
-    pub y: f64,
-    pub z: f64,
-}
-
-impl fmt::Display for Point {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "\n{{\n  x: {}, \n  y: {}, \n  z: {},\n}}",
-            self.x, self.y, self.z
-        )
-    }
-}
-
+// fov type and methods
 pub struct Fov {
     pub horz: u8,
     pub vert: u8,
@@ -33,6 +19,7 @@ impl fmt::Display for Fov {
     }
 }
 
+// screen type and methods
 pub struct Screen {
     pub width: u64,
     pub height: u64,
@@ -48,6 +35,7 @@ impl fmt::Display for Screen {
     }
 }
 
+// surface type and methods
 pub struct Surface {
     pub name: String,
     pub ambient: Color,
@@ -55,6 +43,19 @@ pub struct Surface {
     pub specular: Color,
     pub specpow: f64,
     pub reflect: f64,
+}
+
+impl Clone for Surface {
+    fn clone(&self) -> Self {
+        Surface {
+            name: self.name.clone(),
+            ambient: self.ambient.clone(),
+            diffuse: self.diffuse.clone(),
+            specular: self.specular.clone(),
+            specpow: self.specpow,
+            reflect: self.reflect,
+        }
+    }
 }
 
 impl fmt::Display for Surface {
@@ -67,6 +68,7 @@ impl fmt::Display for Surface {
     }
 }
 
+// entity trait and methods
 pub trait Entity {
     fn calculate_intersections(&self, ray: &Point) -> Vec<Point>;
     fn calculate_color(&self, intersection_point: &Point) -> Color;

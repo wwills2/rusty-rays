@@ -3,6 +3,7 @@ use std::fmt;
 use slog::warn;
 
 use crate::tracer::color::ColorError::FailedToParseFromVec;
+use crate::tracer::types::Surface;
 use crate::utils::logger::LOG;
 
 pub struct Color {
@@ -18,16 +19,16 @@ impl Color {
             r: 0.0,
             g: 0.0,
             b: 0.0,
-            a: 0.0,
+            a: 1.0,
         };
 
-        if rgba_vec.len() != 4 {
+        if rgba_vec.len() != 4 && rgba_vec.len() != 3 {
             return Err(FailedToParseFromVec(
-                "colors should be defined by 4 values".to_string(),
+                "colors should be defined by 3 or 4 numerical values".to_string(),
             ));
         }
         for (i, maybe_color_channel) in rgba_vec.iter().enumerate() {
-            let color_result = parse_color(*maybe_color_channel);
+            let color_result = parse_color_channel_from_str(*maybe_color_channel);
             match color_result {
                 Ok(channel_val) => match i {
                     0 => {
@@ -43,7 +44,7 @@ impl Color {
                         color.a = channel_val;
                     }
                     _ => {
-                        warn!(LOG, "abnormality while parsing diffuse color")
+                        warn!(LOG, "abnormality while parsing color")
                     }
                 },
                 Err(error_message) => return Err(FailedToParseFromVec(error_message)),
@@ -54,13 +55,41 @@ impl Color {
     }
 }
 
-fn parse_color(color_str: &str) -> Result<f64, String> {
+impl Clone for Color {
+    fn clone(&self) -> Self {
+        Color {
+            r: self.r,
+            g: self.g,
+            b: self.b,
+            a: self.a,
+        }
+    }
+}
+
+fn parse_color_channel_from_str(color_str: &str) -> Result<f64, String> {
     match color_str.parse::<f64>() {
-        Ok(color) => Ok(color),
+        Ok(color) => {
+            if color < 0.0 || color > 1.0 {
+                return Err(format!(
+                    "failed to parse color. value {} not a valid rgba channel value",
+                    color_str
+                ));
+            }
+            Ok(color)
+        }
         Err(_) => match color_str.parse::<u8>() {
-            Ok(color_int) => return Ok(color_int as f64 / 255.0),
+            Ok(color_int) => {
+                let color = color_int as f64 / 255.0;
+                if color < 0.0 || color > 1.0 {
+                    return Err(format!(
+                        "failed to parse color. value {} not a valid rgba channel value",
+                        color_str
+                    ));
+                }
+                Ok(color)
+            }
             Err(_) => Err(format!(
-                "failed to parse color. value {} not a value color channel value",
+                "failed to parse color. value {} not a valid rgba channel value",
                 color_str
             )),
         },
@@ -92,4 +121,4 @@ impl fmt::Display for ColorError {
     }
 }
 
-impl std::error::Error for crate::tracer::color::ColorError {}
+impl std::error::Error for ColorError {}
