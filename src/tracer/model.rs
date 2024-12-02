@@ -11,7 +11,7 @@ pub struct Model {
     pub background: Color,
     pub eyep: Point,
     pub lookp: Point,
-    pub up: (u8, u8, u8),
+    pub up: Point,
     pub fov: Fov,
     pub screen: Screen,
     pub spheres: Vec<Sphere>,
@@ -42,7 +42,7 @@ impl fmt::Display for Model {
             self.background,
             self.eyep,
             self.lookp,
-            self.up.0, self.up.1, self.up.2,
+            self.up.x, self.up.y, self.up.x,
             self.fov,
             self.screen,
             self.spheres

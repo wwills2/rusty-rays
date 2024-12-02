@@ -8,4 +8,4 @@ A simple primary-bounce raytracer
     * win: `C:\Users\<user>\AppData\Local\rusty-rays\logs\`
     * linux: `home/<user>/.cache/rusty-rays/logs/`
     * mac: `Users/<user>/Libary/Caches/rusty-rays/logs/`
-* The LOGGER will defualt to console only logging if unable to create the log folder or file 
+* The logger will defualt to console only logging if unable to create the log folder or file 

@@ -1,15 +1,7 @@
-use std::mem::needs_drop;
-use std::process::exit;
-use std::ptr::drop_in_place;
-use std::thread::sleep;
-use std::time::Duration;
-
 use clap::{arg, Parser};
-use clap::error::ContextValue::Bool;
-use slog::{debug, error, info, trace, warn};
+use slog::{error, info, warn};
 
 use crate::tracer::model;
-use crate::utils::logger;
 use crate::utils::logger::{ASYNC_LOGGER, LOG};
 
 mod tracer;

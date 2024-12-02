@@ -4,6 +4,7 @@ use std::io::{BufReader, Lines};
 use std::iter::{Enumerate, Peekable};
 use std::str::SplitWhitespace;
 
+use once_cell::sync::Lazy;
 use slog::{debug, warn};
 
 use crate::tracer::color::Color;
@@ -14,15 +15,9 @@ use crate::tracer::sphere::Sphere;
 use crate::tracer::types::{Fov, Screen, Surface};
 use crate::utils::logger::LOG;
 
-static SCENE_META_DATA_KEYWORDS: [&str; 7] = [
-    "background",
-    "eyep",
-    "lookp",
-    "up",
-    "fov",
-    "screen",
-    "diffuse",
-];
+static SCENE_META_DATA_KEYWORDS: [&str; 6] = ["background", "eyep", "lookp", "up", "fov", "screen"];
+
+static SURFACE_KEY_WORDS: [&str; 5] = ["diffuse", "ambient", "specular", "specpow", "reflect"];
 
 struct NextLine {
     line_value: String,
@@ -30,8 +25,9 @@ struct NextLine {
 }
 
 type FileIterator = Peekable<Lines<BufReader<File>>>;
-type DetermineNextLineClosure<'a> = Box<dyn FnMut() -> DetermineNextLineResult<'a>>;
-type DetermineNextLineResult<'a> = Result<Option<NextLine>, ModelError>;
+type GetNextLineClosure<'a> = Box<dyn FnMut(Option<&NextIfClosure>) -> GetNextLineResult<'a>>;
+type GetNextLineResult<'a> = Result<Option<NextLine>, ModelError>;
+type NextIfClosure = Box<dyn Fn(&String) -> bool>;
 
 pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, ModelError> {
     let mut background = Color {
@@ -50,9 +46,13 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         y: 0.0,
         z: 0.0,
     };
-    let mut up = (0u8, 0u8, 0u8);
+    let mut up = Point {
+        x: 0.0,
+        y: 0.0,
+        z: 0.0,
+    };
     let mut fov = Fov { horz: 0, vert: 0 };
-    let screen = Screen {
+    let mut screen = Screen {
         width: 0,
         height: 0,
     };
@@ -64,7 +64,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
     /// closure which handles error and edge cases, returns a peekable iterator of the next line's
     /// content, and sets the while loop condition to false if need be.
     /// returns None when there are not more lines in the file.
-    let mut get_next_line: DetermineNextLineClosure = Box::new(move || {
+    let mut get_next_line: GetNextLineClosure = Box::new(move |maybe_next_eq_fn| {
         line_number += 1;
 
         debug!(
@@ -72,12 +72,22 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             "attempting to retrieve input file line number {}", line_number
         );
 
-        let maybe_line_read_result = file_iterator.next();
+        let maybe_line_read_result = match maybe_next_eq_fn {
+            Some(ref next_eq_fn) => file_iterator.next_if(|line_result| match line_result {
+                Ok(line) => next_eq_fn(line),
+                Err(_) => return false,
+            }),
+            None => file_iterator.next(),
+        };
+
         if maybe_line_read_result.is_none() && line_number == 1 {
             return Err(ErrorParsingInputFile(
                 line_number,
                 "input file is empty".to_string(),
             ));
+        } else if maybe_line_read_result.is_none() && maybe_next_eq_fn.is_some() {
+            debug!(LOG, "file iterator conditionally returned none.");
+            return Ok(None);
         } else if maybe_line_read_result.is_none() {
             debug!(LOG, "file iterator returned none. reached the end of file");
             return Ok(None);
@@ -107,7 +117,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
     });
 
     loop {
-        let line_words_result = get_next_line();
+        let line_words_result = get_next_line(None);
         if line_words_result.is_err() {
             return Err(line_words_result.err().unwrap());
         }
@@ -117,7 +127,10 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             break;
         }
 
-        let line_words = maybe_next_line.unwrap().line_value;
+        let next_line_struct = maybe_next_line.unwrap();
+        let line_number = next_line_struct.line_number;
+        let line_words = next_line_struct.line_value;
+
         let mut line_words_iter = line_words.split_whitespace().peekable();
         let maybe_peeked_line_word = line_words_iter.peek();
         if maybe_peeked_line_word.is_none() {
@@ -127,6 +140,192 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
 
         let peeked_line_word = *maybe_peeked_line_word.unwrap();
         match peeked_line_word {
+            "background" => {
+                // iterate past peeked keyword
+                line_words_iter.next();
+
+                let rgba_vec: Vec<&str> = line_words_iter.by_ref().take(4).collect();
+                match Color::new_from_str_vec(rgba_vec) {
+                    Ok(color) => background = color,
+                    Err(error) => {
+                        return Err(ErrorParsingInputFile(line_number, error.to_string()))
+                    }
+                }
+
+                let invalid_value = line_words_iter.next();
+                if invalid_value.is_some() {
+                    return Err(ErrorParsingInputFile(
+                        line_number,
+                        format!("value {} should be on a new line", invalid_value.unwrap()),
+                    ));
+                }
+            }
+            "eyep" => {
+                // iterate past peeked keyword
+                line_words_iter.next();
+
+                let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
+                match Point::new_from_str_vec(xyz_vec) {
+                    Ok(position) => eyep = position,
+                    Err(error) => {
+                        return Err(ErrorParsingInputFile(line_number, error.to_string()))
+                    }
+                }
+
+                let invalid_value = line_words_iter.next();
+                if invalid_value.is_some() {
+                    return Err(ErrorParsingInputFile(
+                        line_number,
+                        format!("value {} should be on a new line", invalid_value.unwrap()),
+                    ));
+                }
+            }
+            "lookp" => {
+                // iterate past peeked keyword
+                line_words_iter.next();
+
+                let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
+                match Point::new_from_str_vec(xyz_vec) {
+                    Ok(position) => lookp = position,
+                    Err(error) => {
+                        return Err(ErrorParsingInputFile(line_number, error.to_string()))
+                    }
+                }
+
+                let invalid_value = line_words_iter.next();
+                if invalid_value.is_some() {
+                    return Err(ErrorParsingInputFile(
+                        line_number,
+                        format!("value {} should be on a new line", invalid_value.unwrap()),
+                    ));
+                }
+            }
+            "up" => {
+                // iterate past peeked keyword
+                line_words_iter.next();
+
+                let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
+                match Point::new_from_str_vec(xyz_vec) {
+                    Ok(position) => up = position,
+                    Err(error) => {
+                        return Err(ErrorParsingInputFile(line_number, error.to_string()))
+                    }
+                }
+
+                let invalid_value = line_words_iter.next();
+                if invalid_value.is_some() {
+                    return Err(ErrorParsingInputFile(
+                        line_number,
+                        format!("value {} should be on a new line", invalid_value.unwrap()),
+                    ));
+                }
+            }
+            "fov" => {
+                // iterate past peeked keyword
+                line_words_iter.next();
+
+                let h_fov: u8 = match line_words_iter.next() {
+                    Some(h_fov_str) => match h_fov_str.parse::<u8>() {
+                        Ok(h_fov) => h_fov,
+                        Err(error) => {
+                            return Err(ErrorParsingInputFile(
+                                line_number,
+                                format!("invalid horizontal fov value: {}", h_fov_str),
+                            ))
+                        }
+                    },
+                    None => {
+                        return Err(ErrorParsingInputFile(
+                            line_number,
+                            "missing horizontal fov value".to_string(),
+                        ))
+                    }
+                };
+
+                let v_fov: u8 = match line_words_iter.next() {
+                    Some(h_fov_str) => match h_fov_str.parse::<u8>() {
+                        Ok(h_fov) => h_fov,
+                        Err(error) => {
+                            return Err(ErrorParsingInputFile(
+                                line_number,
+                                format!("invalid vertical fov value: {}", h_fov_str),
+                            ))
+                        }
+                    },
+                    None => {
+                        return Err(ErrorParsingInputFile(
+                            line_number,
+                            "missing vertical fov value".to_string(),
+                        ))
+                    }
+                };
+
+                fov = Fov {
+                    horz: h_fov,
+                    vert: v_fov,
+                };
+
+                let invalid_value = line_words_iter.next();
+                if invalid_value.is_some() {
+                    return Err(ErrorParsingInputFile(
+                        line_number,
+                        format!("value {} should be on a new line", invalid_value.unwrap()),
+                    ));
+                }
+            }
+            "screen" => {
+                // iterate past peeked keyword
+                line_words_iter.next();
+
+                let h_screen_px = match line_words_iter.next() {
+                    Some(h_screen_px_str) => match h_screen_px_str.parse::<u64>() {
+                        Ok(h_fov) => h_fov,
+                        Err(error) => {
+                            return Err(ErrorParsingInputFile(
+                                line_number,
+                                format!("invalid horizontal screen size: {}", h_screen_px_str),
+                            ))
+                        }
+                    },
+                    None => {
+                        return Err(ErrorParsingInputFile(
+                            line_number,
+                            "missing horizontal screen size value".to_string(),
+                        ))
+                    }
+                };
+
+                let v_screen_px = match line_words_iter.next() {
+                    Some(v_screen_px_str) => match v_screen_px_str.parse::<u64>() {
+                        Ok(h_fov) => h_fov,
+                        Err(error) => {
+                            return Err(ErrorParsingInputFile(
+                                line_number,
+                                format!("invalid horizontal screen size: {}", v_screen_px_str),
+                            ))
+                        }
+                    },
+                    None => {
+                        return Err(ErrorParsingInputFile(
+                            line_number,
+                            "missing horizontal screen size value".to_string(),
+                        ))
+                    }
+                };
+
+                screen = Screen {
+                    height: h_screen_px,
+                    width: v_screen_px,
+                };
+
+                let invalid_value = line_words_iter.next();
+                if invalid_value.is_some() {
+                    return Err(ErrorParsingInputFile(
+                        line_number,
+                        format!("value {} should be on a new line", invalid_value.unwrap()),
+                    ));
+                }
+            }
             "surface" => {
                 match process_surface(
                     &mut get_next_line,
@@ -235,12 +434,18 @@ fn process_sphere(
 
 /// expects that the keyword has already been consumed
 fn process_surface(
-    determine_next_line_iter: &mut DetermineNextLineClosure,
+    determine_next_line_iter: &mut GetNextLineClosure,
     keyword_line_iter: &mut Peekable<SplitWhitespace>,
     surfaces: &mut HashMap<String, Surface>,
     starting_line_number: usize,
 ) -> Result<(), ModelError> {
     debug!(LOG, "processing surface");
+
+    let is_matching_line: NextIfClosure =
+        Box::new(|line: &String| match line.split_whitespace().next() {
+            Some(word) => SURFACE_KEY_WORDS.contains(&word),
+            None => false,
+        });
 
     // advance past surface keyword
     keyword_line_iter.next();
@@ -288,7 +493,7 @@ fn process_surface(
     };
 
     loop {
-        let line_read_result = determine_next_line_iter();
+        let line_read_result = determine_next_line_iter(Some(&is_matching_line));
         if line_read_result.is_err() {
             return Err(line_read_result.err().unwrap());
         }
@@ -298,7 +503,7 @@ fn process_surface(
             // next line is none, entire file has been processed
             debug!(
                 LOG,
-                "process_surface() reached end of file. appending surface and returning"
+                "process_surface() received None for next line. appending surface and returning"
             );
             surfaces.insert(name, surface);
             return Ok(());
