@@ -6,6 +6,7 @@ use crate::tracer::color::ColorError::FailedToParseFromVec;
 use crate::tracer::types::Surface;
 use crate::utils::logger::LOG;
 
+#[derive(Debug)]
 pub struct Color {
     pub r: f64,
     pub g: f64,

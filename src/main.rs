@@ -2,6 +2,7 @@ use clap::{arg, Parser};
 use slog::{error, info, warn};
 
 use crate::tracer::model;
+use crate::tracer::model::Model;
 use crate::utils::logger::{ASYNC_LOGGER, LOG};
 
 mod tracer;
@@ -34,18 +35,15 @@ fn main() {
     info!(LOG, "welcome to rusty rays");
 
     if args.input_file.is_some() {
-        let present_input_file = args.input_file.unwrap();
-        let present_output_file = args.output_file.unwrap();
+        let _input_file = args.input_file.unwrap();
+        let _output_file = args.output_file.unwrap();
 
         info!(
             LOG,
-            "reading input file from {} and writing output file to {}",
-            present_input_file,
-            present_output_file
+            "reading input file from {} and writing output file to {}", _input_file, _output_file
         );
 
-        let model_result = model::Model::new(&present_input_file);
-        match model_result {
+        match Model::new(&_input_file) {
             Ok(model) => {
                 info!(LOG, "initialized model from input file");
             }

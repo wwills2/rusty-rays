@@ -8,9 +8,9 @@ use once_cell::sync::Lazy;
 use slog::{debug, warn};
 
 use crate::tracer::color::Color;
+use crate::tracer::coords::Coords;
 use crate::tracer::model::{Model, ModelError};
-use crate::tracer::model::ModelError::ErrorParsingInputFile;
-use crate::tracer::point::Point;
+use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::sphere::Sphere;
 use crate::tracer::types::{Fov, Screen, Surface};
 use crate::utils::logger::LOG;
@@ -36,22 +36,25 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         b: 0.0,
         a: 0.0,
     };
-    let mut eyep = Point {
+    let mut eyep = Coords {
         x: 0.0,
         y: 0.0,
         z: 0.0,
     };
-    let mut lookp = Point {
+    let mut lookp = Coords {
         x: 0.0,
         y: 0.0,
         z: 0.0,
     };
-    let mut up = Point {
+    let mut up = Coords {
         x: 0.0,
         y: 0.0,
         z: 0.0,
     };
-    let mut fov = Fov { horz: 0, vert: 0 };
+    let mut fov = Fov {
+        horz: 0.0,
+        vert: 0.0,
+    };
     let mut screen = Screen {
         width: 0,
         height: 0,
@@ -81,7 +84,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         };
 
         if maybe_line_read_result.is_none() && line_number == 1 {
-            return Err(ErrorParsingInputFile(
+            return Err(FailedToParseInputFile(
                 line_number,
                 "input file is empty".to_string(),
             ));
@@ -95,7 +98,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
 
         let mut line_read_result = maybe_line_read_result.unwrap();
         if line_read_result.is_err() {
-            return Err(ErrorParsingInputFile(
+            return Err(FailedToParseInputFile(
                 line_number,
                 format!(
                     "failed to read input file from disk. Error: {}",
@@ -148,13 +151,13 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 match Color::new_from_str_vec(rgba_vec) {
                     Ok(color) => background = color,
                     Err(error) => {
-                        return Err(ErrorParsingInputFile(line_number, error.to_string()))
+                        return Err(FailedToParseInputFile(line_number, error.to_string()))
                     }
                 }
 
                 let invalid_value = line_words_iter.next();
                 if invalid_value.is_some() {
-                    return Err(ErrorParsingInputFile(
+                    return Err(FailedToParseInputFile(
                         line_number,
                         format!("value {} should be on a new line", invalid_value.unwrap()),
                     ));
@@ -165,16 +168,16 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 line_words_iter.next();
 
                 let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
-                match Point::new_from_str_vec(xyz_vec) {
+                match Coords::new_from_str_vec(xyz_vec) {
                     Ok(position) => eyep = position,
                     Err(error) => {
-                        return Err(ErrorParsingInputFile(line_number, error.to_string()))
+                        return Err(FailedToParseInputFile(line_number, error.to_string()))
                     }
                 }
 
                 let invalid_value = line_words_iter.next();
                 if invalid_value.is_some() {
-                    return Err(ErrorParsingInputFile(
+                    return Err(FailedToParseInputFile(
                         line_number,
                         format!("value {} should be on a new line", invalid_value.unwrap()),
                     ));
@@ -185,16 +188,16 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 line_words_iter.next();
 
                 let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
-                match Point::new_from_str_vec(xyz_vec) {
+                match Coords::new_from_str_vec(xyz_vec) {
                     Ok(position) => lookp = position,
                     Err(error) => {
-                        return Err(ErrorParsingInputFile(line_number, error.to_string()))
+                        return Err(FailedToParseInputFile(line_number, error.to_string()))
                     }
                 }
 
                 let invalid_value = line_words_iter.next();
                 if invalid_value.is_some() {
-                    return Err(ErrorParsingInputFile(
+                    return Err(FailedToParseInputFile(
                         line_number,
                         format!("value {} should be on a new line", invalid_value.unwrap()),
                     ));
@@ -205,16 +208,16 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 line_words_iter.next();
 
                 let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
-                match Point::new_from_str_vec(xyz_vec) {
+                match Coords::new_from_str_vec(xyz_vec) {
                     Ok(position) => up = position,
                     Err(error) => {
-                        return Err(ErrorParsingInputFile(line_number, error.to_string()))
+                        return Err(FailedToParseInputFile(line_number, error.to_string()))
                     }
                 }
 
                 let invalid_value = line_words_iter.next();
                 if invalid_value.is_some() {
-                    return Err(ErrorParsingInputFile(
+                    return Err(FailedToParseInputFile(
                         line_number,
                         format!("value {} should be on a new line", invalid_value.unwrap()),
                     ));
@@ -224,36 +227,36 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 // iterate past peeked keyword
                 line_words_iter.next();
 
-                let h_fov: u8 = match line_words_iter.next() {
-                    Some(h_fov_str) => match h_fov_str.parse::<u8>() {
+                let h_fov: f64 = match line_words_iter.next() {
+                    Some(h_fov_str) => match h_fov_str.parse::<f64>() {
                         Ok(h_fov) => h_fov,
                         Err(error) => {
-                            return Err(ErrorParsingInputFile(
+                            return Err(FailedToParseInputFile(
                                 line_number,
                                 format!("invalid horizontal fov value: {}", h_fov_str),
                             ))
                         }
                     },
                     None => {
-                        return Err(ErrorParsingInputFile(
+                        return Err(FailedToParseInputFile(
                             line_number,
                             "missing horizontal fov value".to_string(),
                         ))
                     }
                 };
 
-                let v_fov: u8 = match line_words_iter.next() {
-                    Some(h_fov_str) => match h_fov_str.parse::<u8>() {
+                let v_fov: f64 = match line_words_iter.next() {
+                    Some(h_fov_str) => match h_fov_str.parse::<f64>() {
                         Ok(h_fov) => h_fov,
                         Err(error) => {
-                            return Err(ErrorParsingInputFile(
+                            return Err(FailedToParseInputFile(
                                 line_number,
                                 format!("invalid vertical fov value: {}", h_fov_str),
                             ))
                         }
                     },
                     None => {
-                        return Err(ErrorParsingInputFile(
+                        return Err(FailedToParseInputFile(
                             line_number,
                             "missing vertical fov value".to_string(),
                         ))
@@ -267,7 +270,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
 
                 let invalid_value = line_words_iter.next();
                 if invalid_value.is_some() {
-                    return Err(ErrorParsingInputFile(
+                    return Err(FailedToParseInputFile(
                         line_number,
                         format!("value {} should be on a new line", invalid_value.unwrap()),
                     ));
@@ -278,17 +281,17 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 line_words_iter.next();
 
                 let h_screen_px = match line_words_iter.next() {
-                    Some(h_screen_px_str) => match h_screen_px_str.parse::<u64>() {
+                    Some(h_screen_px_str) => match h_screen_px_str.parse::<usize>() {
                         Ok(h_fov) => h_fov,
                         Err(error) => {
-                            return Err(ErrorParsingInputFile(
+                            return Err(FailedToParseInputFile(
                                 line_number,
                                 format!("invalid horizontal screen size: {}", h_screen_px_str),
                             ))
                         }
                     },
                     None => {
-                        return Err(ErrorParsingInputFile(
+                        return Err(FailedToParseInputFile(
                             line_number,
                             "missing horizontal screen size value".to_string(),
                         ))
@@ -296,17 +299,17 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 };
 
                 let v_screen_px = match line_words_iter.next() {
-                    Some(v_screen_px_str) => match v_screen_px_str.parse::<u64>() {
+                    Some(v_screen_px_str) => match v_screen_px_str.parse::<usize>() {
                         Ok(h_fov) => h_fov,
                         Err(error) => {
-                            return Err(ErrorParsingInputFile(
+                            return Err(FailedToParseInputFile(
                                 line_number,
-                                format!("invalid horizontal screen size: {}", v_screen_px_str),
+                                format!("invalid vertical screen size: {}", v_screen_px_str),
                             ))
                         }
                     },
                     None => {
-                        return Err(ErrorParsingInputFile(
+                        return Err(FailedToParseInputFile(
                             line_number,
                             "missing horizontal screen size value".to_string(),
                         ))
@@ -320,7 +323,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
 
                 let invalid_value = line_words_iter.next();
                 if invalid_value.is_some() {
-                    return Err(ErrorParsingInputFile(
+                    return Err(FailedToParseInputFile(
                         line_number,
                         format!("value {} should be on a new line", invalid_value.unwrap()),
                     ));
@@ -342,6 +345,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                     Ok(sphere) => sphere,
                     Err(error) => return Err(error),
                 };
+                debug!(LOG, "processed sphere {}", sphere);
                 spheres.push(sphere);
             }
             _ => {}
@@ -376,7 +380,7 @@ fn process_sphere(
             match maybe_surface {
                 Some(surface) => surface,
                 None => {
-                    return Err(ErrorParsingInputFile(
+                    return Err(FailedToParseInputFile(
                         line_number,
                         format!("surface {} referenced before definition", surface_name),
                     ))
@@ -384,7 +388,7 @@ fn process_sphere(
             }
         }
         None => {
-            return Err(ErrorParsingInputFile(
+            return Err(FailedToParseInputFile(
                 line_number,
                 "sphere declaration missing surface".to_string(),
             ))
@@ -396,14 +400,14 @@ fn process_sphere(
         Some(radius) => match radius.parse::<f64>() {
             Ok(radius) => radius,
             Err(_) => {
-                return Err(ErrorParsingInputFile(
+                return Err(FailedToParseInputFile(
                     line_number,
                     "invalid radius value".to_string(),
                 ))
             }
         },
         None => {
-            return Err(ErrorParsingInputFile(
+            return Err(FailedToParseInputFile(
                 line_number,
                 "sphere missing radius".to_string(),
             ))
@@ -411,15 +415,15 @@ fn process_sphere(
     };
 
     let xyz_vec: Vec<&str> = keyword_line_iter.take(3).collect();
-    let point_result = Point::new_from_str_vec(xyz_vec);
-    let position = match point_result {
-        Ok(point) => point,
-        Err(error) => return Err(ErrorParsingInputFile(line_number, error.to_string())),
+    let position_result = Coords::new_from_str_vec(xyz_vec);
+    let position = match position_result {
+        Ok(position) => position,
+        Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
     };
 
     let invalid_value = keyword_line_iter.next();
     if invalid_value.is_some() {
-        return Err(ErrorParsingInputFile(
+        return Err(FailedToParseInputFile(
             line_number,
             format!("value {} should be on a new line", invalid_value.unwrap()),
         ));
@@ -453,7 +457,7 @@ fn process_surface(
     let name = match keyword_line_iter.next() {
         Some(name) => name.to_string(),
         None => {
-            return Err(ErrorParsingInputFile(
+            return Err(FailedToParseInputFile(
                 starting_line_number,
                 "dangling \"surface\" keyword".to_string(),
             ))
@@ -462,7 +466,7 @@ fn process_surface(
 
     let invalid_value = keyword_line_iter.next();
     if invalid_value.is_some() {
-        return Err(ErrorParsingInputFile(
+        return Err(FailedToParseInputFile(
             starting_line_number,
             format!("value {} should be on a new line", invalid_value.unwrap()),
         ));
@@ -535,7 +539,7 @@ fn process_surface(
                         surface.diffuse = diffuse_color;
                     }
                     Err(error) => {
-                        return Err(ErrorParsingInputFile(
+                        return Err(FailedToParseInputFile(
                             next_line.line_number,
                             error.to_string(),
                         ))

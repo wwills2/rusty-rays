@@ -1,12 +1,13 @@
 use std::fmt;
 
 use crate::tracer::color::Color;
-use crate::tracer::point::Point;
+use crate::tracer::coords::Coords;
 
 // fov type and methods
+#[derive(Debug)]
 pub struct Fov {
-    pub horz: u8,
-    pub vert: u8,
+    pub horz: f64,
+    pub vert: f64,
 }
 
 impl fmt::Display for Fov {
@@ -20,9 +21,10 @@ impl fmt::Display for Fov {
 }
 
 // screen type and methods
+#[derive(Debug)]
 pub struct Screen {
-    pub width: u64,
-    pub height: u64,
+    pub width: usize,
+    pub height: usize,
 }
 
 impl fmt::Display for Screen {
@@ -36,6 +38,7 @@ impl fmt::Display for Screen {
 }
 
 // surface type and methods
+#[derive(Debug)]
 pub struct Surface {
     pub name: String,
     pub ambient: Color,
@@ -70,6 +73,6 @@ impl fmt::Display for Surface {
 
 // entity trait and methods
 pub trait Entity {
-    fn calculate_intersections(&self, ray: &Point) -> Vec<Point>;
-    fn calculate_color(&self, intersection_point: &Point) -> Color;
+    fn calculate_intersections(&self, ray: &Coords) -> Vec<Coords>;
+    fn calculate_color(&self, intersection_point: &Coords) -> Color;
 }
