@@ -30,27 +30,10 @@ type GetNextLineResult<'a> = Result<Option<NextLine>, ModelError>;
 type NextIfClosure = Box<dyn Fn(&String) -> bool>;
 
 pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, ModelError> {
-    let mut background = Color {
-        r: 0.0,
-        g: 0.0,
-        b: 0.0,
-        a: 0.0,
-    };
-    let mut eyep = Coords {
-        x: 0.0,
-        y: 0.0,
-        z: 0.0,
-    };
-    let mut lookp = Coords {
-        x: 0.0,
-        y: 0.0,
-        z: 0.0,
-    };
-    let mut up = Coords {
-        x: 0.0,
-        y: 0.0,
-        z: 0.0,
-    };
+    let mut background = Color::new();
+    let mut eyep = Coords::new();
+    let mut lookp = Coords::new();
+    let mut up = Coords::new();
     let mut fov = Fov {
         horz: 0.0,
         vert: 0.0,

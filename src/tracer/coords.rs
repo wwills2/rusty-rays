@@ -42,12 +42,16 @@ impl fmt::Display for Coords {
 }
 
 impl Coords {
-    pub fn new_from_str_vec(rgba_vec: Vec<&str>) -> Result<Self, CoordsError> {
-        let mut coords = Self {
+    pub fn new() -> Self {
+        Coords {
             x: 0.0,
             y: 0.0,
             z: 0.0,
-        };
+        }
+    }
+
+    pub fn new_from_str_vec(rgba_vec: Vec<&str>) -> Result<Self, CoordsError> {
+        let mut coords = Self::new();
 
         if rgba_vec.len() != 3 {
             return Err(FailedToParseFromVec(
@@ -95,7 +99,10 @@ impl Coords {
 
     /// returns new normalized vector
     pub fn calc_normalized_vector(&self) -> Coords {
-        let len = self.calc_vector_length();
+        let len = match self.calc_vector_length() {
+            (length) if length == 0.0 => 1.0,
+            (length) => length,
+        };
         Coords {
             x: self.x / len,
             y: self.y / len,
@@ -105,6 +112,14 @@ impl Coords {
 
     pub fn calc_vector_length(&self) -> f64 {
         f64::sqrt(self.x.powi(2) + self.y.powi(2) + self.z.powi(2))
+    }
+
+    pub fn cross(&self, rhs: &Coords) -> Coords {
+        let x = self.y * rhs.z - self.z * rhs.y;
+        let y = self.z * rhs.x - self.x * rhs.z;
+        let z = self.x * rhs.y - self.y * rhs.x;
+
+        Coords { x, y, z }
     }
 }
 
@@ -136,17 +151,6 @@ impl Sub for Coords {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
             z: self.z - rhs.z,
-        }
-    }
-}
-
-impl Mul for Coords {
-    type Output = Coords;
-    fn mul(self, rhs: Coords) -> Coords {
-        Coords {
-            x: self.x * rhs.x,
-            y: self.y * rhs.y,
-            z: self.z * rhs.z,
         }
     }
 }

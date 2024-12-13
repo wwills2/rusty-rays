@@ -1,8 +1,8 @@
 use clap::{arg, Parser};
 use slog::{error, info, warn};
 
-use crate::tracer::model;
 use crate::tracer::model::Model;
+use crate::tracer::Tracer;
 use crate::utils::logger::{ASYNC_LOGGER, LOG};
 
 mod tracer;
@@ -46,6 +46,8 @@ fn main() {
         match Model::new(&_input_file) {
             Ok(model) => {
                 info!(LOG, "initialized model from input file");
+                let renderer = Tracer::new(model);
+                let raw_pixel_colors = renderer.render();
             }
             Err(error) => {
                 error!(LOG, "failed to read file, error: {}", error);
