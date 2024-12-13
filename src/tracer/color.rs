@@ -3,9 +3,9 @@ use std::fmt;
 use slog::warn;
 
 use crate::tracer::color::ColorError::FailedToParseFromVec;
-use crate::tracer::types::Surface;
 use crate::utils::logger::LOG;
 
+#[derive(Debug)]
 pub struct Color {
     pub r: f64,
     pub g: f64,
@@ -14,13 +14,17 @@ pub struct Color {
 }
 
 impl Color {
-    pub fn new_from_str_vec(rgba_vec: Vec<&str>) -> Result<Self, ColorError> {
-        let mut color = Self {
+    pub fn new() -> Color {
+        Color {
             r: 0.0,
             g: 0.0,
             b: 0.0,
-            a: 1.0,
-        };
+            a: 0.0,
+        }
+    }
+
+    pub fn new_from_str_vec(rgba_vec: Vec<&str>) -> Result<Self, ColorError> {
+        let mut color = Self::new();
 
         if rgba_vec.len() != 4 && rgba_vec.len() != 3 {
             return Err(FailedToParseFromVec(
