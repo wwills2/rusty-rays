@@ -51,7 +51,13 @@ impl Tracer {
         let mut raw_image_data =
             vec![vec![Color::new(); self.model.screen.width]; self.model.screen.height];
 
-        for ray in &self.primary_rays {
+        let ten_percent = &self.primary_rays.len() / 10;
+        let mut block = 1;
+        for (i ,ray) in self.primary_rays.iter().enumerate() {
+            if i != 0 && i % ten_percent == 0 {
+                info!(LOG, "rendering {}% complete", block * 10);
+                block += 1;
+            }
             raw_image_data[ray.i][ray.j] = self.calculate_primary_ray_color(ray).clone();
         }
 
@@ -59,7 +65,7 @@ impl Tracer {
     }
 
     fn calculate_primary_ray_color(&self, ray: &Ray) -> &Color {
-        trace!(LOG, "Calculating primary ray color for ray {}", ray.coords);
+        trace!(LOG, "Calculating primary ray color for pixel ({}, {})", ray.i, ray.j);
 
         let mut closest_entity: Option<&dyn Entity> = None;
         let mut intersection_distance: f64 = f64::INFINITY;
