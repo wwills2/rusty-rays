@@ -143,7 +143,8 @@ screen plane height: {}",
                 pixel_pos
             );
 
-            pixel_pos.calc_normalized_vector()
+            let camera_ray_direction = (pixel_pos - model.eyep).calc_normalized_vector();
+            return camera_ray_direction;
         };
 
         for i in 0..model.screen.height {

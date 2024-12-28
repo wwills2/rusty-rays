@@ -1,9 +1,9 @@
 background 0.078 0.361 0.753
-eyep 0 0 0
-lookp 0 0 2
+eyep 100 -28 5
+lookp 92 -33 0
 up 0 1 0
 fov 45 45
 screen 100 100
 surface txt001
     diffuse 0.5 0.45 0.35
-sphere txt001  1 0 0 4
+sphere txt001  1 92 -33 0
