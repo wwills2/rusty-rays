@@ -2,7 +2,7 @@ use std::fs::{self, File};
 use std::sync::Mutex;
 
 use once_cell::sync::Lazy;
-use slog::{Drain, Level, Logger, o};
+use slog::{o, Drain, Level, Logger};
 use slog_async;
 use slog_async::AsyncGuard;
 use slog_term;
@@ -16,6 +16,7 @@ pub static LOG: Lazy<&Logger> = Lazy::new(|| &ASYNC_LOGGER.logger);
 
 pub static ASYNC_LOGGER: Lazy<AsyncLoggerWithGuard> = Lazy::new(|| {
     let log_level = Level::Trace;
+    let log_channel_size = 500_000;
     let decorator = slog_term::TermDecorator::new().build();
     let console_drain = slog_term::CompactFormat::new(decorator).build().fuse();
     let filtered_console_drain = slog::LevelFilter::new(console_drain, log_level).fuse();
@@ -64,12 +65,15 @@ pub static ASYNC_LOGGER: Lazy<AsyncLoggerWithGuard> = Lazy::new(|| {
     }
 
     let (async_drain, async_guard) = if maybe_filtered_file_drain.is_none() {
-        slog_async::Async::new(filtered_console_drain).build_with_guard()
+        slog_async::Async::new(filtered_console_drain)
+            .chan_size(log_channel_size)
+            .build_with_guard()
     } else {
         let filtered_file_drain = maybe_filtered_file_drain.unwrap();
         slog_async::Async::new(
             slog::Duplicate::new(filtered_console_drain, filtered_file_drain).fuse(),
         )
+        .chan_size(log_channel_size)
         .build_with_guard()
     };
 

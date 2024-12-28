@@ -9,8 +9,9 @@ use slog::{debug, warn};
 
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
-use crate::tracer::model::{Model, ModelError};
 use crate::tracer::model::ModelError::FailedToParseInputFile;
+use crate::tracer::model::{Model, ModelError};
+use crate::tracer::polygon::Polygon;
 use crate::tracer::sphere::Sphere;
 use crate::tracer::types::{Fov, Screen, Surface};
 use crate::utils::logger::LOG;
@@ -43,6 +44,8 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         height: 0,
     };
     let mut spheres: Vec<Sphere> = Vec::new();
+    // todo: need to support parsing polygons
+    let mut polygons: Vec<Polygon> = Vec::new();
     let mut surfaces: HashMap<String, Surface> = HashMap::new();
 
     let mut line_number = 0;
@@ -343,6 +346,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         fov,
         screen,
         spheres,
+        polygons,
     });
 }
 
