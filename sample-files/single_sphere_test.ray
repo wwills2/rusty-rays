@@ -6,4 +6,4 @@ fov 45 45
 screen 100 100
 surface txt001
     diffuse 0.5 0.45 0.35
-sphere txt001  1 0 0 2
+sphere txt001  1 0 0 4

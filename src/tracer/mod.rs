@@ -9,7 +9,7 @@ use coords::Coords;
 
 use crate::tracer::color::Color;
 use crate::tracer::model::{Model, ModelError};
-use crate::tracer::types::{Entity, Fov, Screen, Surface};
+use crate::tracer::types::Entity;
 use crate::utils::logger::LOG;
 
 mod color;
@@ -61,8 +61,8 @@ impl Tracer {
     fn calculate_primary_ray_color(&self, ray: &Ray) -> &Color {
         trace!(LOG, "Calculating primary ray color for ray {}", ray.coords);
 
-        let mut closest_entity: &dyn Entity = &self.model.spheres[0];
-        let mut intersection_distance: f64 = 0.0;
+        let mut closest_entity: Option<&dyn Entity> = None;
+        let mut intersection_distance: f64 = f64::INFINITY;
 
         for entity in self.model.all_entity_iter() {
             let maybe_intersection_distances =
@@ -81,12 +81,20 @@ impl Tracer {
             }
 
             if set_entity {
-                closest_entity = entity;
+                closest_entity = Some(entity);
             }
         }
 
-        let intersection_point = self.model.eyep + ray.coords * intersection_distance;
-        closest_entity.calculate_color(&intersection_point)
+        match closest_entity {
+            Some(entity) => {
+                let intersection_point = self.model.eyep + ray.coords * intersection_distance;
+                entity.calculate_color(&intersection_point)
+            },
+            None => {
+                &self.model.background
+            }
+        }
+
     }
 
     fn calculate_primary_rays(model: &Model) -> Vec<Ray> {
