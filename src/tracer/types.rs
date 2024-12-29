@@ -73,6 +73,10 @@ impl fmt::Display for Surface {
 
 // entity trait and methods
 pub trait Entity {
-    fn calculate_intersections(&self, ray: &Coords) -> Vec<Coords>;
-    fn calculate_color(&self, intersection_point: &Coords) -> Color;
+    fn calculate_intersection_distances(
+        &self,
+        ray_direction: &Coords,
+        ray_origin: &Coords,
+    ) -> Option<Vec<f64>>;
+    fn calculate_color(&self, intersection_point: &Coords) -> &Color;
 }

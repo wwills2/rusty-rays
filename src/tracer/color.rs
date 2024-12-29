@@ -13,6 +13,12 @@ pub struct Color {
     pub a: f64,
 }
 
+pub struct NormalizedColor {
+    pub r: u8,
+    pub g: u8,
+    pub b: u8,
+}
+
 impl Color {
     pub fn new() -> Color {
         Color {
@@ -55,7 +61,19 @@ impl Color {
             }
         }
 
-        return Ok(color);
+        Ok(color)
+    }
+
+    pub fn normalize(&self) -> NormalizedColor {
+        let normalize = |color: f64| -> u8 {
+            (color * 255.0).clamp(0.0, 255.0) as u8
+        };
+
+        NormalizedColor {
+            r: normalize(self.r),
+            g: normalize(self.g),
+            b: normalize(self.b),
+        }
     }
 }
 
