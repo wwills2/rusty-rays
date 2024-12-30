@@ -1,12 +1,12 @@
-use std::fmt;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::{Path, PathBuf};
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 use crate::tracer::polygon::Polygon;
 use crate::tracer::sphere::Sphere;
 use crate::tracer::types::{Entity, Fov, Screen};
+use std::fmt;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub struct Model {

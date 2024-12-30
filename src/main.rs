@@ -1,6 +1,6 @@
-use std::path::PathBuf;
 use clap::{arg, Parser};
 use slog::{error, info, warn};
+use std::path::PathBuf;
 
 use crate::tracer::model::Model;
 use crate::tracer::{write, Tracer};
@@ -41,7 +41,9 @@ fn main() {
 
         info!(
             LOG,
-            "reading input file from {} and writing output file to {}", _input_file.display(), _output_file.display()
+            "reading input file from {} and writing output file to {}",
+            _input_file.display(),
+            _output_file.display()
         );
 
         match Model::new(_input_file.as_path()) {
@@ -56,12 +58,12 @@ fn main() {
                         match write(_output_file.as_path(), &raw_pixel_colors) {
                             Ok(_) => {
                                 info!(LOG, "wrote rendered image to {}", _output_file.display());
-                            },
+                            }
                             Err(error) => {
                                 error!(LOG, "{}", error);
                             }
                         }
-                    },
+                    }
                     Err(error) => {
                         error!(LOG, "{}", error);
                     }

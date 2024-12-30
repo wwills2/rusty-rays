@@ -65,9 +65,7 @@ impl Color {
     }
 
     pub fn normalize(&self) -> NormalizedColor {
-        let normalize = |color: f64| -> u8 {
-            (color * 255.0).clamp(0.0, 255.0) as u8
-        };
+        let normalize = |color: f64| -> u8 { (color * 255.0).clamp(0.0, 255.0) as u8 };
 
         NormalizedColor {
             r: normalize(self.r),
