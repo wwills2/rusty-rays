@@ -158,14 +158,18 @@ impl Tracer {
         }
 
         let mut thread_error = false;
+        let mut joined_thread_num = 0;
         for handle in thread_handles {
             match handle.join() {
-                Ok(_) => {}
+                Ok(_) => {
+                    info!(LOG, "render thread #{} finished", joined_thread_num);
+                }
                 Err(_) => {
-                    error!(LOG, "failed to join renderer thread");
+                    error!(LOG, "failed to join renderer thread #{}", joined_thread_num);
                     thread_error = true;
                 }
             }
+            joined_thread_num += 1;
         }
 
         if thread_error {
