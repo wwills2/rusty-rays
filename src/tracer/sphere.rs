@@ -1,12 +1,8 @@
 use std::fmt;
 
-use slog::{debug, trace, Logger};
-
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 use crate::tracer::types::{Entity, Surface};
-use crate::utils::logger;
-use crate::utils::logger::LOG;
 
 pub static NAME: &str = "sphere";
 
