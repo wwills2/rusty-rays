@@ -16,9 +16,33 @@ use crate::tracer::sphere::Sphere;
 use crate::tracer::types::{Fov, Screen, Surface};
 use crate::utils::logger::LOG;
 
-static SCENE_META_DATA_KEYWORDS: [&str; 6] = ["background", "eyep", "lookp", "up", "fov", "screen"];
+static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
+    let mut map = HashMap::from([
+        ("background", "background".to_string()),
+        ("eyep", "eyep".to_string()),
+        ("lookp", "lookp".to_string()),
+        ("fov", "fov".to_string()),
+        ("screen", "screen".to_string()),
+        ("sphere", "sphere".to_string()),
+        ("polygon", "polygon".to_string()),
+        ("up", "up".to_string()),
+        ("surface", "surface".to_string()),
+    ]);
 
-static SURFACE_KEY_WORDS: [&str; 5] = ["diffuse", "ambient", "specular", "specpow", "reflect"];
+    map
+});
+
+static SURFACE_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
+    let mut map = HashMap::from([
+        ("diffuse", "diffuse".to_string()),
+        ("ambient", "ambient".to_string()),
+        ("specular", "specular".to_string()),
+        ("specpow", "specpow".to_string()),
+        ("reflect", "reflect".to_string()),
+    ]);
+
+    map
+});
 
 struct NextLine {
     line_value: String,
@@ -128,217 +152,228 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         }
 
         let peeked_line_word = *maybe_peeked_line_word.unwrap();
-        match peeked_line_word {
-            "background" => {
-                // iterate past peeked keyword
-                line_words_iter.next();
+        if SCENE_DATA_KEYWORDS
+            .get("background")
+            .unwrap()
+            .eq(peeked_line_word)
+        {
+            // iterate past peeked keyword
+            line_words_iter.next();
 
-                let rgba_vec: Vec<&str> = line_words_iter.by_ref().take(4).collect();
-                match Color::new_from_str_vec(rgba_vec) {
-                    Ok(color) => background = color,
-                    Err(error) => {
-                        return Err(FailedToParseInputFile(line_number, error.to_string()))
-                    }
-                }
-
-                let invalid_value = line_words_iter.next();
-                if invalid_value.is_some() {
-                    return Err(FailedToParseInputFile(
-                        line_number,
-                        format!("value {} should be on a new line", invalid_value.unwrap()),
-                    ));
-                }
+            let rgba_vec: Vec<&str> = line_words_iter.by_ref().take(4).collect();
+            match Color::new_from_str_vec(rgba_vec) {
+                Ok(color) => background = color,
+                Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
             }
-            "eyep" => {
-                // iterate past peeked keyword
-                line_words_iter.next();
 
-                let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
-                match Coords::new_from_str_vec(xyz_vec) {
-                    Ok(position) => eyep = position,
-                    Err(error) => {
-                        return Err(FailedToParseInputFile(line_number, error.to_string()))
-                    }
-                }
-
-                let invalid_value = line_words_iter.next();
-                if invalid_value.is_some() {
-                    return Err(FailedToParseInputFile(
-                        line_number,
-                        format!("value {} should be on a new line", invalid_value.unwrap()),
-                    ));
-                }
-            }
-            "lookp" => {
-                // iterate past peeked keyword
-                line_words_iter.next();
-
-                let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
-                match Coords::new_from_str_vec(xyz_vec) {
-                    Ok(position) => lookp = position,
-                    Err(error) => {
-                        return Err(FailedToParseInputFile(line_number, error.to_string()))
-                    }
-                }
-
-                let invalid_value = line_words_iter.next();
-                if invalid_value.is_some() {
-                    return Err(FailedToParseInputFile(
-                        line_number,
-                        format!("value {} should be on a new line", invalid_value.unwrap()),
-                    ));
-                }
-            }
-            "up" => {
-                // iterate past peeked keyword
-                line_words_iter.next();
-
-                let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
-                match Coords::new_from_str_vec(xyz_vec) {
-                    Ok(position) => up = position,
-                    Err(error) => {
-                        return Err(FailedToParseInputFile(line_number, error.to_string()))
-                    }
-                }
-
-                let invalid_value = line_words_iter.next();
-                if invalid_value.is_some() {
-                    return Err(FailedToParseInputFile(
-                        line_number,
-                        format!("value {} should be on a new line", invalid_value.unwrap()),
-                    ));
-                }
-            }
-            "fov" => {
-                // iterate past peeked keyword
-                line_words_iter.next();
-
-                let h_fov: f64 = match line_words_iter.next() {
-                    Some(h_fov_str) => match h_fov_str.parse::<f64>() {
-                        Ok(h_fov) => h_fov,
-                        Err(error) => {
-                            return Err(FailedToParseInputFile(
-                                line_number,
-                                format!("invalid horizontal fov value: {}", h_fov_str),
-                            ))
-                        }
-                    },
-                    None => {
-                        return Err(FailedToParseInputFile(
-                            line_number,
-                            "missing horizontal fov value".to_string(),
-                        ))
-                    }
-                };
-
-                let v_fov: f64 = match line_words_iter.next() {
-                    Some(h_fov_str) => match h_fov_str.parse::<f64>() {
-                        Ok(h_fov) => h_fov,
-                        Err(error) => {
-                            return Err(FailedToParseInputFile(
-                                line_number,
-                                format!("invalid vertical fov value: {}", h_fov_str),
-                            ))
-                        }
-                    },
-                    None => {
-                        return Err(FailedToParseInputFile(
-                            line_number,
-                            "missing vertical fov value".to_string(),
-                        ))
-                    }
-                };
-
-                fov = Fov {
-                    horz: h_fov,
-                    vert: v_fov,
-                };
-
-                let invalid_value = line_words_iter.next();
-                if invalid_value.is_some() {
-                    return Err(FailedToParseInputFile(
-                        line_number,
-                        format!("value {} should be on a new line", invalid_value.unwrap()),
-                    ));
-                }
-            }
-            "screen" => {
-                // iterate past peeked keyword
-                line_words_iter.next();
-
-                let h_screen_px = match line_words_iter.next() {
-                    Some(h_screen_px_str) => match h_screen_px_str.parse::<usize>() {
-                        Ok(h_fov) => h_fov,
-                        Err(error) => {
-                            return Err(FailedToParseInputFile(
-                                line_number,
-                                format!("invalid horizontal screen size: {}", h_screen_px_str),
-                            ))
-                        }
-                    },
-                    None => {
-                        return Err(FailedToParseInputFile(
-                            line_number,
-                            "missing horizontal screen size value".to_string(),
-                        ))
-                    }
-                };
-
-                let v_screen_px = match line_words_iter.next() {
-                    Some(v_screen_px_str) => match v_screen_px_str.parse::<usize>() {
-                        Ok(h_fov) => h_fov,
-                        Err(error) => {
-                            return Err(FailedToParseInputFile(
-                                line_number,
-                                format!("invalid vertical screen size: {}", v_screen_px_str),
-                            ))
-                        }
-                    },
-                    None => {
-                        return Err(FailedToParseInputFile(
-                            line_number,
-                            "missing horizontal screen size value".to_string(),
-                        ))
-                    }
-                };
-
-                screen = Screen {
-                    height: h_screen_px,
-                    width: v_screen_px,
-                };
-
-                let invalid_value = line_words_iter.next();
-                if invalid_value.is_some() {
-                    return Err(FailedToParseInputFile(
-                        line_number,
-                        format!("value {} should be on a new line", invalid_value.unwrap()),
-                    ));
-                }
-            }
-            "surface" => {
-                match process_surface(
-                    &mut get_next_line,
-                    &mut line_words_iter,
-                    &mut surfaces,
+            let invalid_value = line_words_iter.next();
+            if invalid_value.is_some() {
+                return Err(FailedToParseInputFile(
                     line_number,
-                ) {
-                    Err(error) => return Err(error),
-                    _ => {}
+                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                ));
+            }
+        } else if SCENE_DATA_KEYWORDS
+            .get("eyep")
+            .unwrap()
+            .eq(peeked_line_word)
+        {
+            // iterate past peeked keyword
+            line_words_iter.next();
+
+            let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
+            match Coords::new_from_str_vec(xyz_vec) {
+                Ok(position) => eyep = position,
+                Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+            }
+
+            let invalid_value = line_words_iter.next();
+            if invalid_value.is_some() {
+                return Err(FailedToParseInputFile(
+                    line_number,
+                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                ));
+            }
+        } else if SCENE_DATA_KEYWORDS
+            .get("lookp")
+            .unwrap()
+            .eq(peeked_line_word)
+        {
+            // iterate past peeked keyword
+            line_words_iter.next();
+
+            let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
+            match Coords::new_from_str_vec(xyz_vec) {
+                Ok(position) => lookp = position,
+                Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+            }
+
+            let invalid_value = line_words_iter.next();
+            if invalid_value.is_some() {
+                return Err(FailedToParseInputFile(
+                    line_number,
+                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                ));
+            }
+        } else if SCENE_DATA_KEYWORDS.get("up").unwrap().eq(peeked_line_word) {
+            // iterate past peeked keyword
+            line_words_iter.next();
+
+            let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
+            match Coords::new_from_str_vec(xyz_vec) {
+                Ok(position) => up = position,
+                Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+            }
+
+            let invalid_value = line_words_iter.next();
+            if invalid_value.is_some() {
+                return Err(FailedToParseInputFile(
+                    line_number,
+                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                ));
+            }
+        } else if SCENE_DATA_KEYWORDS.get("fov").unwrap().eq(peeked_line_word) {
+            // iterate past peeked keyword
+            line_words_iter.next();
+
+            let h_fov: f64 = match line_words_iter.next() {
+                Some(h_fov_str) => match h_fov_str.parse::<f64>() {
+                    Ok(h_fov) => h_fov,
+                    Err(error) => {
+                        return Err(FailedToParseInputFile(
+                            line_number,
+                            format!("invalid horizontal fov value: {}", h_fov_str),
+                        ))
+                    }
+                },
+                None => {
+                    return Err(FailedToParseInputFile(
+                        line_number,
+                        "missing horizontal fov value".to_string(),
+                    ))
                 }
+            };
+
+            let v_fov: f64 = match line_words_iter.next() {
+                Some(h_fov_str) => match h_fov_str.parse::<f64>() {
+                    Ok(h_fov) => h_fov,
+                    Err(error) => {
+                        return Err(FailedToParseInputFile(
+                            line_number,
+                            format!("invalid vertical fov value: {}", h_fov_str),
+                        ))
+                    }
+                },
+                None => {
+                    return Err(FailedToParseInputFile(
+                        line_number,
+                        "missing vertical fov value".to_string(),
+                    ))
+                }
+            };
+
+            fov = Fov {
+                horz: h_fov,
+                vert: v_fov,
+            };
+
+            let invalid_value = line_words_iter.next();
+            if invalid_value.is_some() {
+                return Err(FailedToParseInputFile(
+                    line_number,
+                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                ));
             }
-            "sphere" => {
-                let sphere = match process_sphere(&mut line_words_iter, &surfaces, line_number) {
-                    Ok(sphere) => sphere,
-                    Err(error) => return Err(error),
-                };
-                debug!(LOG, "processed sphere {}", sphere);
-                spheres.push(sphere);
+        } else if SCENE_DATA_KEYWORDS
+            .get("screen")
+            .unwrap()
+            .eq(peeked_line_word)
+        {
+            // iterate past peeked keyword
+            line_words_iter.next();
+
+            let h_screen_px = match line_words_iter.next() {
+                Some(h_screen_px_str) => match h_screen_px_str.parse::<usize>() {
+                    Ok(h_fov) => h_fov,
+                    Err(error) => {
+                        return Err(FailedToParseInputFile(
+                            line_number,
+                            format!("invalid horizontal screen size: {}", h_screen_px_str),
+                        ))
+                    }
+                },
+                None => {
+                    return Err(FailedToParseInputFile(
+                        line_number,
+                        "missing horizontal screen size value".to_string(),
+                    ))
+                }
+            };
+
+            let v_screen_px = match line_words_iter.next() {
+                Some(v_screen_px_str) => match v_screen_px_str.parse::<usize>() {
+                    Ok(h_fov) => h_fov,
+                    Err(error) => {
+                        return Err(FailedToParseInputFile(
+                            line_number,
+                            format!("invalid vertical screen size: {}", v_screen_px_str),
+                        ))
+                    }
+                },
+                None => {
+                    return Err(FailedToParseInputFile(
+                        line_number,
+                        "missing horizontal screen size value".to_string(),
+                    ))
+                }
+            };
+
+            screen = Screen {
+                height: h_screen_px,
+                width: v_screen_px,
+            };
+
+            let invalid_value = line_words_iter.next();
+            if invalid_value.is_some() {
+                return Err(FailedToParseInputFile(
+                    line_number,
+                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                ));
             }
-            _ => {}
+        } else if SCENE_DATA_KEYWORDS
+            .get("surface")
+            .unwrap()
+            .eq(peeked_line_word)
+        {
+            match process_surface(
+                &mut get_next_line,
+                &mut line_words_iter,
+                &mut surfaces,
+                line_number,
+            ) {
+                Err(error) => return Err(error),
+                _ => {}
+            }
+        } else if SCENE_DATA_KEYWORDS
+            .get("sphere")
+            .unwrap()
+            .eq(peeked_line_word)
+        {
+            let sphere = match process_sphere(&mut line_words_iter, &surfaces, line_number) {
+                Ok(sphere) => sphere,
+                Err(error) => return Err(error),
+            };
+            debug!(LOG, "processed sphere {}", sphere);
+            spheres.push(sphere);
+        } else {
+            warn!(
+                LOG,
+                "unhandled key word \"{}\". line number {}", peeked_line_word, line_number
+            );
         }
     }
 
-    return Ok(Model {
+    Ok(Model {
         background,
         eyep,
         lookp,
@@ -347,7 +382,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         screen,
         spheres,
         polygons,
-    });
+    })
 }
 
 fn process_sphere(
@@ -423,7 +458,6 @@ fn process_sphere(
     })
 }
 
-/// expects that the keyword has already been consumed
 fn process_surface(
     determine_next_line_iter: &mut GetNextLineClosure,
     keyword_line_iter: &mut Peekable<SplitWhitespace>,
@@ -434,7 +468,7 @@ fn process_surface(
 
     let is_matching_line: NextIfClosure =
         Box::new(|line: &String| match line.split_whitespace().next() {
-            Some(word) => SURFACE_KEY_WORDS.contains(&word),
+            Some(word) => SURFACE_KEYWORDS.get(&word).is_some(),
             None => false,
         });
 
@@ -511,42 +545,64 @@ fn process_surface(
         }
 
         let first_word_next_line = maybe_next_word.unwrap();
-        match first_word_next_line {
-            "diffuse" => {
-                debug!(
-                    LOG,
-                    "processing diffuse color on line input file line {}", next_line.line_number
-                );
 
-                let rgba_vec: Vec<&str> = line_words_iter.take(4).collect();
-                let diffuse_color_result = Color::new_from_str_vec(rgba_vec);
+        if SURFACE_KEYWORDS
+            .get("diffuse")
+            .unwrap()
+            .eq(first_word_next_line)
+        {
+            debug!(
+                LOG,
+                "processing diffuse color on line input file line {}", next_line.line_number
+            );
 
-                match diffuse_color_result {
-                    Ok(diffuse_color) => {
-                        surface.diffuse = diffuse_color;
-                    }
-                    Err(error) => {
-                        return Err(FailedToParseInputFile(
-                            next_line.line_number,
-                            error.to_string(),
-                        ))
-                    }
+            let rgba_vec: Vec<&str> = line_words_iter.take(4).collect();
+            let diffuse_color_result = Color::new_from_str_vec(rgba_vec);
+
+            match diffuse_color_result {
+                Ok(diffuse_color) => {
+                    surface.diffuse = diffuse_color;
+                }
+                Err(error) => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        error.to_string(),
+                    ))
                 }
             }
-            "ambient" => warn!(LOG, "ambient is not currently supported"),
-            "specular" => warn!(LOG, "specular is not currently supported"),
-            "specpow" => warn!(LOG, "specpow is not currently supported"),
-            "reflect" => warn!(LOG, "reflect is not currently supported"),
-            _ => {
-                debug!(
+        } else if SURFACE_KEYWORDS
+            .get("ambient")
+            .unwrap()
+            .eq(first_word_next_line)
+        {
+            warn!(LOG, "ambient is not currently supported")
+        } else if SURFACE_KEYWORDS
+            .get("specular")
+            .unwrap()
+            .eq(first_word_next_line)
+        {
+            warn!(LOG, "specular is not currently supported")
+        } else if SURFACE_KEYWORDS
+            .get("specpow")
+            .unwrap()
+            .eq(first_word_next_line)
+        {
+            warn!(LOG, "specpow is not currently supported")
+        } else if SURFACE_KEYWORDS
+            .get("reflect")
+            .unwrap()
+            .eq(first_word_next_line)
+        {
+            warn!(LOG, "relfect is not currently supported")
+        } else {
+            debug!(
                     LOG,
                     "key word {} on input file line {} is not associated with surfaces. stopping surface processing and appending surface",
                     first_word_next_line,
                     next_line.line_number
                 );
-                surfaces.insert(name, surface);
-                return Ok(());
-            }
+            surfaces.insert(name, surface);
+            return Ok(());
         }
     }
 }
