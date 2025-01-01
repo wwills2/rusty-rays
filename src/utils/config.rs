@@ -68,7 +68,7 @@ static DEFAULT_CONFIG: Lazy<Config> = Lazy::new(|| Config {
 });
 
 fn get_config_dir() -> Result<PathBuf, String> {
-    match dirs::config_dir() {
+    match dirs_next::config_dir() {
         Some(mut config_dir) => {
             let package_name = env!("CARGO_PKG_NAME");
             config_dir.push(package_name);
