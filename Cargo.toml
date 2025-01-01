@@ -16,3 +16,5 @@ slog-term = "2.9.1"
 log = "0.4.22"
 image = "0.25.5"
 num_cpus = "1.16.0"
+serde_json5 = "0.1.0"
+serde = { version = "1.0.217", features = ["derive"] }
