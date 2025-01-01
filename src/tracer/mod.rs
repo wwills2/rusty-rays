@@ -1,16 +1,18 @@
-use crate::tracer::color::Color;
-use crate::tracer::coords::Coords;
-use crate::tracer::model::{Model, ModelError};
-use crate::tracer::types::Entity;
-use crate::utils::logger::LOG;
-use image::{ImageBuffer, RgbImage};
-use num_cpus;
-use slog::{debug, error, info, trace, warn};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::{fmt, sync, thread};
+
+use image::{ImageBuffer, RgbImage};
+use num_cpus;
+use slog::{debug, error, info, trace, warn};
+
+use crate::tracer::color::Color;
+use crate::tracer::coords::Coords;
+use crate::tracer::model::{Model, ModelError};
+use crate::tracer::types::Entity;
+use crate::utils::logger::LOG;
 
 mod color;
 mod coords;
@@ -101,7 +103,7 @@ impl Tracer {
             let _progress_block_mutex_arc_clone = Arc::clone(&progress_block_mutex_arc);
 
             let start_index = thread_num * rays_per_thread;
-            let end_index = if thread_num == num_cores - 1 {
+            let end_index = if thread_num == max_thread_num {
                 start_index + rays_per_thread + surplus_rays
             } else {
                 start_index + rays_per_thread

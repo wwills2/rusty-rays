@@ -1,8 +1,9 @@
 use std::fs::{self, File};
 use std::sync::Mutex;
 
+use crate::utils::config::CONFIG;
 use once_cell::sync::Lazy;
-use slog::{o, Drain, Level, Logger};
+use slog::{o, Drain, Logger};
 use slog_async;
 use slog_async::AsyncGuard;
 use slog_term;
@@ -15,8 +16,8 @@ pub struct AsyncLoggerWithGuard {
 pub static LOG: Lazy<&Logger> = Lazy::new(|| &ASYNC_LOGGER.logger);
 
 pub static ASYNC_LOGGER: Lazy<AsyncLoggerWithGuard> = Lazy::new(|| {
-    let log_level = Level::Trace;
-    let log_channel_size = 500_000;
+    let log_level = CONFIG.log_level;
+    let log_channel_size = CONFIG.log_message_cache_overflow_limit;
     let decorator = slog_term::TermDecorator::new().build();
     let console_drain = slog_term::CompactFormat::new(decorator).build().fuse();
     let filtered_console_drain = slog::LevelFilter::new(console_drain, log_level).fuse();
