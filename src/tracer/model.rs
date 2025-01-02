@@ -6,7 +6,7 @@ use crate::tracer::types::{Entity, Fov, Screen};
 use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 
 #[derive(Debug)]
 pub struct Model {
@@ -55,11 +55,7 @@ impl Model {
         };
 
         let file_reader = BufReader::new(open_file_result);
-
-        match crate::tracer::parse(file_reader) {
-            Ok(model) => Ok(model),
-            Err(error) => Err(error),
-        }
+        crate::tracer::parse(file_reader)
     }
 
     pub fn all_entity_iter(&self) -> impl Iterator<Item = &dyn Entity> {

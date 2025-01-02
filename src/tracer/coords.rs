@@ -50,15 +50,15 @@ impl Coords {
         }
     }
 
-    pub fn new_from_str_vec(rgba_vec: Vec<&str>) -> Result<Self, CoordsError> {
+    pub fn new_from_str_vec(xyz_vec: Vec<&str>) -> Result<Self, CoordsError> {
         let mut coords = Self::new();
 
-        if rgba_vec.len() != 3 {
+        if xyz_vec.len() != 3 {
             return Err(FailedToParseFromVec(
                 "3d coordinate values should be defined by 3 numerical values".to_string(),
             ));
         }
-        for (i, maybe_coords_dimension) in rgba_vec.iter().enumerate() {
+        for (i, maybe_coords_dimension) in xyz_vec.iter().enumerate() {
             let value_result = match maybe_coords_dimension.parse::<f64>() {
                 Ok(value) => Ok(value),
                 Err(_) => Err(format!(

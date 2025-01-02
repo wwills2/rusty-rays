@@ -1,13 +1,14 @@
-use std::fmt;
-
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 use crate::tracer::types::{Entity, Surface};
+use std::fmt;
+use uuid::Uuid;
 
-pub static NAME: &str = "sphere";
+pub static TYPE_NAME: &str = "sphere";
 
 #[derive(Debug)]
 pub struct Sphere {
+    pub uuid: Uuid,
     pub surface: Surface,
     pub radius: f64,
     pub position: Coords,
@@ -16,6 +17,7 @@ pub struct Sphere {
 impl Clone for Sphere {
     fn clone(&self) -> Sphere {
         Sphere {
+            uuid: self.uuid,
             surface: self.surface.clone(),
             radius: self.radius,
             position: self.position.clone(),
@@ -30,6 +32,14 @@ impl fmt::Display for Sphere {
 }
 
 impl Entity for Sphere {
+    fn get_uuid(&self) -> Uuid {
+        self.uuid
+    }
+
+    fn get_type(&self) -> String {
+        TYPE_NAME.to_string()
+    }
+
     fn calculate_intersection_distances(
         &self,
         direction_vector: &Coords,

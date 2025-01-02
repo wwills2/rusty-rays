@@ -22,8 +22,6 @@ mod polygon;
 mod sphere;
 mod types;
 
-static ENTITY_NAMES: [&str; 1] = [sphere::NAME];
-
 #[derive(Debug, Copy)]
 struct _Ray {
     i: usize,
@@ -318,13 +316,9 @@ fn normalize_and_flatten_to_u8_rgb(image_data: &Vec<Vec<Color>>) -> Vec<u8> {
 }
 
 fn parse(input_file_buf_reader: BufReader<File>) -> Result<Model, ModelError> {
-    match input_file_parser::iterate_input_data(input_file_buf_reader.lines().peekable()) {
-        Ok(model) => {
-            trace!(LOG, "parsed model:\n{}", model);
-            Ok(model)
-        }
-        Err(error) => Err(error),
-    }
+    let model = input_file_parser::iterate_input_data(input_file_buf_reader.lines().peekable())?;
+    trace!(LOG, "parsed model:\n{}", model);
+    Ok(model)
 }
 
 pub fn write(output_file_path: &Path, raw_image_data: &Vec<Vec<Color>>) -> Result<(), WriteError> {

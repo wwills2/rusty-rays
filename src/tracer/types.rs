@@ -1,7 +1,7 @@
-use std::fmt;
-
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
+use std::fmt;
+use uuid::Uuid;
 
 // fov type and methods
 #[derive(Debug)]
@@ -73,6 +73,8 @@ impl fmt::Display for Surface {
 
 // entity trait and methods
 pub trait Entity {
+    fn get_uuid(&self) -> Uuid;
+    fn get_type(&self) -> String;
     fn calculate_intersection_distances(
         &self,
         ray_direction: &Coords,
