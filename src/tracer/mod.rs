@@ -265,8 +265,8 @@ screen plane height: {}",
         let mut rays: Vec<_Ray> = Vec::new();
 
         let calc_ray_definition = |i, j| -> Coords {
-            let horz_pos = ((i as f64 + 0.5) / model.screen.width as f64) - 0.5;
-            let vert_pos = 0.5 - ((j as f64 + 0.5) / model.screen.height as f64);
+            let horz_pos = ((j as f64 + 0.5) / model.screen.width as f64) - 0.5;
+            let vert_pos = 0.5 - ((i as f64 + 0.5) / model.screen.height as f64);
 
             let pixel_pos = model.lookp
                 + (right * screen_plane_width * horz_pos)
