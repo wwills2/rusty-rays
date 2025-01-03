@@ -4,17 +4,18 @@ use std::io::{BufReader, Lines};
 use std::iter::{Enumerate, Peekable};
 use std::str::SplitWhitespace;
 
+use once_cell::sync::Lazy;
+use slog::{debug, warn};
+use uuid::Uuid;
+
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
-use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::model::{Model, ModelError};
+use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::polygon::Polygon;
 use crate::tracer::sphere::Sphere;
 use crate::tracer::types::{Fov, Screen, Surface};
 use crate::utils::logger::LOG;
-use once_cell::sync::Lazy;
-use slog::{debug, warn};
-use uuid::Uuid;
 
 static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
     let mut map = HashMap::from([
@@ -345,14 +346,13 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             .unwrap()
             .eq(peeked_line_word)
         {
-            match process_surface(
+            if let Err(result) = process_surface(
                 &mut get_next_line,
                 &mut line_words_iter,
                 &mut surfaces,
                 line_number,
             ) {
-                Err(error) => return Err(error),
-                _ => {}
+                return Err(result);
             }
         } else if SCENE_DATA_KEYWORDS
             .get("sphere")
@@ -493,24 +493,6 @@ fn process_polygon(
     // advance past polygon keyword
     keyword_line_iter.next();
 
-    let name = match keyword_line_iter.next() {
-        Some(name) => name.to_string(),
-        None => {
-            return Err(FailedToParseInputFile(
-                starting_line_number,
-                "dangling \"polygon\" keyword".to_string(),
-            ))
-        }
-    };
-
-    let invalid_value = keyword_line_iter.next();
-    if invalid_value.is_some() {
-        return Err(FailedToParseInputFile(
-            starting_line_number,
-            format!("value {} should be on a new line", invalid_value.unwrap()),
-        ));
-    }
-
     let maybe_surface_name = keyword_line_iter.next();
     let surface = match maybe_surface_name {
         Some(surface_name) => {
@@ -532,6 +514,14 @@ fn process_polygon(
             ))
         }
     };
+
+    let invalid_value = keyword_line_iter.next();
+    if invalid_value.is_some() {
+        return Err(FailedToParseInputFile(
+            starting_line_number,
+            format!("value {} should be on a new line", invalid_value.unwrap()),
+        ));
+    }
 
     let mut polygon = Polygon {
         uuid: Uuid::new_v4(),
@@ -559,7 +549,13 @@ fn process_polygon(
         let mut line_words_iter = next_line_value.split_whitespace();
 
         loop {
-            let xyz_str_vec = line_words_iter.clone().take(3).collect::<Vec<&str>>();
+            let mut xyz_str_vec = vec![];
+            for i in 0..3 {
+                if let Some(next) = line_words_iter.next() {
+                    xyz_str_vec.push(next);
+                }
+            }
+
             if xyz_str_vec.len() == 0 {
                 // could take no more from line. go to next line
                 break;
