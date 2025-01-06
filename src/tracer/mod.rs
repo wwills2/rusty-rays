@@ -1,8 +1,8 @@
+use std::{fmt, sync, thread};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use std::{fmt, sync, thread};
 
 use image::{ImageBuffer, RgbImage};
 use num_cpus;
@@ -11,7 +11,7 @@ use slog::{debug, error, info, trace, warn};
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 use crate::tracer::model::{Model, ModelError};
-use crate::tracer::types::Entity;
+use crate::tracer::types::{Entity, Intersection};
 use crate::utils::logger::LOG;
 
 mod color;
@@ -201,22 +201,21 @@ impl Tracer {
         );
 
         let mut closest_entity: Option<&dyn Entity> = None;
-        let mut intersection_distance: f64 = f64::INFINITY;
+        let mut closest_intersection: Intersection = Intersection {
+            distance_along_ray: f64::INFINITY,
+            location: Coords::new(),
+        };
 
         for entity in self.model.all_entity_iter() {
-            let maybe_intersection_distances =
-                entity.calculate_intersection_distances(&ray.coords, &self.model.eyep);
-            if maybe_intersection_distances.is_none() {
-                continue;
-            }
+            let intersection = match entity.calculate_intersection(&ray.coords, &self.model.eyep) {
+                Some(intersection) => intersection,
+                None => continue,
+            };
 
-            let intersection_distances = maybe_intersection_distances.unwrap();
             let mut set_entity = false;
-            for distance in intersection_distances {
-                if distance < intersection_distance {
-                    intersection_distance = distance;
-                    set_entity = true;
-                }
+            if intersection.distance_along_ray < closest_intersection.distance_along_ray {
+                closest_intersection = intersection;
+                set_entity = true;
             }
 
             if set_entity {
@@ -225,10 +224,7 @@ impl Tracer {
         }
 
         match closest_entity {
-            Some(entity) => {
-                let intersection_point = self.model.eyep + ray.coords * intersection_distance;
-                entity.calculate_color(&intersection_point)
-            }
+            Some(entity) => entity.calculate_color(&closest_intersection.location),
             None => &self.model.background,
         }
     }
@@ -269,8 +265,8 @@ screen plane height: {}",
             let vert_pos = 0.5 - ((i as f64 + 0.5) / model.screen.height as f64);
 
             let pixel_pos = model.lookp
-                + (right * screen_plane_width * horz_pos)
-                + (true_up * vert_pos * screen_plane_height);
+                + (&right * (screen_plane_width * horz_pos))
+                + (&true_up * (vert_pos * screen_plane_height));
             trace!(
                 LOG,
                 "position of image plane pixel (i: {}, j: {}); {}",

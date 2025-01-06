@@ -1,8 +1,10 @@
+use std::fmt;
+
+use uuid::Uuid;
+
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
-use crate::tracer::types::{Entity, Surface};
-use std::fmt;
-use uuid::Uuid;
+use crate::tracer::types::{Entity, Intersection, Surface};
 
 pub static TYPE_NAME: &str = "sphere";
 
@@ -40,17 +42,16 @@ impl Entity for Sphere {
         TYPE_NAME.to_string()
     }
 
-    fn calculate_intersection_distances(
+    fn calculate_intersection(
         &self,
-        direction_vector: &Coords,
+        ray_direction: &Coords,
         ray_origin: &Coords,
-    ) -> Option<Vec<f64>> {
-        let a =
-            direction_vector.x.powi(2) + direction_vector.y.powi(2) + direction_vector.z.powi(2);
+    ) -> Option<Intersection> {
+        let a = ray_direction.x.powi(2) + ray_direction.y.powi(2) + ray_direction.z.powi(2);
 
-        let b = (2.0 * direction_vector.x * (ray_origin.x - self.position.x))
-            + (2.0 * direction_vector.y * (ray_origin.y - self.position.y))
-            + (2.0 * direction_vector.z * (ray_origin.z - self.position.z));
+        let b = (2.0 * ray_direction.x * (ray_origin.x - self.position.x))
+            + (2.0 * ray_direction.y * (ray_origin.y - self.position.y))
+            + (2.0 * ray_direction.z * (ray_origin.z - self.position.z));
 
         let c = (ray_origin.x - self.position.x).powi(2)
             + (ray_origin.y - self.position.y).powi(2)
@@ -62,14 +63,30 @@ impl Entity for Sphere {
             return None;
         }
 
-        if discriminant == 0.0 {
-            return Some(vec![-b / (2.0 * a)]);
+        let distance = match discriminant {
+            0.0 => -b / (2.0 * a),
+            _ => {
+                let dist_t1 = (-b - discriminant.sqrt()) / (2.0 * a);
+                let dist_t2 = (-b + discriminant.sqrt()) / (2.0 * a);
+
+                if dist_t1 < dist_t2 {
+                    dist_t1
+                } else {
+                    dist_t2
+                }
+            }
+        };
+
+        if distance < 0.0 {
+            return None;
         }
 
-        let dist_t1 = (-b - discriminant.sqrt()) / (2.0 * a);
-        let dist_t2 = (-b + discriminant.sqrt()) / (2.0 * a);
+        let location = ray_origin + &(ray_direction * distance);
 
-        Some(vec![dist_t1, dist_t2])
+        Some(Intersection {
+            distance_along_ray: distance,
+            location,
+        })
     }
 
     fn calculate_color(&self, intersection_point: &Coords) -> &Color {

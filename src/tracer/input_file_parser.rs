@@ -12,7 +12,10 @@ use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 use crate::tracer::model::{Model, ModelError};
 use crate::tracer::model::ModelError::FailedToParseInputFile;
-use crate::tracer::polygon::Polygon;
+use crate::tracer::polygon::{
+    calculate_basis_vectors, calculate_plane_normal_vector, Polygon, PolygonError,
+};
+use crate::tracer::polygon::PolygonError::FailedToInitializePolygon;
 use crate::tracer::sphere::Sphere;
 use crate::tracer::types::{Fov, Screen, Surface};
 use crate::utils::logger::LOG;
@@ -73,14 +76,12 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
     let mut polygons: Vec<Polygon> = Vec::new();
     let mut surfaces: HashMap<String, Surface> = HashMap::new();
 
-    let mut line_number = 0;
+    let mut line_number = 1;
 
     /// closure which handles error and edge cases, returns a peekable iterator of the next line's
     /// content, and sets the while loop condition to false if need be.
     /// returns None when there are not more lines in the file.
     let mut get_next_line: GetNextLineClosure = Box::new(move |maybe_next_eq_fn| {
-        line_number += 1;
-
         debug!(
             LOG,
             "attempting to retrieve input file line number {}", line_number
@@ -121,8 +122,10 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         let input_file_line = line_read_result.unwrap();
         debug!(
             LOG,
-            "read \"{}\" from input file line{}", input_file_line, line_number
+            "read \"{}\" from input file line {}", input_file_line, line_number
         );
+
+        line_number += 1;
 
         Ok(Some(NextLine {
             line_number,
@@ -483,6 +486,8 @@ fn process_polygon(
 ) -> Result<Polygon, ModelError> {
     debug!(LOG, "processing polygon");
 
+    let mut line_number = starting_line_number;
+
     // lines associated with polygons following the keyword should start with floats
     let is_matching_line: NextIfClosure =
         Box::new(|line: &String| match line.split_whitespace().next() {
@@ -501,7 +506,7 @@ fn process_polygon(
                 Some(surface) => surface,
                 None => {
                     return Err(FailedToParseInputFile(
-                        starting_line_number,
+                        line_number,
                         format!("surface {} referenced before definition", surface_name),
                     ))
                 }
@@ -518,16 +523,12 @@ fn process_polygon(
     let invalid_value = keyword_line_iter.next();
     if invalid_value.is_some() {
         return Err(FailedToParseInputFile(
-            starting_line_number,
+            line_number,
             format!("value {} should be on a new line", invalid_value.unwrap()),
         ));
     }
 
-    let mut polygon = Polygon {
-        uuid: Uuid::new_v4(),
-        surface: surface.clone(),
-        vertices: Vec::new(),
-    };
+    let mut vertices: Vec<Coords> = vec![];
 
     loop {
         let line_read_result = determine_next_line_iter(Some(&is_matching_line));
@@ -535,17 +536,25 @@ fn process_polygon(
             return Err(line_read_result.err().unwrap());
         }
 
-        let mut maybe_next_line = line_read_result?;
+        let maybe_next_line = line_read_result?;
         if maybe_next_line.is_none() {
             debug!(
                 LOG,
-                "process_polygon() received None for next line. appending polygon and returning"
+                "process_polygon() received None for next line. calculating plane normal before appending"
             );
+
+            let polygon = match Polygon::new(vertices, surface.clone()) {
+                Ok(polygon) => polygon,
+                Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+            };
+
+            debug!(LOG, "appending polygon and returning");
             return Ok(polygon);
         }
 
         let next_line = maybe_next_line.unwrap();
         let next_line_value = next_line.line_value;
+        line_number = next_line.line_number;
         let mut line_words_iter = next_line_value.split_whitespace();
 
         loop {
@@ -562,7 +571,7 @@ fn process_polygon(
             }
 
             match Coords::new_from_str_vec(xyz_str_vec) {
-                Ok(coords) => polygon.vertices.push(coords),
+                Ok(coords) => vertices.push(coords),
                 Err(error) => {
                     return Err(FailedToParseInputFile(
                         next_line.line_number,

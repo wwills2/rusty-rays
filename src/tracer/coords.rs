@@ -7,7 +7,7 @@ use CoordsError::FailedToParseFromVec;
 
 use crate::utils::logger::LOG;
 
-#[derive(Debug, Copy)]
+#[derive(PartialEq, Debug, Copy)]
 pub struct Coords {
     pub x: f64,
     pub y: f64,
@@ -144,6 +144,17 @@ impl Add for Coords {
     }
 }
 
+impl Add for &Coords {
+    type Output = Coords;
+    fn add(self, rhs: &Coords) -> Coords {
+        Coords {
+            x: self.x + rhs.x,
+            y: self.y + rhs.y,
+            z: self.z + rhs.z,
+        }
+    }
+}
+
 impl Sub for Coords {
     type Output = Coords;
     fn sub(self, rhs: Coords) -> Coords {
@@ -155,7 +166,32 @@ impl Sub for Coords {
     }
 }
 
-impl Mul<f64> for Coords {
+impl Sub<&Coords> for Coords {
+    type Output = Coords;
+    fn sub(self, rhs: &Coords) -> Coords {
+        Coords {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+}
+
+impl Mul for Coords {
+    type Output = f64;
+    fn mul(self, rhs: Coords) -> f64 {
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+    }
+}
+
+impl Mul<&Coords> for &Coords {
+    type Output = f64;
+    fn mul(self, rhs: &Coords) -> f64 {
+        self.x * rhs.x + self.y * rhs.y + self.z * rhs.z
+    }
+}
+
+impl Mul<f64> for &Coords {
     type Output = Coords;
     fn mul(self, rhs: f64) -> Coords {
         Coords {
@@ -166,9 +202,9 @@ impl Mul<f64> for Coords {
     }
 }
 
-impl Div for Coords {
+impl Div for &Coords {
     type Output = Coords;
-    fn div(self, rhs: Coords) -> Coords {
+    fn div(self, rhs: &Coords) -> Coords {
         Coords {
             x: self.x / rhs.x,
             y: self.y / rhs.y,

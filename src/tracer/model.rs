@@ -1,12 +1,13 @@
+use std::fmt;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
+
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 use crate::tracer::polygon::Polygon;
 use crate::tracer::sphere::Sphere;
 use crate::tracer::types::{Entity, Fov, Screen};
-use std::fmt;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
 
 #[derive(Debug)]
 pub struct Model {
@@ -59,6 +60,8 @@ impl Model {
     }
 
     pub fn all_entity_iter(&self) -> impl Iterator<Item = &dyn Entity> {
+        todo!("this is not including polygons");
+
         self.spheres
             .iter()
             .map(|sphere| sphere as &dyn Entity)
