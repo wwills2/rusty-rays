@@ -10,12 +10,12 @@ use uuid::Uuid;
 
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
-use crate::tracer::model::{Model, ModelError};
 use crate::tracer::model::ModelError::FailedToParseInputFile;
+use crate::tracer::model::{Model, ModelError};
+use crate::tracer::polygon::PolygonError::FailedToInitializePolygon;
 use crate::tracer::polygon::{
     calculate_basis_vectors, calculate_plane_normal_vector, Polygon, PolygonError,
 };
-use crate::tracer::polygon::PolygonError::FailedToInitializePolygon;
 use crate::tracer::sphere::Sphere;
 use crate::tracer::types::{Fov, Screen, Surface};
 use crate::utils::logger::LOG;

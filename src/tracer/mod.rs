@@ -1,8 +1,8 @@
-use std::{fmt, sync, thread};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::{fmt, sync, thread};
 
 use image::{ImageBuffer, RgbImage};
 use num_cpus;
@@ -84,6 +84,7 @@ impl Tracer {
         let total_work_arc = Arc::new(self.primary_rays.len());
         let ten_percent_arc = Arc::new(self.primary_rays.len() / 10);
         let progress_block_mutex_arc = Arc::new(Mutex::new(1usize));
+        let all_entity_iter_arc = Arc::new(self.model.get_all_entity_iter());
 
         let image_data_arc = Arc::new(Mutex::new(vec![
             vec![Color::new(); self.model.screen.width];
@@ -93,6 +94,7 @@ impl Tracer {
 
         for thread_num in 0..num_cores {
             // these arc clones do not clone the underlying data
+            let _all_entity_iter_arc = Arc::clone(&all_entity_iter_arc);
             let _image_data_arc_clone = Arc::clone(&image_data_arc);
             let _self_arc_clone = Arc::clone(&self_arc);
             let _counter_mutex_arc_clone = Arc::clone(&counter_mutex_arc);
@@ -142,7 +144,9 @@ impl Tracer {
                         }
                     }
 
-                    let pixel_color = _self_arc_clone.calculate_primary_ray_color(ray).clone();
+                    let pixel_color = _self_arc_clone
+                        .calculate_primary_ray_color(ray, &_all_entity_iter_arc)
+                        .clone();
                     match _image_data_arc_clone.lock() {
                         Ok(mut mutex_guard) => {
                             mutex_guard[ray.i][ray.j] = pixel_color;
@@ -192,7 +196,11 @@ impl Tracer {
         }
     }
 
-    fn calculate_primary_ray_color(&self, ray: &_Ray) -> &Color {
+    fn calculate_primary_ray_color(
+        &self,
+        ray: &_Ray,
+        all_entity_iter: &dyn Iterator<Item = &dyn Entity>,
+    ) -> &Color {
         trace!(
             LOG,
             "Calculating primary ray color for pixel ({}, {})",
@@ -206,7 +214,7 @@ impl Tracer {
             location: Coords::new(),
         };
 
-        for entity in self.model.all_entity_iter() {
+        for entity in all_entity_iter {
             let intersection = match entity.calculate_intersection(&ray.coords, &self.model.eyep) {
                 Some(intersection) => intersection,
                 None => continue,
@@ -297,26 +305,6 @@ screen plane height: {}",
     }
 }
 
-fn normalize_and_flatten_to_u8_rgb(image_data: &Vec<Vec<Color>>) -> Vec<u8> {
-    let mut normalized_image_data: Vec<u8> = Vec::new();
-    for row in image_data {
-        for color in row {
-            let normalized_color = color.normalize();
-            normalized_image_data.push(normalized_color.r);
-            normalized_image_data.push(normalized_color.g);
-            normalized_image_data.push(normalized_color.b);
-        }
-    }
-
-    normalized_image_data
-}
-
-fn parse(input_file_buf_reader: BufReader<File>) -> Result<Model, ModelError> {
-    let model = input_file_parser::iterate_input_data(input_file_buf_reader.lines().peekable())?;
-    trace!(LOG, "parsed model:\n{}", model);
-    Ok(model)
-}
-
 pub fn write(output_file_path: &Path, raw_image_data: &Vec<Vec<Color>>) -> Result<(), WriteError> {
     let height = raw_image_data.len();
     let width = raw_image_data[0].len();
@@ -341,6 +329,26 @@ pub fn write(output_file_path: &Path, raw_image_data: &Vec<Vec<Color>>) -> Resul
             error
         ))),
     }
+}
+
+fn normalize_and_flatten_to_u8_rgb(image_data: &Vec<Vec<Color>>) -> Vec<u8> {
+    let mut normalized_image_data: Vec<u8> = Vec::new();
+    for row in image_data {
+        for color in row {
+            let normalized_color = color.normalize();
+            normalized_image_data.push(normalized_color.r);
+            normalized_image_data.push(normalized_color.g);
+            normalized_image_data.push(normalized_color.b);
+        }
+    }
+
+    normalized_image_data
+}
+
+fn parse(input_file_buf_reader: BufReader<File>) -> Result<Model, ModelError> {
+    let model = input_file_parser::iterate_input_data(input_file_buf_reader.lines().peekable())?;
+    trace!(LOG, "parsed model:\n{}", model);
+    Ok(model)
 }
 
 #[derive(Debug)]

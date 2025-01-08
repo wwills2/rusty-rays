@@ -13,7 +13,7 @@ A simple primary-bounce raytracer
 #### Config
 
 * The application will create a `config.json5` file in the users config directory
-    * win: `C:\Users\Alice\AppData\Roaming\rusty-rays\`
+    * win: `C:\Users\<user>\AppData\Roaming\rusty-rays\`
     * linux: `$HOME/.config/rusty-rays/`
     * mac: `$HOME/Library/Application Support/rusty-rays/`
 * If `config.json5` is inaccessible, the application will use its internal default config

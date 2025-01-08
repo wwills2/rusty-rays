@@ -59,13 +59,17 @@ impl Model {
         crate::tracer::parse(file_reader)
     }
 
-    pub fn all_entity_iter(&self) -> impl Iterator<Item = &dyn Entity> {
-        todo!("this is not including polygons");
+    pub fn get_all_entity_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &dyn Entity>> {
+        let mut all_entities: Vec<dyn Entity> = Vec::new();
+        for sphere in self.spheres {
+            all_entities.push(&sphere);
+        }
 
-        self.spheres
-            .iter()
-            .map(|sphere| sphere as &dyn Entity)
-            .chain(self.polygons.iter().map(|polygon| polygon as &dyn Entity))
+        for polygon in self.polygons {
+            all_entities.push(&polygon);
+        }
+
+        Box::new(all_entities.iter().cloned())
     }
 }
 
