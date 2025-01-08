@@ -7,7 +7,7 @@ use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 use crate::tracer::polygon::Polygon;
 use crate::tracer::sphere::Sphere;
-use crate::tracer::types::{Entity, Fov, Screen};
+use crate::tracer::types::{Fov, Screen};
 
 #[derive(Debug)]
 pub struct Model {
@@ -57,19 +57,6 @@ impl Model {
 
         let file_reader = BufReader::new(open_file_result);
         crate::tracer::parse(file_reader)
-    }
-
-    pub fn get_all_entity_iter<'a>(&'a self) -> Box<dyn Iterator<Item = &dyn Entity>> {
-        let mut all_entities: Vec<dyn Entity> = Vec::new();
-        for sphere in self.spheres {
-            all_entities.push(&sphere);
-        }
-
-        for polygon in self.polygons {
-            all_entities.push(&polygon);
-        }
-
-        Box::new(all_entities.iter().cloned())
     }
 }
 

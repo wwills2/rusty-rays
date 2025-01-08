@@ -72,7 +72,6 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         height: 0,
     };
     let mut spheres: Vec<Sphere> = Vec::new();
-    // todo: need to support parsing polygons
     let mut polygons: Vec<Polygon> = Vec::new();
     let mut surfaces: HashMap<String, Surface> = HashMap::new();
 

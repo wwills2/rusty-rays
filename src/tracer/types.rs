@@ -90,5 +90,3 @@ pub trait Entity {
     ) -> Option<Intersection>;
     fn calculate_color(&self, intersection_point: &Coords) -> &Color;
 }
-
-impl Sized for Entity {}

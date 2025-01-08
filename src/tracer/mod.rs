@@ -84,7 +84,6 @@ impl Tracer {
         let total_work_arc = Arc::new(self.primary_rays.len());
         let ten_percent_arc = Arc::new(self.primary_rays.len() / 10);
         let progress_block_mutex_arc = Arc::new(Mutex::new(1usize));
-        let all_entity_iter_arc = Arc::new(self.model.get_all_entity_iter());
 
         let image_data_arc = Arc::new(Mutex::new(vec![
             vec![Color::new(); self.model.screen.width];
@@ -94,7 +93,6 @@ impl Tracer {
 
         for thread_num in 0..num_cores {
             // these arc clones do not clone the underlying data
-            let _all_entity_iter_arc = Arc::clone(&all_entity_iter_arc);
             let _image_data_arc_clone = Arc::clone(&image_data_arc);
             let _self_arc_clone = Arc::clone(&self_arc);
             let _counter_mutex_arc_clone = Arc::clone(&counter_mutex_arc);
@@ -145,7 +143,7 @@ impl Tracer {
                     }
 
                     let pixel_color = _self_arc_clone
-                        .calculate_primary_ray_color(ray, &_all_entity_iter_arc)
+                        .calculate_primary_ray_color(ray, &_self_arc_clone.model)
                         .clone();
                     match _image_data_arc_clone.lock() {
                         Ok(mut mutex_guard) => {
@@ -196,11 +194,7 @@ impl Tracer {
         }
     }
 
-    fn calculate_primary_ray_color(
-        &self,
-        ray: &_Ray,
-        all_entity_iter: &dyn Iterator<Item = &dyn Entity>,
-    ) -> &Color {
+    fn calculate_primary_ray_color(&self, ray: &_Ray, model: &Model) -> &Color {
         trace!(
             LOG,
             "Calculating primary ray color for pixel ({}, {})",
@@ -214,7 +208,7 @@ impl Tracer {
             location: Coords::new(),
         };
 
-        for entity in all_entity_iter {
+        for entity in model.spheres.iter().chain(model.polygons.iter()) {
             let intersection = match entity.calculate_intersection(&ray.coords, &self.model.eyep) {
                 Some(intersection) => intersection,
                 None => continue,
