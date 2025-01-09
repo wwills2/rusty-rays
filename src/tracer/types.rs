@@ -80,7 +80,7 @@ pub struct Intersection {
 }
 
 // entity trait and methods
-pub trait Entity {
+pub trait Entity: Send + Sync {
     fn get_uuid(&self) -> Uuid;
     fn get_type(&self) -> String;
     fn calculate_intersection(
@@ -89,4 +89,22 @@ pub trait Entity {
         ray_origin: &Coords,
     ) -> Option<Intersection>;
     fn calculate_color(&self, intersection_point: &Coords) -> &Color;
+    fn entity_clone(&self) -> Box<dyn Entity>;
+}
+
+impl fmt::Debug for dyn Entity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "entity of type {} with uuid {}",
+            self.get_type(),
+            self.get_uuid()
+        )
+    }
+}
+
+impl Clone for Box<dyn Entity> {
+    fn clone(&self) -> Self {
+        self.entity_clone()
+    }
 }

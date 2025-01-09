@@ -93,4 +93,8 @@ impl Entity for Sphere {
         // todo intersection point will be important for reflection angles
         &self.surface.diffuse
     }
+
+    fn entity_clone(&self) -> Box<dyn Entity> {
+        Box::new((*self).clone())
+    }
 }

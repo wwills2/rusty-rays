@@ -1,6 +1,6 @@
 background 0.0 0.0 0.0
-eyep .25 1.5 1.5
-lookp .25 0 0
+eyep 1.5 1.5 1.5
+lookp 0 0 0
 up 0 1 0
 fov 45 45
 screen 5000 5000

@@ -194,7 +194,7 @@ impl Tracer {
         }
     }
 
-    fn calculate_primary_ray_color(&self, ray: &_Ray, model: &Model) -> &Color {
+    fn calculate_primary_ray_color(&self, ray: &_Ray, model: &Model) -> Color {
         trace!(
             LOG,
             "Calculating primary ray color for pixel ({}, {})",
@@ -202,13 +202,13 @@ impl Tracer {
             ray.j
         );
 
-        let mut closest_entity: Option<&dyn Entity> = None;
+        let mut closest_entity: Option<&Box<dyn Entity>> = None;
         let mut closest_intersection: Intersection = Intersection {
             distance_along_ray: f64::INFINITY,
             location: Coords::new(),
         };
 
-        for entity in model.spheres.iter().chain(model.polygons.iter()) {
+        for entity in &model.all_entities {
             let intersection = match entity.calculate_intersection(&ray.coords, &self.model.eyep) {
                 Some(intersection) => intersection,
                 None => continue,
@@ -225,10 +225,12 @@ impl Tracer {
             }
         }
 
-        match closest_entity {
+        let color = match closest_entity {
             Some(entity) => entity.calculate_color(&closest_intersection.location),
             None => &self.model.background,
-        }
+        };
+
+        color.clone()
     }
 
     fn calculate_primary_rays(model: &Model) -> Vec<_Ray> {

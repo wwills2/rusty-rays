@@ -85,7 +85,7 @@ impl Entity for Polygon {
         ray_origin: &Coords,
     ) -> Option<Intersection> {
         let denominator = &self.normal_vector * ray_direction;
-        if denominator < 10e-10 {
+        if f64::abs(denominator) < 10e-10 {
             return None;
         }
 
@@ -104,6 +104,10 @@ impl Entity for Polygon {
     fn calculate_color(&self, intersection_point: &Coords) -> &Color {
         // todo intersection point will be important for reflection angles
         &self.surface.diffuse
+    }
+
+    fn entity_clone(&self) -> Box<dyn Entity> {
+        Box::new((*self).clone())
     }
 }
 

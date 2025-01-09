@@ -17,7 +17,7 @@ use crate::tracer::polygon::{
     calculate_basis_vectors, calculate_plane_normal_vector, Polygon, PolygonError,
 };
 use crate::tracer::sphere::Sphere;
-use crate::tracer::types::{Fov, Screen, Surface};
+use crate::tracer::types::{Entity, Fov, Screen, Surface};
 use crate::utils::logger::LOG;
 
 static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
@@ -391,6 +391,15 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         }
     }
 
+    let mut all_entities: Vec<Box<dyn Entity>> = Vec::new();
+    for sphere in &spheres {
+        all_entities.push(Box::new(sphere.clone()));
+    }
+
+    for polygon in &polygons {
+        all_entities.push(Box::new(polygon.clone()));
+    }
+
     Ok(Model {
         background,
         eyep,
@@ -400,6 +409,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         screen,
         spheres,
         polygons,
+        all_entities,
     })
 }
 

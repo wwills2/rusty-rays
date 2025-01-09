@@ -7,7 +7,7 @@ use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 use crate::tracer::polygon::Polygon;
 use crate::tracer::sphere::Sphere;
-use crate::tracer::types::{Fov, Screen};
+use crate::tracer::types::{Entity, Fov, Screen};
 
 #[derive(Debug)]
 pub struct Model {
@@ -19,6 +19,7 @@ pub struct Model {
     pub screen: Screen,
     pub spheres: Vec<Sphere>,
     pub polygons: Vec<Polygon>,
+    pub all_entities: Vec<Box<dyn Entity>>,
 }
 
 #[derive(Debug)]
@@ -113,6 +114,7 @@ impl Clone for Model {
             },
             spheres: self.spheres.clone(),
             polygons: self.polygons.clone(),
+            all_entities: self.all_entities.clone(),
         }
     }
 }
