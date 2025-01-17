@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
+use crate::tracer::plane_coords::PlaneCoords;
 use crate::tracer::polygon::PolygonError::FailedToInitializePolygon;
 use crate::tracer::sphere::TYPE_NAME;
 use crate::tracer::types::{Entity, Intersection, Surface};
@@ -16,7 +17,8 @@ pub struct Polygon {
     pub surface: Surface,
     pub normal_vector: Coords,
     pub basis_vectors: (Coords, Coords),
-    pub plane_projected_vertices: Vec<(f64, f64)>,
+    pub plane_projected_vertices: Vec<PlaneCoords>,
+    pub polygon_intersection_ray_termination: PlaneCoords,
     pub projection_origin: Coords,
     pub vertices: Vec<Coords>,
 }
@@ -38,11 +40,26 @@ impl Polygon {
         };
 
         let projection_origin = vertices[0];
-        let mut plane_projected_vertices: Vec<(f64, f64)> = vec![];
+        let mut largest_axis_magnitude = 0.0;
+        let mut plane_projected_vertices: Vec<PlaneCoords> = vec![];
         for vertex in &vertices {
             let projection = project_to_plane(vertex, &projection_origin, basis_vectors);
+
+            if projection.x > largest_axis_magnitude {
+                largest_axis_magnitude = projection.x;
+            }
+            if projection.y > largest_axis_magnitude {
+                largest_axis_magnitude = projection.y;
+            }
+
             plane_projected_vertices.push(projection);
         }
+
+        // add 10% buffer to ray termination point
+        let polygon_intersection_ray_termination = PlaneCoords {
+            x: largest_axis_magnitude * 1.1,
+            y: largest_axis_magnitude * 1.1,
+        };
 
         Ok(Polygon {
             uuid: Uuid::new_v4(),
@@ -50,6 +67,7 @@ impl Polygon {
             normal_vector,
             basis_vectors,
             plane_projected_vertices,
+            polygon_intersection_ray_termination,
             projection_origin,
             vertices,
         })
@@ -64,6 +82,7 @@ impl Clone for Polygon {
             surface: self.surface.clone(),
             basis_vectors: self.basis_vectors,
             plane_projected_vertices: self.plane_projected_vertices.clone(),
+            polygon_intersection_ray_termination: self.polygon_intersection_ray_termination.clone(),
             projection_origin: self.projection_origin,
             vertices: self.vertices.clone(),
         }
@@ -89,16 +108,62 @@ impl Entity for Polygon {
             return None;
         }
 
-        let distance = self.normal_vector * (self.vertices[0] - ray_origin);
+        let distance = (self.normal_vector * (self.vertices[0] - ray_origin)) / denominator;
         let plane_intersection_point = ray_origin + &(ray_direction * distance);
 
+        // assume ray is cast from here to (inf, inf)
         let projected_intersection = project_to_plane(
             &plane_intersection_point,
             &self.projection_origin,
             self.basis_vectors,
         );
 
-        todo!("need to calculate edges and projected polygon intersection");
+        let a_matrix = self.polygon_intersection_ray_termination.x - projected_intersection.x;
+        let c_matrix = self.polygon_intersection_ray_termination.y - projected_intersection.y;
+
+        let mut projected_edge_intersection_count = 0;
+        for edge_p2_index in 1..self.plane_projected_vertices.len() {
+            let edge_p2 = self.plane_projected_vertices[edge_p2_index];
+            let edge_p1 = self.plane_projected_vertices[edge_p2_index - 1];
+
+            let b_matrix = -(edge_p2.x - edge_p1.x);
+            let d_matrix = -(edge_p2.y - edge_p1.y);
+
+            let determinant = a_matrix * d_matrix - c_matrix * d_matrix;
+            if f64::abs(determinant) < 10e-10 {
+                // matrix is not invertible, no intersection with edge and test vector
+                continue;
+            }
+
+            let inverse_multiplicand = 1.0 / determinant;
+            let a_inv_matrix = d_matrix * inverse_multiplicand;
+            let b_inv_matrix = -b_matrix * inverse_multiplicand;
+            let c_inv_matrix = -c_matrix * inverse_multiplicand;
+            let d_inv_matrix = a_matrix * inverse_multiplicand;
+
+            let solution_multiplicand = PlaneCoords {
+                x: edge_p1.x - projected_intersection.x,
+                y: edge_p1.y - projected_intersection.y,
+            };
+
+            let solution = PlaneCoords {
+                x: a_inv_matrix * solution_multiplicand.x + b_inv_matrix * solution_multiplicand.y,
+                y: c_inv_matrix * solution_multiplicand.x + d_inv_matrix * solution_multiplicand.y,
+            };
+
+            if solution.x >= 0.0 && solution.y >= 0.0 && solution.y <= 1.0 {
+                projected_edge_intersection_count = projected_edge_intersection_count + 1;
+            }
+        }
+
+        if projected_edge_intersection_count % 2 == 0 {
+            Some(Intersection {
+                location: plane_intersection_point,
+                distance_along_ray: distance,
+            })
+        } else {
+            None
+        }
     }
 
     fn calculate_color(&self, intersection_point: &Coords) -> &Color {
@@ -168,7 +233,7 @@ pub fn calculate_basis_vectors(
     }
 
     if vertex_1 == vertex_2 {
-        return Err("all points on the polygon are the same. invalid polygon".to_string());
+        return Err("all vertices of the polygon are the same. invalid polygon".to_string());
     }
 
     let edge_vector_basis_1 = (vertex_2 - vertex_1).calc_normalized_vector();
@@ -181,12 +246,12 @@ pub fn project_to_plane(
     coordinates: &Coords,
     projection_origin: &Coords,
     plane_basis_vectors: (Coords, Coords),
-) -> (f64, f64) {
+) -> PlaneCoords {
     let diff_vector = *coordinates - projection_origin;
     let u = plane_basis_vectors.0 * diff_vector;
     let w = plane_basis_vectors.1 * diff_vector;
 
-    (u, w)
+    PlaneCoords { x: u, y: w }
 }
 
 #[derive(Debug)]
