@@ -1,8 +1,8 @@
+use std::{fmt, sync, thread};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use std::{fmt, sync, thread};
 
 use image::{ImageBuffer, RgbImage};
 use num_cpus;
@@ -12,12 +12,14 @@ use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 use crate::tracer::model::{Model, ModelError};
 use crate::tracer::types::{Entity, Intersection};
+use crate::utils::config::CONFIG;
 use crate::utils::logger::LOG;
 
 mod color;
 mod coords;
 mod input_file_parser;
 pub mod model;
+mod plane_coords;
 mod polygon;
 mod sphere;
 mod types;
@@ -74,10 +76,10 @@ impl Tracer {
     }
 
     fn _render(self: Arc<Self>) -> Result<Vec<Vec<Color>>, RenderError> {
-        let num_cores = num_cpus::get_physical();
-        let max_thread_num = num_cores - 1;
-        let rays_per_thread: usize = self.primary_rays.len() / num_cores;
-        let surplus_rays = self.primary_rays.len() - (rays_per_thread * num_cores);
+        let num_threads = CONFIG.max_render_threads;
+        let max_thread_num = num_threads - 1;
+        let rays_per_thread: usize = self.primary_rays.len() / num_threads;
+        let surplus_rays = self.primary_rays.len() - (rays_per_thread * num_threads);
         let mut thread_handles = vec![];
 
         let counter_mutex_arc = Arc::new(Mutex::new(0usize));
@@ -91,7 +93,7 @@ impl Tracer {
         ]));
         let self_arc = Arc::new(self);
 
-        for thread_num in 0..num_cores {
+        for thread_num in 0..num_threads {
             // these arc clones do not clone the underlying data
             let _image_data_arc_clone = Arc::clone(&image_data_arc);
             let _self_arc_clone = Arc::clone(&self_arc);
