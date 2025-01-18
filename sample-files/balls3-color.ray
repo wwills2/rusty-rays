@@ -12,7 +12,7 @@ surface txt001
     ambient 0.2 0.15 0.066
     diffuse 0.8 0.6 0.264
 polygon txt001 
-5 5 -0.5 -5 5 -0.5 5 -5 -0.5
+5 5 -0.5 -5 5 -0.5 -5 -5 -0.5
 5 -5 -0.5
 surface txt002
     ambient 0 0 0

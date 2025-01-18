@@ -18,7 +18,7 @@ pub struct Polygon {
     pub normal_vector: Coords,
     pub basis_vectors: (Coords, Coords),
     pub plane_projected_vertices: Vec<PlaneCoords>,
-    pub polygon_intersection_ray_termination: PlaneCoords,
+    pub point_in_polygon_inf_test_vector: PlaneCoords,
     pub projection_origin: Coords,
     pub vertices: Vec<Coords>,
 }
@@ -55,10 +55,11 @@ impl Polygon {
             plane_projected_vertices.push(projection);
         }
 
-        // add 10% buffer to ray termination point
-        let polygon_intersection_ray_termination = PlaneCoords {
-            x: largest_axis_magnitude * 1.1,
-            y: largest_axis_magnitude * 1.1,
+        // need to cast a ray to effectively infinity without getting into f64 precision errors
+        // multiply by the largest projected x or y by 10 billion for pseudo infinity
+        let point_in_polygon_inf_test_vector = PlaneCoords {
+            x: largest_axis_magnitude * 10_000_000_000_f64,
+            y: largest_axis_magnitude * 10_000_000_000_f64,
         };
 
         Ok(Polygon {
@@ -67,7 +68,7 @@ impl Polygon {
             normal_vector,
             basis_vectors,
             plane_projected_vertices,
-            polygon_intersection_ray_termination,
+            point_in_polygon_inf_test_vector,
             projection_origin,
             vertices,
         })
@@ -82,7 +83,7 @@ impl Clone for Polygon {
             surface: self.surface.clone(),
             basis_vectors: self.basis_vectors,
             plane_projected_vertices: self.plane_projected_vertices.clone(),
-            polygon_intersection_ray_termination: self.polygon_intersection_ray_termination.clone(),
+            point_in_polygon_inf_test_vector: self.point_in_polygon_inf_test_vector.clone(),
             projection_origin: self.projection_origin,
             vertices: self.vertices.clone(),
         }
@@ -118,18 +119,19 @@ impl Entity for Polygon {
             self.basis_vectors,
         );
 
-        let a_matrix = self.polygon_intersection_ray_termination.x - projected_intersection.x;
-        let c_matrix = self.polygon_intersection_ray_termination.y - projected_intersection.y;
-
         let mut projected_edge_intersection_count = 0;
-        for edge_p2_index in 1..self.plane_projected_vertices.len() {
+        let num_plane_projected_vertices = self.plane_projected_vertices.len();
+        for edge_p1_index in 0..num_plane_projected_vertices {
+            let edge_p2_index = (edge_p1_index + 1) % num_plane_projected_vertices;
+            let edge_p1 = self.plane_projected_vertices[edge_p1_index];
             let edge_p2 = self.plane_projected_vertices[edge_p2_index];
-            let edge_p1 = self.plane_projected_vertices[edge_p2_index - 1];
 
-            let b_matrix = -(edge_p2.x - edge_p1.x);
-            let d_matrix = -(edge_p2.y - edge_p1.y);
+            let a_matrix = edge_p2.x - edge_p1.x;
+            let b_matrix = -self.point_in_polygon_inf_test_vector.x;
+            let c_matrix = edge_p2.y - edge_p1.y;
+            let d_matrix = -self.point_in_polygon_inf_test_vector.y;
 
-            let determinant = a_matrix * d_matrix - c_matrix * d_matrix;
+            let determinant = (a_matrix * d_matrix) - (c_matrix * b_matrix);
             if f64::abs(determinant) < 10e-10 {
                 // matrix is not invertible, no intersection with edge and test vector
                 continue;
@@ -142,8 +144,8 @@ impl Entity for Polygon {
             let d_inv_matrix = a_matrix * inverse_multiplicand;
 
             let solution_multiplicand = PlaneCoords {
-                x: edge_p1.x - projected_intersection.x,
-                y: edge_p1.y - projected_intersection.y,
+                x: projected_intersection.x - edge_p1.x,
+                y: projected_intersection.y - edge_p1.y,
             };
 
             let solution = PlaneCoords {
@@ -151,12 +153,12 @@ impl Entity for Polygon {
                 y: c_inv_matrix * solution_multiplicand.x + d_inv_matrix * solution_multiplicand.y,
             };
 
-            if solution.x >= 0.0 && solution.y >= 0.0 && solution.y <= 1.0 {
+            if solution.y >= 0.0 && solution.x >= 0.0 && solution.x <= 1.0 {
                 projected_edge_intersection_count = projected_edge_intersection_count + 1;
             }
         }
 
-        if projected_edge_intersection_count % 2 == 0 {
+        if projected_edge_intersection_count % 2 != 0 {
             Some(Intersection {
                 location: plane_intersection_point,
                 distance_along_ray: distance,

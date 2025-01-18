@@ -1,8 +1,8 @@
-use std::{fmt, sync, thread};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::{fmt, sync, thread};
 
 use image::{ImageBuffer, RgbImage};
 use num_cpus;
@@ -115,7 +115,7 @@ impl Tracer {
                 for ray_index in start_index..end_index {
                     let ray = &_self_arc_clone.primary_rays[ray_index];
 
-                    // block to release counter guard ASAP
+                    // code block to release counter guard ASAP
                     {
                         match _counter_mutex_arc_clone.lock() {
                             Ok(mut counter_mutex_guard) => {

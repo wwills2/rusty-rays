@@ -18,6 +18,8 @@ surface z-red-0
     diffuse 1.0 0.5 0.5
 surface z-red-1
     diffuse 1.0 0.0 0.0
+surface floor-plane
+    diffuse 0.3 0.3 0.3
 sphere zero-vec     0.1 0.0 0.0 0.0
 sphere x-blue-0     0.1 0.5 0.0 0.0
 sphere x-blue-1     0.1 1.0 0.0 0.0
@@ -25,3 +27,8 @@ sphere y-green-0    0.1 0.0 0.5 0.0
 sphere y-green-1    0.1 0.0 1.0 0.0
 sphere z-red-0      0.1 0.0 0.0 0.5
 sphere z-red-1      0.1 0.0 0.0 1.0
+polygon floor-plane
+0 -0.5 0
+0 -.5 1.0
+1.0 -0.5 1.0
+1.0 -0.5 0
