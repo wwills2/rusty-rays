@@ -5,7 +5,7 @@ use std::path::PathBuf;
 use std::str::FromStr;
 
 use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use serde_json5;
 use slog::Level;
 
@@ -70,12 +70,15 @@ pub static CONFIG: Lazy<Config> = Lazy::new(|| match get_config_file_content_str
         }
     },
     Err(error) => {
+        eprintln!("failed to find or open config file. {}", error);
+
         match create_config_file() {
             Err(error) => {
-                eprintln!("Failed to read config file. {}", error);
+                eprintln!("failed to create config file. {}", error);
             }
             _ => {}
-        }
+        };
+
         println!("using default config");
 
         DEFAULT_CONFIG.clone()

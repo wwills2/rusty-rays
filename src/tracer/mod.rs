@@ -2,10 +2,9 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use std::{fmt, sync, thread};
+use std::{fmt, thread};
 
 use image::{ImageBuffer, RgbImage};
-use num_cpus;
 use slog::{debug, error, info, trace, warn};
 
 use crate::tracer::color::Color;
@@ -151,7 +150,7 @@ impl Tracer {
                         Ok(mut mutex_guard) => {
                             mutex_guard[ray.i][ray.j] = pixel_color;
                         }
-                        Err(error) => {
+                        Err(_) => {
                             warn!(LOG, "thread {} encountered poisoned data error from mutex when writing color for pixel ({}, {}). proceeding with render", thread_num, ray.i, ray.j);
                         }
                     }

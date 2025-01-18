@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Lines};
-use std::iter::{Enumerate, Peekable};
+use std::iter::Peekable;
 use std::str::SplitWhitespace;
 
 use once_cell::sync::Lazy;
@@ -12,16 +12,13 @@ use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::model::{Model, ModelError};
-use crate::tracer::polygon::PolygonError::FailedToInitializePolygon;
-use crate::tracer::polygon::{
-    calculate_basis_vectors, calculate_plane_normal_vector, Polygon, PolygonError,
-};
+use crate::tracer::polygon::Polygon;
 use crate::tracer::sphere::Sphere;
 use crate::tracer::types::{Entity, Fov, Screen, Surface};
 use crate::utils::logger::LOG;
 
 static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
-    let mut map = HashMap::from([
+    let map = HashMap::from([
         ("background", "background".to_string()),
         ("eyep", "eyep".to_string()),
         ("lookp", "lookp".to_string()),
@@ -37,7 +34,7 @@ static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
 });
 
 static SURFACE_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
-    let mut map = HashMap::from([
+    let map = HashMap::from([
         ("diffuse", "diffuse".to_string()),
         ("ambient", "ambient".to_string()),
         ("specular", "specular".to_string()),
@@ -77,9 +74,10 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
 
     let mut line_number = 1;
 
-    /// closure which handles error and edge cases, returns a peekable iterator of the next line's
-    /// content, and sets the while loop condition to false if need be.
-    /// returns None when there are not more lines in the file.
+    /*  closure which handles error and edge cases, returns a peekable iterator of the next line's
+       content, and sets the while loop condition to false if need be.
+       returns None when there are not more lines in the file.
+    */
     let mut get_next_line: GetNextLineClosure = Box::new(move |maybe_next_eq_fn| {
         debug!(
             LOG,
@@ -107,7 +105,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             return Ok(None);
         }
 
-        let mut line_read_result = maybe_line_read_result.unwrap();
+        let line_read_result = maybe_line_read_result.unwrap();
         if line_read_result.is_err() {
             return Err(FailedToParseInputFile(
                 line_number,
@@ -138,7 +136,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             return Err(line_words_result.err().unwrap());
         }
 
-        let mut maybe_next_line = line_words_result?;
+        let maybe_next_line = line_words_result?;
         if maybe_next_line.is_none() {
             break;
         }
@@ -242,7 +240,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             let h_fov: f64 = match line_words_iter.next() {
                 Some(h_fov_str) => match h_fov_str.parse::<f64>() {
                     Ok(h_fov) => h_fov,
-                    Err(error) => {
+                    Err(_) => {
                         return Err(FailedToParseInputFile(
                             line_number,
                             format!("invalid horizontal fov value: {}", h_fov_str),
@@ -260,7 +258,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             let v_fov: f64 = match line_words_iter.next() {
                 Some(h_fov_str) => match h_fov_str.parse::<f64>() {
                     Ok(h_fov) => h_fov,
-                    Err(error) => {
+                    Err(_) => {
                         return Err(FailedToParseInputFile(
                             line_number,
                             format!("invalid vertical fov value: {}", h_fov_str),
@@ -298,7 +296,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             let h_screen_px = match line_words_iter.next() {
                 Some(h_screen_px_str) => match h_screen_px_str.parse::<usize>() {
                     Ok(h_fov) => h_fov,
-                    Err(error) => {
+                    Err(_) => {
                         return Err(FailedToParseInputFile(
                             line_number,
                             format!("invalid horizontal screen size: {}", h_screen_px_str),
@@ -316,7 +314,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             let v_screen_px = match line_words_iter.next() {
                 Some(v_screen_px_str) => match v_screen_px_str.parse::<usize>() {
                     Ok(h_fov) => h_fov,
-                    Err(error) => {
+                    Err(_) => {
                         return Err(FailedToParseInputFile(
                             line_number,
                             format!("invalid vertical screen size: {}", v_screen_px_str),
@@ -568,7 +566,7 @@ fn process_polygon(
 
         loop {
             let mut xyz_str_vec = vec![];
-            for i in 0..3 {
+            for _ in 0..3 {
                 if let Some(next) = line_words_iter.next() {
                     xyz_str_vec.push(next);
                 }
@@ -657,7 +655,7 @@ fn process_surface(
             return Err(line_read_result.err().unwrap());
         }
 
-        let mut maybe_next_line = line_read_result?;
+        let maybe_next_line = line_read_result?;
         if maybe_next_line.is_none() {
             debug!(
                 LOG,
@@ -670,7 +668,7 @@ fn process_surface(
         let next_line = maybe_next_line.unwrap();
         let next_line_value = next_line.line_value;
         let mut line_words_iter = next_line_value.split_whitespace();
-        let mut maybe_next_word = line_words_iter.next();
+        let maybe_next_word = line_words_iter.next();
 
         if maybe_next_word.is_none() {
             // blank line, skip

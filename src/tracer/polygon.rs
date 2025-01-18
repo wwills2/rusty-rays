@@ -6,10 +6,9 @@ use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 use crate::tracer::plane_coords::PlaneCoords;
 use crate::tracer::polygon::PolygonError::FailedToInitializePolygon;
-use crate::tracer::sphere::TYPE_NAME;
 use crate::tracer::types::{Entity, Intersection, Surface};
 
-pub static NAME: &str = "polygon";
+pub static TYPE_NAME: &str = "polygon";
 
 #[derive(Debug)]
 pub struct Polygon {
@@ -168,7 +167,7 @@ impl Entity for Polygon {
         }
     }
 
-    fn calculate_color(&self, intersection_point: &Coords) -> &Color {
+    fn calculate_color(&self, _intersection_point: &Coords) -> &Color {
         // todo intersection point will be important for reflection angles
         &self.surface.diffuse
     }
@@ -239,7 +238,7 @@ pub fn calculate_basis_vectors(
     }
 
     let edge_vector_basis_1 = (vertex_2 - vertex_1).calc_normalized_vector();
-    let mut basis_2 = normal.cross(&edge_vector_basis_1).calc_normalized_vector();
+    let basis_2 = normal.cross(&edge_vector_basis_1).calc_normalized_vector();
 
     Ok((edge_vector_basis_1, basis_2))
 }

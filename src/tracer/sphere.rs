@@ -89,7 +89,7 @@ impl Entity for Sphere {
         })
     }
 
-    fn calculate_color(&self, intersection_point: &Coords) -> &Color {
+    fn calculate_color(&self, _intersection_point: &Coords) -> &Color {
         // todo intersection point will be important for reflection angles
         &self.surface.diffuse
     }
