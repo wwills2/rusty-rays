@@ -13,7 +13,10 @@ A simple primary-bounce raytracer
 #### Config
 
 * The application will create a `config.json5` file in the users config directory
-    * win: `C:\Users\Alice\AppData\Roaming\rusty-rays\`
+    * win: `C:\Users\<user>\AppData\Roaming\rusty-rays\`
     * linux: `$HOME/.config/rusty-rays/`
     * mac: `$HOME/Library/Application Support/rusty-rays/`
 * If `config.json5` is inaccessible, the application will use its internal default config
+* If a value is missing from the config or null, the default internal config value will be used
+* If `max_render_threads` option is set to a value less than 1 or greater than the number of physical cores,
+  it will default to the number of physical cores.

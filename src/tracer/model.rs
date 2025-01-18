@@ -1,12 +1,13 @@
+use std::fmt;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
+
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 use crate::tracer::polygon::Polygon;
 use crate::tracer::sphere::Sphere;
 use crate::tracer::types::{Entity, Fov, Screen};
-use std::fmt;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::{Path, PathBuf};
 
 #[derive(Debug)]
 pub struct Model {
@@ -18,6 +19,7 @@ pub struct Model {
     pub screen: Screen,
     pub spheres: Vec<Sphere>,
     pub polygons: Vec<Polygon>,
+    pub all_entities: Vec<Box<dyn Entity>>,
 }
 
 #[derive(Debug)]
@@ -55,18 +57,7 @@ impl Model {
         };
 
         let file_reader = BufReader::new(open_file_result);
-
-        match crate::tracer::parse(file_reader) {
-            Ok(model) => Ok(model),
-            Err(error) => Err(error),
-        }
-    }
-
-    pub fn all_entity_iter(&self) -> impl Iterator<Item = &dyn Entity> {
-        self.spheres
-            .iter()
-            .map(|sphere| sphere as &dyn Entity)
-            .chain(self.polygons.iter().map(|polygon| polygon as &dyn Entity))
+        crate::tracer::parse(file_reader)
     }
 }
 
@@ -123,6 +114,7 @@ impl Clone for Model {
             },
             spheres: self.spheres.clone(),
             polygons: self.polygons.clone(),
+            all_entities: self.all_entities.clone(),
         }
     }
 }

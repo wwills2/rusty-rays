@@ -6,14 +6,18 @@ use std::str::SplitWhitespace;
 
 use once_cell::sync::Lazy;
 use slog::{debug, warn};
+use uuid::Uuid;
 
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::model::{Model, ModelError};
-use crate::tracer::polygon::Polygon;
+use crate::tracer::polygon::PolygonError::FailedToInitializePolygon;
+use crate::tracer::polygon::{
+    calculate_basis_vectors, calculate_plane_normal_vector, Polygon, PolygonError,
+};
 use crate::tracer::sphere::Sphere;
-use crate::tracer::types::{Fov, Screen, Surface};
+use crate::tracer::types::{Entity, Fov, Screen, Surface};
 use crate::utils::logger::LOG;
 
 static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
@@ -68,18 +72,15 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         height: 0,
     };
     let mut spheres: Vec<Sphere> = Vec::new();
-    // todo: need to support parsing polygons
     let mut polygons: Vec<Polygon> = Vec::new();
     let mut surfaces: HashMap<String, Surface> = HashMap::new();
 
-    let mut line_number = 0;
+    let mut line_number = 1;
 
     /// closure which handles error and edge cases, returns a peekable iterator of the next line's
     /// content, and sets the while loop condition to false if need be.
     /// returns None when there are not more lines in the file.
     let mut get_next_line: GetNextLineClosure = Box::new(move |maybe_next_eq_fn| {
-        line_number += 1;
-
         debug!(
             LOG,
             "attempting to retrieve input file line number {}", line_number
@@ -120,8 +121,10 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         let input_file_line = line_read_result.unwrap();
         debug!(
             LOG,
-            "read \"{}\" from input file line{}", input_file_line, line_number
+            "read \"{}\" from input file line {}", input_file_line, line_number
         );
+
+        line_number += 1;
 
         Ok(Some(NextLine {
             line_number,
@@ -135,7 +138,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             return Err(line_words_result.err().unwrap());
         }
 
-        let mut maybe_next_line = line_words_result.unwrap();
+        let mut maybe_next_line = line_words_result?;
         if maybe_next_line.is_none() {
             break;
         }
@@ -345,14 +348,13 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             .unwrap()
             .eq(peeked_line_word)
         {
-            match process_surface(
+            if let Err(result) = process_surface(
                 &mut get_next_line,
                 &mut line_words_iter,
                 &mut surfaces,
                 line_number,
             ) {
-                Err(error) => return Err(error),
-                _ => {}
+                return Err(result);
             }
         } else if SCENE_DATA_KEYWORDS
             .get("sphere")
@@ -365,12 +367,37 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             };
             debug!(LOG, "processed sphere {}", sphere);
             spheres.push(sphere);
+        } else if SCENE_DATA_KEYWORDS
+            .get("polygon")
+            .unwrap()
+            .eq(peeked_line_word)
+        {
+            let polygon = match process_polygon(
+                &mut get_next_line,
+                &mut line_words_iter,
+                &surfaces,
+                line_number,
+            ) {
+                Ok(polygon) => polygon,
+                Err(error) => return Err(error),
+            };
+            debug!(LOG, "processed polygon");
+            polygons.push(polygon);
         } else {
             warn!(
                 LOG,
                 "unhandled key word \"{}\". line number {}", peeked_line_word, line_number
             );
         }
+    }
+
+    let mut all_entities: Vec<Box<dyn Entity>> = Vec::new();
+    for sphere in &spheres {
+        all_entities.push(Box::new(sphere.clone()));
+    }
+
+    for polygon in &polygons {
+        all_entities.push(Box::new(polygon.clone()));
     }
 
     Ok(Model {
@@ -382,6 +409,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         screen,
         spheres,
         polygons,
+        all_entities,
     })
 }
 
@@ -452,10 +480,116 @@ fn process_sphere(
     }
 
     Ok(Sphere {
+        uuid: Uuid::new_v4(),
         surface: surface.clone(),
         radius,
         position,
     })
+}
+
+fn process_polygon(
+    determine_next_line_iter: &mut GetNextLineClosure,
+    keyword_line_iter: &mut Peekable<SplitWhitespace>,
+    surfaces: &HashMap<String, Surface>,
+    starting_line_number: usize,
+) -> Result<Polygon, ModelError> {
+    debug!(LOG, "processing polygon");
+
+    let mut line_number = starting_line_number;
+
+    // lines associated with polygons following the keyword should start with floats
+    let is_matching_line: NextIfClosure =
+        Box::new(|line: &String| match line.split_whitespace().next() {
+            Some(word) => SCENE_DATA_KEYWORDS.get(word).is_none() && word.parse::<f64>().is_ok(),
+            None => false,
+        });
+
+    // advance past polygon keyword
+    keyword_line_iter.next();
+
+    let maybe_surface_name = keyword_line_iter.next();
+    let surface = match maybe_surface_name {
+        Some(surface_name) => {
+            let maybe_surface = surfaces.get(surface_name);
+            match maybe_surface {
+                Some(surface) => surface,
+                None => {
+                    return Err(FailedToParseInputFile(
+                        line_number,
+                        format!("surface {} referenced before definition", surface_name),
+                    ))
+                }
+            }
+        }
+        None => {
+            return Err(FailedToParseInputFile(
+                starting_line_number,
+                "polygon declaration missing surface".to_string(),
+            ))
+        }
+    };
+
+    let invalid_value = keyword_line_iter.next();
+    if invalid_value.is_some() {
+        return Err(FailedToParseInputFile(
+            line_number,
+            format!("value {} should be on a new line", invalid_value.unwrap()),
+        ));
+    }
+
+    let mut vertices: Vec<Coords> = vec![];
+
+    loop {
+        let line_read_result = determine_next_line_iter(Some(&is_matching_line));
+        if line_read_result.is_err() {
+            return Err(line_read_result.err().unwrap());
+        }
+
+        let maybe_next_line = line_read_result?;
+        if maybe_next_line.is_none() {
+            debug!(
+                LOG,
+                "process_polygon() received None for next line. calculating plane normal before appending"
+            );
+
+            let polygon = match Polygon::new(vertices, surface.clone()) {
+                Ok(polygon) => polygon,
+                Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+            };
+
+            debug!(LOG, "appending polygon and returning");
+            return Ok(polygon);
+        }
+
+        let next_line = maybe_next_line.unwrap();
+        let next_line_value = next_line.line_value;
+        line_number = next_line.line_number;
+        let mut line_words_iter = next_line_value.split_whitespace();
+
+        loop {
+            let mut xyz_str_vec = vec![];
+            for i in 0..3 {
+                if let Some(next) = line_words_iter.next() {
+                    xyz_str_vec.push(next);
+                }
+            }
+
+            if xyz_str_vec.len() == 0 {
+                // could take no more from line. go to next line
+                break;
+            }
+
+            match Coords::new_from_str_vec(xyz_str_vec) {
+                Ok(coords) => vertices.push(coords),
+                Err(error) => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        format!("{}", error),
+                    ))
+                }
+            }
+        }
+    }
 }
 
 fn process_surface(
@@ -523,9 +657,8 @@ fn process_surface(
             return Err(line_read_result.err().unwrap());
         }
 
-        let mut maybe_next_line = line_read_result.unwrap();
+        let mut maybe_next_line = line_read_result?;
         if maybe_next_line.is_none() {
-            // next line is none, entire file has been processed
             debug!(
                 LOG,
                 "process_surface() received None for next line. appending surface and returning"
@@ -594,15 +727,6 @@ fn process_surface(
             .eq(first_word_next_line)
         {
             warn!(LOG, "relfect is not currently supported")
-        } else {
-            debug!(
-                    LOG,
-                    "key word {} on input file line {} is not associated with surfaces. stopping surface processing and appending surface",
-                    first_word_next_line,
-                    next_line.line_number
-                );
-            surfaces.insert(name, surface);
-            return Ok(());
         }
     }
 }

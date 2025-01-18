@@ -1,5 +1,7 @@
 use std::fmt;
 
+use uuid::Uuid;
+
 use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
 
@@ -71,12 +73,38 @@ impl fmt::Display for Surface {
     }
 }
 
+// intersection type and methods
+pub struct Intersection {
+    pub distance_along_ray: f64,
+    pub location: Coords,
+}
+
 // entity trait and methods
-pub trait Entity {
-    fn calculate_intersection_distances(
+pub trait Entity: Send + Sync {
+    fn get_uuid(&self) -> Uuid;
+    fn get_type(&self) -> String;
+    fn calculate_intersection(
         &self,
         ray_direction: &Coords,
         ray_origin: &Coords,
-    ) -> Option<Vec<f64>>;
+    ) -> Option<Intersection>;
     fn calculate_color(&self, intersection_point: &Coords) -> &Color;
+    fn entity_clone(&self) -> Box<dyn Entity>;
+}
+
+impl fmt::Debug for dyn Entity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "entity of type {} with uuid {}",
+            self.get_type(),
+            self.get_uuid()
+        )
+    }
+}
+
+impl Clone for Box<dyn Entity> {
+    fn clone(&self) -> Self {
+        self.entity_clone()
+    }
 }
