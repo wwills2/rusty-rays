@@ -1,49 +1,32 @@
+use crate::tracer::coords::Coords;
+use crate::tracer::misc_types::{Entity, Intersection, Ray, SphereSurfaceNormalKey};
+use crate::tracer::model::{Model, ModelError};
+use crate::utils::config::CONFIG;
+use crate::utils::logger::LOG;
+use image::{ImageBuffer, RgbImage};
+use shader::color::Color;
+use slog::{debug, error, info, trace, warn};
+use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::{fmt, thread};
+use uuid::Uuid;
 
-use image::{ImageBuffer, RgbImage};
-use slog::{debug, error, info, trace, warn};
-
-use crate::tracer::color::Color;
-use crate::tracer::coords::Coords;
-use crate::tracer::model::{Model, ModelError};
-use crate::tracer::types::{Entity, Intersection};
-use crate::utils::config::CONFIG;
-use crate::utils::logger::LOG;
-
-mod color;
 mod coords;
-mod input_file_parser;
+mod misc_types;
 pub mod model;
 mod plane_coords;
 mod polygon;
+mod rayshade4_file_parser;
+mod shader;
 mod sphere;
-mod types;
-
-#[derive(Debug, Copy)]
-struct _Ray {
-    i: usize,
-    j: usize,
-    coords: Coords,
-}
-
-impl Clone for _Ray {
-    fn clone(&self) -> Self {
-        _Ray {
-            i: self.i,
-            j: self.j,
-            coords: self.coords.clone(),
-        }
-    }
-}
 
 #[derive(Debug)]
 pub struct Tracer {
     model: Model,
-    primary_rays: Vec<_Ray>,
+    primary_rays: Vec<Ray>,
 }
 
 impl Clone for Tracer {
@@ -143,9 +126,23 @@ impl Tracer {
                         }
                     }
 
-                    let pixel_color = _self_arc_clone
-                        .calculate_primary_ray_color(ray, &_self_arc_clone.model)
-                        .clone();
+                    let pixel_color = match _self_arc_clone
+                        .calculate_ray_closest_intersection(ray, &_self_arc_clone.model)
+                    {
+                        Some(intersection) => {
+                            let intersected_entity = _self_arc_clone
+                                .model
+                                .all_entities
+                                .get(&intersection.uuid)
+                                .unwrap();
+                            shader::calculate_color(
+                                &intersected_entity.get_surface(),
+                                &intersection,
+                            )
+                        }
+                        None => _self_arc_clone.model.background.clone(),
+                    };
+
                     match _image_data_arc_clone.lock() {
                         Ok(mut mutex_guard) => {
                             mutex_guard[ray.i][ray.j] = pixel_color;
@@ -195,7 +192,7 @@ impl Tracer {
         }
     }
 
-    fn calculate_primary_ray_color(&self, ray: &_Ray, model: &Model) -> Color {
+    fn calculate_ray_closest_intersection(&self, ray: &Ray, model: &Model) -> Option<Intersection> {
         trace!(
             LOG,
             "Calculating primary ray color for pixel ({}, {})",
@@ -203,38 +200,40 @@ impl Tracer {
             ray.j
         );
 
-        let mut closest_entity: Option<&Box<dyn Entity>> = None;
-        let mut closest_intersection: Intersection = Intersection {
-            distance_along_ray: f64::INFINITY,
-            location: Coords::new(),
-        };
+        let mut closest_intersection: Option<Intersection> = None;
 
-        for entity in &model.all_entities {
-            let intersection = match entity.calculate_intersection(&ray.coords, &self.model.eyep) {
-                Some(intersection) => intersection,
-                None => continue,
-            };
-
-            let mut set_entity = false;
-            if intersection.distance_along_ray < closest_intersection.distance_along_ray {
-                closest_intersection = intersection;
-                set_entity = true;
-            }
-
-            if set_entity {
-                closest_entity = Some(entity);
+        for (_, entity) in &model.all_entities {
+            if let Some(intersection) = entity.calculate_intersection(&ray) {
+                match closest_intersection {
+                    Some(ref current_intersection)
+                        if intersection.distance_along_ray
+                            < current_intersection.distance_along_ray =>
+                    {
+                        closest_intersection = Some(intersection);
+                    }
+                    None => {
+                        closest_intersection = Some(intersection);
+                    }
+                    _ => {}
+                }
             }
         }
 
-        let color = match closest_entity {
-            Some(entity) => entity.calculate_color(&closest_intersection.location),
-            None => &self.model.background,
-        };
-
-        color.clone()
+        closest_intersection
     }
 
-    fn calculate_primary_rays(model: &Model) -> Vec<_Ray> {
+    fn calculate_ray_first_intersection(&self, ray: &Ray, model: &Model) -> Option<Intersection> {
+        for (_, entity) in &model.all_entities {
+            match entity.calculate_intersection(&ray) {
+                Some(intersection) => return Some(intersection),
+                _ => {}
+            }
+        }
+
+        None
+    }
+
+    fn calculate_primary_rays(model: &Model) -> Vec<Ray> {
         let direction = model.lookp - model.eyep;
         let forward = direction.calc_normalized_vector();
         let right = forward.cross(&model.up).calc_normalized_vector();
@@ -263,7 +262,7 @@ screen plane height: {}",
             screen_plane_width
         );
 
-        let mut rays: Vec<_Ray> = Vec::new();
+        let mut rays: Vec<Ray> = Vec::new();
 
         let calc_ray_definition = |i, j| -> Coords {
             let horz_pos = ((j as f64 + 0.5) / model.screen.width as f64) - 0.5;
@@ -294,7 +293,12 @@ screen plane height: {}",
                     j,
                     coords
                 );
-                rays.push(_Ray { i, j, coords });
+                rays.push(Ray {
+                    i,
+                    j,
+                    direction: coords,
+                    origin: model.eyep,
+                });
             }
         }
 
@@ -343,7 +347,8 @@ fn normalize_and_flatten_to_u8_rgb(image_data: &Vec<Vec<Color>>) -> Vec<u8> {
 }
 
 fn parse(input_file_buf_reader: BufReader<File>) -> Result<Model, ModelError> {
-    let model = input_file_parser::iterate_input_data(input_file_buf_reader.lines().peekable())?;
+    let model =
+        rayshade4_file_parser::iterate_input_data(input_file_buf_reader.lines().peekable())?;
     trace!(LOG, "parsed model:\n{}", model);
     Ok(model)
 }

@@ -2,7 +2,7 @@ use std::fmt;
 
 use slog::warn;
 
-use crate::tracer::color::ColorError::FailedToParseFromVec;
+use crate::tracer::shader::color::ColorError::FailedToParseFromVec;
 use crate::utils::logger::LOG;
 
 #[derive(Debug)]

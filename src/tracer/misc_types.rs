@@ -2,8 +2,8 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
+use crate::tracer::shader::color::Color;
 
 // fov type and methods
 #[derive(Debug)]
@@ -73,22 +73,45 @@ impl fmt::Display for Surface {
     }
 }
 
+// ray type and methods
+#[derive(Debug, Copy)]
+pub struct Ray {
+    pub i: usize,
+    pub j: usize,
+    pub direction: Coords,
+    pub origin: Coords,
+}
+
+impl Clone for Ray {
+    fn clone(&self) -> Self {
+        Ray {
+            i: self.i,
+            j: self.j,
+            direction: self.direction.clone(),
+            origin: self.origin.clone(),
+        }
+    }
+}
+
 // intersection type and methods
 pub struct Intersection {
     pub distance_along_ray: f64,
     pub location: Coords,
+    pub normal_vector: Coords,
+    pub uuid: Uuid,
+}
+
+pub struct SphereSurfaceNormalKey {
+    pub intersection_point: Coords,
+    pub uuid: Uuid,
 }
 
 // entity trait and methods
 pub trait Entity: Send + Sync {
     fn get_uuid(&self) -> Uuid;
     fn get_type(&self) -> String;
-    fn calculate_intersection(
-        &self,
-        ray_direction: &Coords,
-        ray_origin: &Coords,
-    ) -> Option<Intersection>;
-    fn calculate_color(&self, intersection_point: &Coords) -> &Color;
+    fn get_surface(&self) -> &Surface;
+    fn calculate_intersection(&self, ray: &Ray) -> Option<Intersection>;
     fn entity_clone(&self) -> Box<dyn Entity>;
 }
 

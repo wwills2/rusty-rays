@@ -2,11 +2,10 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
+use crate::tracer::misc_types::{Entity, Intersection, Ray, Surface};
 use crate::tracer::plane_coords::PlaneCoords;
 use crate::tracer::polygon::PolygonError::FailedToInitializePolygon;
-use crate::tracer::types::{Entity, Intersection, Surface};
 
 pub static TYPE_NAME: &str = "polygon";
 
@@ -98,18 +97,18 @@ impl Entity for Polygon {
         TYPE_NAME.to_string()
     }
 
-    fn calculate_intersection(
-        &self,
-        ray_direction: &Coords,
-        ray_origin: &Coords,
-    ) -> Option<Intersection> {
-        let denominator = &self.normal_vector * ray_direction;
+    fn get_surface(&self) -> &Surface {
+        &self.surface
+    }
+
+    fn calculate_intersection(&self, ray: &Ray) -> Option<Intersection> {
+        let denominator = &self.normal_vector * &ray.direction;
         if f64::abs(denominator) < 10e-10 {
             return None;
         }
 
-        let distance = (self.normal_vector * (self.vertices[0] - ray_origin)) / denominator;
-        let plane_intersection_point = ray_origin + &(ray_direction * distance);
+        let distance = (self.normal_vector * (self.vertices[0] - ray.origin)) / denominator;
+        let plane_intersection_point = ray.origin + (&ray.direction * distance);
 
         // assume ray is cast from here to (inf, inf)
         let projected_intersection = project_to_plane(
@@ -161,15 +160,12 @@ impl Entity for Polygon {
             Some(Intersection {
                 location: plane_intersection_point,
                 distance_along_ray: distance,
+                normal_vector: self.normal_vector,
+                uuid: self.uuid,
             })
         } else {
             None
         }
-    }
-
-    fn calculate_color(&self, _intersection_point: &Coords) -> &Color {
-        // todo intersection point will be important for reflection angles
-        &self.surface.diffuse
     }
 
     fn entity_clone(&self) -> Box<dyn Entity> {

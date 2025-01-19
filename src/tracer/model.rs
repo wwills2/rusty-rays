@@ -1,13 +1,15 @@
+use crate::tracer::coords::Coords;
+use crate::tracer::misc_types::{Entity, Fov, Screen};
+use crate::tracer::polygon::Polygon;
+use crate::tracer::shader::color::Color;
+use crate::tracer::shader::light::Light;
+use crate::tracer::sphere::Sphere;
+use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
 use std::io::BufReader;
 use std::path::Path;
-
-use crate::tracer::color::Color;
-use crate::tracer::coords::Coords;
-use crate::tracer::polygon::Polygon;
-use crate::tracer::sphere::Sphere;
-use crate::tracer::types::{Entity, Fov, Screen};
+use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct Model {
@@ -17,9 +19,10 @@ pub struct Model {
     pub up: Coords,
     pub fov: Fov,
     pub screen: Screen,
-    pub spheres: Vec<Sphere>,
-    pub polygons: Vec<Polygon>,
-    pub all_entities: Vec<Box<dyn Entity>>,
+    pub light_sources: Vec<Light>,
+    pub spheres: HashMap<Uuid, Sphere>,
+    pub polygons: HashMap<Uuid, Polygon>,
+    pub all_entities: HashMap<Uuid, Box<dyn Entity>>,
 }
 
 #[derive(Debug)]
@@ -90,7 +93,7 @@ impl fmt::Display for Model {
             self.screen,
             self.spheres
                 .iter()
-                .map(|s| format!("    {}", s))
+                .map(|(_, sphere)| format!("    {}", sphere))
                 .collect::<Vec<String>>()
                 .join(",\n")
         )
@@ -112,6 +115,7 @@ impl Clone for Model {
                 width: self.screen.width,
                 height: self.screen.height,
             },
+            light_sources: self.light_sources.clone(),
             spheres: self.spheres.clone(),
             polygons: self.polygons.clone(),
             all_entities: self.all_entities.clone(),
