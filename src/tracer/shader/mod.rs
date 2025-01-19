@@ -3,7 +3,6 @@ use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::model::Model;
 use crate::tracer::shader::color::Color;
 use crate::tracer::shader::light::Light;
-use std::ops::Div;
 
 pub mod color;
 pub mod light;

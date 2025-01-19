@@ -1,18 +1,16 @@
 use crate::tracer::coords::Coords;
-use crate::tracer::misc_types::{Entity, Intersection, Ray, SphereSurfaceNormalKey};
+use crate::tracer::misc_types::{Intersection, Ray};
 use crate::tracer::model::{Model, ModelError};
 use crate::utils::config::CONFIG;
 use crate::utils::logger::LOG;
 use image::{ImageBuffer, RgbImage};
 use shader::color::Color;
 use slog::{debug, error, info, trace, warn};
-use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::{fmt, thread};
-use uuid::Uuid;
 
 mod coords;
 mod misc_types;

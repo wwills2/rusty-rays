@@ -193,7 +193,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             let intensity = match line_words_iter.next() {
                 Some(intensity_str) => match intensity_str.parse::<f64>() {
                     Ok(intensity) => intensity,
-                    Err(error) => {
+                    Err(_) => {
                         return Err(FailedToParseInputFile(
                             line_number,
                             "light intensity must be a valid decimal value".to_string(),

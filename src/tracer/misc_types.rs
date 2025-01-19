@@ -102,11 +102,6 @@ pub struct Intersection {
     pub uuid: Uuid,
 }
 
-pub struct SphereSurfaceNormalKey {
-    pub intersection_point: Coords,
-    pub uuid: Uuid,
-}
-
 // entity trait and methods
 pub trait Entity: Send + Sync {
     fn get_uuid(&self) -> Uuid;
