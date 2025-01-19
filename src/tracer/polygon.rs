@@ -165,7 +165,7 @@ impl Entity for Polygon {
                 position: plane_intersection_point,
                 ray: ray.clone(),
                 distance_along_ray: distance,
-                normal_vector_to_intersection: self.normal_vector,
+                surface_normal_at_intersection: self.normal_vector,
                 uuid: self.uuid,
             })
         } else {

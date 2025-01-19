@@ -98,7 +98,7 @@ pub struct Intersection {
     pub distance_along_ray: f64,
     pub ray: Ray,
     pub position: Coords,
-    pub normal_vector_to_intersection: Coords,
+    pub surface_normal_at_intersection: Coords,
     pub uuid: Uuid,
 }
 

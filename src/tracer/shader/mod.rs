@@ -1,4 +1,5 @@
 use crate::tracer;
+use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::model::Model;
 use crate::tracer::shader::color::Color;
@@ -16,7 +17,7 @@ pub fn calculate_color(
         return surface.ambient.clone();
     }
 
-    let mut exposed_light_sources: Vec<&Light> = vec![];
+    let mut point_color = surface.ambient.clone();
 
     for light_source in &model.light_sources {
         let mut shadow_ray_direction = light_source.position - starting_intersection.position;
@@ -40,18 +41,42 @@ pub fn calculate_color(
             match tracer::calculate_ray_first_intersection(&shadow_ray, model) {
                 Some(intersection) => intersection,
                 None => {
-                    exposed_light_sources.push(light_source);
+                    adjust_color_for_light(
+                        &mut point_color,
+                        light_source,
+                        &shadow_ray.direction,
+                        &starting_intersection.surface_normal_at_intersection,
+                        surface,
+                    );
                     continue;
                 }
             };
 
         if shadow_ray_intersection.distance_along_ray > shadow_ray_length {
-            exposed_light_sources.push(light_source);
+            adjust_color_for_light(
+                &mut point_color,
+                light_source,
+                &shadow_ray.direction,
+                &starting_intersection.surface_normal_at_intersection,
+                surface,
+            )
         }
     }
 
-    match exposed_light_sources.len() {
-        0 => surface.ambient.clone(),
-        _ => surface.diffuse.clone(),
+    point_color
+}
+
+fn adjust_color_for_light(
+    point_color: &mut Color,
+    light: &Light,
+    shadow_ray_direction: &Coords,
+    surface_normal: &Coords,
+    surface: &Surface,
+) {
+    let surface_normal_relative_angle = shadow_ray_direction * surface_normal;
+    if surface_normal_relative_angle > 0.0 {
+        let diffuse_intensity = light.intensity * surface_normal_relative_angle;
+        let diffuse_color_contribution = &surface.diffuse.scale(diffuse_intensity);
+        point_color.adjust_by(diffuse_color_contribution);
     }
 }
