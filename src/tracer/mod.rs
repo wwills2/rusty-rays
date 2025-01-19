@@ -136,6 +136,7 @@ impl Tracer {
                                 .get(&intersection.uuid)
                                 .unwrap();
                             shader::calculate_color(
+                                &_self_arc_clone.model,
                                 &intersected_entity.get_surface(),
                                 &intersection,
                             )
@@ -222,17 +223,6 @@ impl Tracer {
         closest_intersection
     }
 
-    fn calculate_ray_first_intersection(&self, ray: &Ray, model: &Model) -> Option<Intersection> {
-        for (_, entity) in &model.all_entities {
-            match entity.calculate_intersection(&ray) {
-                Some(intersection) => return Some(intersection),
-                _ => {}
-            }
-        }
-
-        None
-    }
-
     fn calculate_primary_rays(model: &Model) -> Vec<Ray> {
         let direction = model.lookp - model.eyep;
         let forward = direction.calc_normalized_vector();
@@ -304,6 +294,17 @@ screen plane height: {}",
 
         rays
     }
+}
+
+fn calculate_ray_first_intersection(ray: &Ray, model: &Model) -> Option<Intersection> {
+    for (_, entity) in &model.all_entities {
+        match entity.calculate_intersection(&ray) {
+            Some(intersection) => return Some(intersection),
+            _ => {}
+        }
+    }
+
+    None
 }
 
 pub fn write(output_file_path: &Path, raw_image_data: &Vec<Vec<Color>>) -> Result<(), WriteError> {

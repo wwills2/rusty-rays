@@ -155,7 +155,12 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             continue;
         }
 
+        // process line comment
         let peeked_line_word = *maybe_peeked_line_word.unwrap();
+        if peeked_line_word.to_string().eq("//") {
+            continue;
+        }
+
         if SCENE_DATA_KEYWORDS
             .get("background")
             .unwrap()

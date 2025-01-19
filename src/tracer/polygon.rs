@@ -108,6 +108,10 @@ impl Entity for Polygon {
         }
 
         let distance = (self.normal_vector * (self.vertices[0] - ray.origin)) / denominator;
+        if distance < 0.0 {
+            return None;
+        }
+
         let plane_intersection_point = ray.origin + (&ray.direction * distance);
 
         // assume ray is cast from here to (inf, inf)
@@ -158,9 +162,10 @@ impl Entity for Polygon {
 
         if projected_edge_intersection_count % 2 != 0 {
             Some(Intersection {
-                location: plane_intersection_point,
+                position: plane_intersection_point,
+                ray: ray.clone(),
                 distance_along_ray: distance,
-                normal_vector: self.normal_vector,
+                normal_vector_to_intersection: self.normal_vector,
                 uuid: self.uuid,
             })
         } else {

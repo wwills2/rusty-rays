@@ -96,8 +96,9 @@ impl Clone for Ray {
 // intersection type and methods
 pub struct Intersection {
     pub distance_along_ray: f64,
-    pub location: Coords,
-    pub normal_vector: Coords,
+    pub ray: Ray,
+    pub position: Coords,
+    pub normal_vector_to_intersection: Coords,
     pub uuid: Uuid,
 }
 

@@ -85,8 +85,9 @@ impl Entity for Sphere {
 
         Some(Intersection {
             distance_along_ray: distance,
-            location,
-            normal_vector: normal,
+            ray: ray.clone(),
+            position: location,
+            normal_vector_to_intersection: normal,
             uuid: self.uuid,
         })
     }
