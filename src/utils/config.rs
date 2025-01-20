@@ -140,7 +140,7 @@ fn create_config_file() -> Result<(), String> {
                 log_message_cache_overflow_limit: Some(
                     DEFAULT_CONFIG.log_message_cache_overflow_limit,
                 ),
-                max_render_threads: Some(DEFAULT_CONFIG.max_render_threads),
+                max_render_threads: None, // set null
             };
             let config_contents_result = serde_json5::to_string(&config);
             if config_contents_result.is_err() {

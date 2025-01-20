@@ -2,9 +2,8 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
-use crate::tracer::types::{Entity, Intersection, Surface};
+use crate::tracer::misc_types::{Entity, Intersection, Ray, Surface};
 
 pub static TYPE_NAME: &str = "sphere";
 
@@ -42,20 +41,20 @@ impl Entity for Sphere {
         TYPE_NAME.to_string()
     }
 
-    fn calculate_intersection(
-        &self,
-        ray_direction: &Coords,
-        ray_origin: &Coords,
-    ) -> Option<Intersection> {
-        let a = ray_direction.x.powi(2) + ray_direction.y.powi(2) + ray_direction.z.powi(2);
+    fn get_surface(&self) -> &Surface {
+        &self.surface
+    }
 
-        let b = (2.0 * ray_direction.x * (ray_origin.x - self.position.x))
-            + (2.0 * ray_direction.y * (ray_origin.y - self.position.y))
-            + (2.0 * ray_direction.z * (ray_origin.z - self.position.z));
+    fn calculate_intersection(&self, ray: &Ray) -> Option<Intersection> {
+        let a = ray.direction.x.powi(2) + ray.direction.y.powi(2) + ray.direction.z.powi(2);
 
-        let c = (ray_origin.x - self.position.x).powi(2)
-            + (ray_origin.y - self.position.y).powi(2)
-            + (ray_origin.z - self.position.z).powi(2)
+        let b = (2.0 * ray.direction.x * (ray.origin.x - self.position.x))
+            + (2.0 * ray.direction.y * (ray.origin.y - self.position.y))
+            + (2.0 * ray.direction.z * (ray.origin.z - self.position.z));
+
+        let c = (ray.origin.x - self.position.x).powi(2)
+            + (ray.origin.y - self.position.y).powi(2)
+            + (ray.origin.z - self.position.z).powi(2)
             - self.radius.powi(2);
 
         let discriminant = b * b - 4.0 * a * c;
@@ -81,17 +80,16 @@ impl Entity for Sphere {
             return None;
         }
 
-        let location = ray_origin + &(ray_direction * distance);
+        let location = ray.origin + (&ray.direction * distance);
+        let normal = (location - &self.position).calc_normalized_vector();
 
         Some(Intersection {
             distance_along_ray: distance,
-            location,
+            ray: ray.clone(),
+            position: location,
+            surface_normal_at_intersection: normal,
+            uuid: self.uuid,
         })
-    }
-
-    fn calculate_color(&self, _intersection_point: &Coords) -> &Color {
-        // todo intersection point will be important for reflection angles
-        &self.surface.diffuse
     }
 
     fn entity_clone(&self) -> Box<dyn Entity> {

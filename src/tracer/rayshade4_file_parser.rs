@@ -2,19 +2,20 @@ use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Lines};
 use std::iter::Peekable;
-use std::str::SplitWhitespace;
+use std::str::{FromStr, SplitWhitespace};
 
 use once_cell::sync::Lazy;
 use slog::{debug, warn};
 use uuid::Uuid;
 
-use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
+use crate::tracer::misc_types::{Entity, Fov, Screen, Surface};
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::model::{Model, ModelError};
 use crate::tracer::polygon::Polygon;
+use crate::tracer::shader::color::Color;
+use crate::tracer::shader::light::{Light, LightSourceType};
 use crate::tracer::sphere::Sphere;
-use crate::tracer::types::{Entity, Fov, Screen, Surface};
 use crate::utils::logger::LOG;
 
 static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
@@ -28,6 +29,7 @@ static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
         ("polygon", "polygon".to_string()),
         ("up", "up".to_string()),
         ("surface", "surface".to_string()),
+        ("light", "light".to_string()),
     ]);
 
     map
@@ -68,8 +70,9 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         width: 0,
         height: 0,
     };
-    let mut spheres: Vec<Sphere> = Vec::new();
-    let mut polygons: Vec<Polygon> = Vec::new();
+    let mut light_sources: Vec<Light> = Vec::new();
+    let mut spheres: HashMap<Uuid, Sphere> = HashMap::new();
+    let mut polygons: HashMap<Uuid, Polygon> = HashMap::new();
     let mut surfaces: HashMap<String, Surface> = HashMap::new();
 
     let mut line_number = 1;
@@ -152,7 +155,12 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             continue;
         }
 
+        // process line comment
         let peeked_line_word = *maybe_peeked_line_word.unwrap();
+        if peeked_line_word.to_string().eq("//") {
+            continue;
+        }
+
         if SCENE_DATA_KEYWORDS
             .get("background")
             .unwrap()
@@ -174,6 +182,66 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                     format!("value {} should be on a new line", invalid_value.unwrap()),
                 ));
             }
+        } else if SCENE_DATA_KEYWORDS
+            .get("light")
+            .unwrap()
+            .eq(peeked_line_word)
+        {
+            // iterate past peeked keyword
+            line_words_iter.next();
+
+            let intensity = match line_words_iter.next() {
+                Some(intensity_str) => match intensity_str.parse::<f64>() {
+                    Ok(intensity) => intensity,
+                    Err(_) => {
+                        return Err(FailedToParseInputFile(
+                            line_number,
+                            "light intensity must be a valid decimal value".to_string(),
+                        ))
+                    }
+                },
+                None => {
+                    return Err(FailedToParseInputFile(
+                        line_number,
+                        "missing light source intensity value".to_string(),
+                    ))
+                }
+            };
+
+            let light_source_type = match line_words_iter.next() {
+                Some(source_type) => match LightSourceType::from_str(source_type) {
+                    Ok(light_source_type) => light_source_type,
+                    Err(error) => {
+                        return Err(FailedToParseInputFile(line_number, error.to_string()))
+                    }
+                },
+                None => {
+                    return Err(FailedToParseInputFile(
+                        line_number,
+                        "missing light source type".to_string(),
+                    ))
+                }
+            };
+
+            let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(4).collect();
+            let position = match Coords::new_from_str_vec(xyz_vec) {
+                Ok(position) => position,
+                Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+            };
+
+            let invalid_value = line_words_iter.next();
+            if invalid_value.is_some() {
+                return Err(FailedToParseInputFile(
+                    line_number,
+                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                ));
+            }
+
+            light_sources.push(Light {
+                position,
+                intensity,
+                source_type: light_source_type,
+            })
         } else if SCENE_DATA_KEYWORDS
             .get("eyep")
             .unwrap()
@@ -364,7 +432,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 Err(error) => return Err(error),
             };
             debug!(LOG, "processed sphere {}", sphere);
-            spheres.push(sphere);
+            spheres.insert(sphere.uuid, sphere);
         } else if SCENE_DATA_KEYWORDS
             .get("polygon")
             .unwrap()
@@ -380,7 +448,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 Err(error) => return Err(error),
             };
             debug!(LOG, "processed polygon");
-            polygons.push(polygon);
+            polygons.insert(polygon.uuid, polygon);
         } else {
             warn!(
                 LOG,
@@ -389,13 +457,13 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         }
     }
 
-    let mut all_entities: Vec<Box<dyn Entity>> = Vec::new();
-    for sphere in &spheres {
-        all_entities.push(Box::new(sphere.clone()));
+    let mut all_entities: HashMap<Uuid, Box<dyn Entity>> = HashMap::new();
+    for (uuid, sphere) in &spheres {
+        all_entities.insert(uuid.clone(), Box::new(sphere.clone()));
     }
 
-    for polygon in &polygons {
-        all_entities.push(Box::new(polygon.clone()));
+    for (uuid, polygon) in &polygons {
+        all_entities.insert(uuid.clone(), Box::new(polygon.clone()));
     }
 
     Ok(Model {
@@ -405,6 +473,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         up,
         fov,
         screen,
+        light_sources,
         spheres,
         polygons,
         all_entities,
@@ -706,25 +775,97 @@ fn process_surface(
             .unwrap()
             .eq(first_word_next_line)
         {
-            warn!(LOG, "ambient is not currently supported")
+            debug!(
+                LOG,
+                "processing ambient color on line input file line {}", next_line.line_number
+            );
+
+            let rgba_vec: Vec<&str> = line_words_iter.take(4).collect();
+            let ambient_color_result = Color::new_from_str_vec(rgba_vec);
+
+            match ambient_color_result {
+                Ok(ambient_color) => {
+                    surface.diffuse = ambient_color;
+                }
+                Err(error) => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        error.to_string(),
+                    ))
+                }
+            }
         } else if SURFACE_KEYWORDS
             .get("specular")
             .unwrap()
             .eq(first_word_next_line)
         {
-            warn!(LOG, "specular is not currently supported")
+            debug!(
+                LOG,
+                "processing specular color on line input file line {}", next_line.line_number
+            );
+
+            let rgba_vec: Vec<&str> = line_words_iter.take(4).collect();
+            let specular_color_result = Color::new_from_str_vec(rgba_vec);
+
+            match specular_color_result {
+                Ok(specular_color) => {
+                    surface.diffuse = specular_color;
+                }
+                Err(error) => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        error.to_string(),
+                    ))
+                }
+            }
         } else if SURFACE_KEYWORDS
             .get("specpow")
             .unwrap()
             .eq(first_word_next_line)
         {
-            warn!(LOG, "specpow is not currently supported")
+            let maybe_specpow_str = match line_words_iter.next() {
+                Some(specpow_str) => specpow_str,
+                None => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        "missing specpow value".to_string(),
+                    ))
+                }
+            };
+
+            match maybe_specpow_str.parse::<f64>() {
+                Ok(specpow) => surface.specpow = specpow,
+                Err(_) => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        "specpow value must be valid decimal value".to_string(),
+                    ))
+                }
+            }
         } else if SURFACE_KEYWORDS
             .get("reflect")
             .unwrap()
             .eq(first_word_next_line)
         {
-            warn!(LOG, "relfect is not currently supported")
+            let maybe_reflect_str = match line_words_iter.next() {
+                Some(reflect_str) => reflect_str,
+                None => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        "missing reflect value".to_string(),
+                    ))
+                }
+            };
+
+            match maybe_reflect_str.parse::<f64>() {
+                Ok(reflect) => surface.reflect = reflect,
+                Err(_) => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        "reflect value must be valid decimal value".to_string(),
+                    ))
+                }
+            }
         }
     }
 }
