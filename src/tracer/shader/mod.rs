@@ -17,6 +17,8 @@ pub fn calculate_color(
         return surface.ambient.clone();
     }
 
+    let ray_to_eyep = (model.eyep - starting_intersection.position).calc_normalized_vector();
+
     let mut point_color = surface.ambient.clone();
 
     for light_source in &model.light_sources {
@@ -25,7 +27,7 @@ pub fn calculate_color(
         shadow_ray_direction.normalize_vector();
 
         /*  move the origin just off the intersected object along the shadow ray to protect against
-           intersection with the originally intersected object
+          intersection with the originally intersected object
         */
         let offset_shadow_ray_origin =
             starting_intersection.position + (&shadow_ray_direction * 10e-5);
@@ -46,6 +48,7 @@ pub fn calculate_color(
                         light_source,
                         &shadow_ray.direction,
                         &starting_intersection.surface_normal_at_intersection,
+                        &ray_to_eyep,
                         surface,
                     );
                     continue;
@@ -58,6 +61,7 @@ pub fn calculate_color(
                 light_source,
                 &shadow_ray.direction,
                 &starting_intersection.surface_normal_at_intersection,
+                &ray_to_eyep,
                 surface,
             )
         }
@@ -71,12 +75,21 @@ fn adjust_color_for_light(
     light: &Light,
     shadow_ray_direction: &Coords,
     surface_normal: &Coords,
+    ray_to_eyep: &Coords,
     surface: &Surface,
 ) {
-    let surface_normal_relative_angle = shadow_ray_direction * surface_normal;
+    let surface_normal_relative_angle: f64 = shadow_ray_direction * surface_normal;
     if surface_normal_relative_angle > 0.0 {
         let diffuse_intensity = light.intensity * surface_normal_relative_angle;
         let diffuse_color_contribution = &surface.diffuse.scale(diffuse_intensity);
         point_color.adjust_by(diffuse_color_contribution);
+
+        let specular_half_vector = (shadow_ray_direction + ray_to_eyep).calc_normalized_vector();
+        let specular_normal_angle: f64 = &specular_half_vector * surface_normal;
+        if specular_normal_angle > 0.0 {
+            let specular_intensity = light.intensity * specular_normal_angle.powf(surface.specpow);
+            let specular_color_contribution = &surface.specular.scale(specular_intensity);
+            point_color.adjust_by(specular_color_contribution)
+        }
     }
 }
