@@ -1,16 +1,19 @@
+use std::{fmt, thread};
+use std::fs::File;
+use std::io::{BufRead, BufReader};
+use std::path::Path;
+use std::sync::{Arc, Mutex};
+
+use image::{ImageBuffer, RgbImage};
+use slog::{debug, error, info, trace, warn};
+
+use shader::color::Color;
+
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray};
 use crate::tracer::model::{Model, ModelError};
 use crate::utils::config::CONFIG;
 use crate::utils::logger::LOG;
-use image::{ImageBuffer, RgbImage};
-use shader::color::Color;
-use slog::{debug, error, info, trace, warn};
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::Path;
-use std::sync::{Arc, Mutex};
-use std::{fmt, thread};
 
 mod coords;
 mod misc_types;
@@ -124,23 +127,7 @@ impl Tracer {
                         }
                     }
 
-                    let pixel_color = match _self_arc_clone
-                        .calculate_ray_closest_intersection(ray, &_self_arc_clone.model)
-                    {
-                        Some(intersection) => {
-                            let intersected_entity = _self_arc_clone
-                                .model
-                                .all_entities
-                                .get(&intersection.uuid)
-                                .unwrap();
-                            shader::calculate_color(
-                                &_self_arc_clone.model,
-                                &intersected_entity.get_surface(),
-                                &intersection,
-                            )
-                        }
-                        None => _self_arc_clone.model.background.clone(),
-                    };
+                    let pixel_color = shader::process_ray(0, ray, &_self_arc_clone.model);
 
                     match _image_data_arc_clone.lock() {
                         Ok(mut mutex_guard) => {
@@ -189,36 +176,6 @@ impl Tracer {
                 "an asynchronous resource sharing error occurred".to_string(),
             )),
         }
-    }
-
-    fn calculate_ray_closest_intersection(&self, ray: &Ray, model: &Model) -> Option<Intersection> {
-        trace!(
-            LOG,
-            "Calculating primary ray color for pixel ({}, {})",
-            ray.i,
-            ray.j
-        );
-
-        let mut closest_intersection: Option<Intersection> = None;
-
-        for (_, entity) in &model.all_entities {
-            if let Some(intersection) = entity.calculate_intersection(&ray) {
-                match closest_intersection {
-                    Some(ref current_intersection)
-                        if intersection.distance_along_ray
-                            < current_intersection.distance_along_ray =>
-                    {
-                        closest_intersection = Some(intersection);
-                    }
-                    None => {
-                        closest_intersection = Some(intersection);
-                    }
-                    _ => {}
-                }
-            }
-        }
-
-        closest_intersection
     }
 
     fn calculate_primary_rays(model: &Model) -> Vec<Ray> {
@@ -292,6 +249,36 @@ screen plane height: {}",
 
         rays
     }
+}
+
+fn calculate_ray_closest_intersection(ray: &Ray, model: &Model) -> Option<Intersection> {
+    trace!(
+        LOG,
+        "Calculating primary ray color for pixel ({}, {})",
+        ray.i,
+        ray.j
+    );
+
+    let mut closest_intersection: Option<Intersection> = None;
+
+    for (_, entity) in &model.all_entities {
+        if let Some(intersection) = entity.calculate_intersection(&ray) {
+            match closest_intersection {
+                Some(ref current_intersection)
+                    if intersection.distance_along_ray
+                        < current_intersection.distance_along_ray =>
+                {
+                    closest_intersection = Some(intersection);
+                }
+                None => {
+                    closest_intersection = Some(intersection);
+                }
+                _ => {}
+            }
+        }
+    }
+
+    closest_intersection
 }
 
 fn calculate_ray_first_intersection(ray: &Ray, model: &Model) -> Option<Intersection> {
