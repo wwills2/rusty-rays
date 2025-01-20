@@ -2,7 +2,7 @@ use std::fmt;
 
 use slog::warn;
 
-use crate::tracer::color::ColorError::FailedToParseFromVec;
+use crate::tracer::shader::color::ColorError::FailedToParseFromVec;
 use crate::utils::logger::LOG;
 
 #[derive(Debug)]
@@ -64,6 +64,22 @@ impl Color {
         Ok(color)
     }
 
+    pub fn scale(&self, scalar: f64) -> Color {
+        Color {
+            r: clamp(self.r * scalar),
+            g: clamp(self.g * scalar),
+            b: clamp(self.b * scalar),
+            a: self.a, // transparency does not change when scaling color
+        }
+    }
+
+    pub fn adjust_by(&mut self, change: &Color) {
+        self.r = clamp(self.r + change.r);
+        self.g = clamp(self.g + change.g);
+        self.b = clamp(self.b + change.b);
+        self.a = clamp(self.a + change.a);
+    }
+
     pub fn normalize(&self) -> NormalizedColor {
         let normalize = |color: f64| -> u8 { (color * 255.0).clamp(0.0, 255.0) as u8 };
 
@@ -83,6 +99,16 @@ impl Clone for Color {
             b: self.b,
             a: self.a,
         }
+    }
+}
+
+fn clamp(channel_value: f64) -> f64 {
+    if channel_value > 1.0 {
+        1.0
+    } else if channel_value < 0.0 {
+        0.0
+    } else {
+        channel_value
     }
 }
 

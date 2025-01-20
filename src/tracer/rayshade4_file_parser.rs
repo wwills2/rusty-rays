@@ -1,23 +1,25 @@
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{BufReader, Lines};
-use std::iter::{Enumerate, Peekable};
-use std::str::SplitWhitespace;
+use std::iter::Peekable;
+use std::str::{FromStr, SplitWhitespace};
 
 use once_cell::sync::Lazy;
 use slog::{debug, warn};
+use uuid::Uuid;
 
-use crate::tracer::color::Color;
 use crate::tracer::coords::Coords;
+use crate::tracer::misc_types::{Entity, Fov, Screen, Surface};
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::model::{Model, ModelError};
 use crate::tracer::polygon::Polygon;
+use crate::tracer::shader::color::Color;
+use crate::tracer::shader::light::{Light, LightSourceType};
 use crate::tracer::sphere::Sphere;
-use crate::tracer::types::{Fov, Screen, Surface};
 use crate::utils::logger::LOG;
 
 static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
-    let mut map = HashMap::from([
+    let map = HashMap::from([
         ("background", "background".to_string()),
         ("eyep", "eyep".to_string()),
         ("lookp", "lookp".to_string()),
@@ -27,13 +29,14 @@ static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
         ("polygon", "polygon".to_string()),
         ("up", "up".to_string()),
         ("surface", "surface".to_string()),
+        ("light", "light".to_string()),
     ]);
 
     map
 });
 
 static SURFACE_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
-    let mut map = HashMap::from([
+    let map = HashMap::from([
         ("diffuse", "diffuse".to_string()),
         ("ambient", "ambient".to_string()),
         ("specular", "specular".to_string()),
@@ -67,19 +70,18 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         width: 0,
         height: 0,
     };
-    let mut spheres: Vec<Sphere> = Vec::new();
-    // todo: need to support parsing polygons
-    let mut polygons: Vec<Polygon> = Vec::new();
+    let mut light_sources: Vec<Light> = Vec::new();
+    let mut spheres: HashMap<Uuid, Sphere> = HashMap::new();
+    let mut polygons: HashMap<Uuid, Polygon> = HashMap::new();
     let mut surfaces: HashMap<String, Surface> = HashMap::new();
 
-    let mut line_number = 0;
+    let mut line_number = 1;
 
-    /// closure which handles error and edge cases, returns a peekable iterator of the next line's
-    /// content, and sets the while loop condition to false if need be.
-    /// returns None when there are not more lines in the file.
+    /*  closure which handles error and edge cases, returns a peekable iterator of the next line's
+       content, and sets the while loop condition to false if need be.
+       returns None when there are not more lines in the file.
+    */
     let mut get_next_line: GetNextLineClosure = Box::new(move |maybe_next_eq_fn| {
-        line_number += 1;
-
         debug!(
             LOG,
             "attempting to retrieve input file line number {}", line_number
@@ -106,7 +108,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             return Ok(None);
         }
 
-        let mut line_read_result = maybe_line_read_result.unwrap();
+        let line_read_result = maybe_line_read_result.unwrap();
         if line_read_result.is_err() {
             return Err(FailedToParseInputFile(
                 line_number,
@@ -120,8 +122,10 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         let input_file_line = line_read_result.unwrap();
         debug!(
             LOG,
-            "read \"{}\" from input file line{}", input_file_line, line_number
+            "read \"{}\" from input file line {}", input_file_line, line_number
         );
+
+        line_number += 1;
 
         Ok(Some(NextLine {
             line_number,
@@ -135,7 +139,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             return Err(line_words_result.err().unwrap());
         }
 
-        let mut maybe_next_line = line_words_result.unwrap();
+        let maybe_next_line = line_words_result?;
         if maybe_next_line.is_none() {
             break;
         }
@@ -151,7 +155,12 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             continue;
         }
 
+        // process line comment
         let peeked_line_word = *maybe_peeked_line_word.unwrap();
+        if peeked_line_word.to_string().eq("//") {
+            continue;
+        }
+
         if SCENE_DATA_KEYWORDS
             .get("background")
             .unwrap()
@@ -173,6 +182,66 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                     format!("value {} should be on a new line", invalid_value.unwrap()),
                 ));
             }
+        } else if SCENE_DATA_KEYWORDS
+            .get("light")
+            .unwrap()
+            .eq(peeked_line_word)
+        {
+            // iterate past peeked keyword
+            line_words_iter.next();
+
+            let intensity = match line_words_iter.next() {
+                Some(intensity_str) => match intensity_str.parse::<f64>() {
+                    Ok(intensity) => intensity,
+                    Err(_) => {
+                        return Err(FailedToParseInputFile(
+                            line_number,
+                            "light intensity must be a valid decimal value".to_string(),
+                        ))
+                    }
+                },
+                None => {
+                    return Err(FailedToParseInputFile(
+                        line_number,
+                        "missing light source intensity value".to_string(),
+                    ))
+                }
+            };
+
+            let light_source_type = match line_words_iter.next() {
+                Some(source_type) => match LightSourceType::from_str(source_type) {
+                    Ok(light_source_type) => light_source_type,
+                    Err(error) => {
+                        return Err(FailedToParseInputFile(line_number, error.to_string()))
+                    }
+                },
+                None => {
+                    return Err(FailedToParseInputFile(
+                        line_number,
+                        "missing light source type".to_string(),
+                    ))
+                }
+            };
+
+            let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(4).collect();
+            let position = match Coords::new_from_str_vec(xyz_vec) {
+                Ok(position) => position,
+                Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+            };
+
+            let invalid_value = line_words_iter.next();
+            if invalid_value.is_some() {
+                return Err(FailedToParseInputFile(
+                    line_number,
+                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                ));
+            }
+
+            light_sources.push(Light {
+                position,
+                intensity,
+                source_type: light_source_type,
+            })
         } else if SCENE_DATA_KEYWORDS
             .get("eyep")
             .unwrap()
@@ -239,7 +308,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             let h_fov: f64 = match line_words_iter.next() {
                 Some(h_fov_str) => match h_fov_str.parse::<f64>() {
                     Ok(h_fov) => h_fov,
-                    Err(error) => {
+                    Err(_) => {
                         return Err(FailedToParseInputFile(
                             line_number,
                             format!("invalid horizontal fov value: {}", h_fov_str),
@@ -257,7 +326,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             let v_fov: f64 = match line_words_iter.next() {
                 Some(h_fov_str) => match h_fov_str.parse::<f64>() {
                     Ok(h_fov) => h_fov,
-                    Err(error) => {
+                    Err(_) => {
                         return Err(FailedToParseInputFile(
                             line_number,
                             format!("invalid vertical fov value: {}", h_fov_str),
@@ -295,7 +364,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             let h_screen_px = match line_words_iter.next() {
                 Some(h_screen_px_str) => match h_screen_px_str.parse::<usize>() {
                     Ok(h_fov) => h_fov,
-                    Err(error) => {
+                    Err(_) => {
                         return Err(FailedToParseInputFile(
                             line_number,
                             format!("invalid horizontal screen size: {}", h_screen_px_str),
@@ -313,7 +382,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             let v_screen_px = match line_words_iter.next() {
                 Some(v_screen_px_str) => match v_screen_px_str.parse::<usize>() {
                     Ok(h_fov) => h_fov,
-                    Err(error) => {
+                    Err(_) => {
                         return Err(FailedToParseInputFile(
                             line_number,
                             format!("invalid vertical screen size: {}", v_screen_px_str),
@@ -345,14 +414,13 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             .unwrap()
             .eq(peeked_line_word)
         {
-            match process_surface(
+            if let Err(result) = process_surface(
                 &mut get_next_line,
                 &mut line_words_iter,
                 &mut surfaces,
                 line_number,
             ) {
-                Err(error) => return Err(error),
-                _ => {}
+                return Err(result);
             }
         } else if SCENE_DATA_KEYWORDS
             .get("sphere")
@@ -364,13 +432,38 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 Err(error) => return Err(error),
             };
             debug!(LOG, "processed sphere {}", sphere);
-            spheres.push(sphere);
+            spheres.insert(sphere.uuid, sphere);
+        } else if SCENE_DATA_KEYWORDS
+            .get("polygon")
+            .unwrap()
+            .eq(peeked_line_word)
+        {
+            let polygon = match process_polygon(
+                &mut get_next_line,
+                &mut line_words_iter,
+                &surfaces,
+                line_number,
+            ) {
+                Ok(polygon) => polygon,
+                Err(error) => return Err(error),
+            };
+            debug!(LOG, "processed polygon");
+            polygons.insert(polygon.uuid, polygon);
         } else {
             warn!(
                 LOG,
                 "unhandled key word \"{}\". line number {}", peeked_line_word, line_number
             );
         }
+    }
+
+    let mut all_entities: HashMap<Uuid, Box<dyn Entity>> = HashMap::new();
+    for (uuid, sphere) in &spheres {
+        all_entities.insert(uuid.clone(), Box::new(sphere.clone()));
+    }
+
+    for (uuid, polygon) in &polygons {
+        all_entities.insert(uuid.clone(), Box::new(polygon.clone()));
     }
 
     Ok(Model {
@@ -380,8 +473,10 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         up,
         fov,
         screen,
+        light_sources,
         spheres,
         polygons,
+        all_entities,
     })
 }
 
@@ -452,10 +547,116 @@ fn process_sphere(
     }
 
     Ok(Sphere {
+        uuid: Uuid::new_v4(),
         surface: surface.clone(),
         radius,
         position,
     })
+}
+
+fn process_polygon(
+    determine_next_line_iter: &mut GetNextLineClosure,
+    keyword_line_iter: &mut Peekable<SplitWhitespace>,
+    surfaces: &HashMap<String, Surface>,
+    starting_line_number: usize,
+) -> Result<Polygon, ModelError> {
+    debug!(LOG, "processing polygon");
+
+    let mut line_number = starting_line_number;
+
+    // lines associated with polygons following the keyword should start with floats
+    let is_matching_line: NextIfClosure =
+        Box::new(|line: &String| match line.split_whitespace().next() {
+            Some(word) => SCENE_DATA_KEYWORDS.get(word).is_none() && word.parse::<f64>().is_ok(),
+            None => false,
+        });
+
+    // advance past polygon keyword
+    keyword_line_iter.next();
+
+    let maybe_surface_name = keyword_line_iter.next();
+    let surface = match maybe_surface_name {
+        Some(surface_name) => {
+            let maybe_surface = surfaces.get(surface_name);
+            match maybe_surface {
+                Some(surface) => surface,
+                None => {
+                    return Err(FailedToParseInputFile(
+                        line_number,
+                        format!("surface {} referenced before definition", surface_name),
+                    ))
+                }
+            }
+        }
+        None => {
+            return Err(FailedToParseInputFile(
+                starting_line_number,
+                "polygon declaration missing surface".to_string(),
+            ))
+        }
+    };
+
+    let invalid_value = keyword_line_iter.next();
+    if invalid_value.is_some() {
+        return Err(FailedToParseInputFile(
+            line_number,
+            format!("value {} should be on a new line", invalid_value.unwrap()),
+        ));
+    }
+
+    let mut vertices: Vec<Coords> = vec![];
+
+    loop {
+        let line_read_result = determine_next_line_iter(Some(&is_matching_line));
+        if line_read_result.is_err() {
+            return Err(line_read_result.err().unwrap());
+        }
+
+        let maybe_next_line = line_read_result?;
+        if maybe_next_line.is_none() {
+            debug!(
+                LOG,
+                "process_polygon() received None for next line. calculating plane normal before appending"
+            );
+
+            let polygon = match Polygon::new(vertices, surface.clone()) {
+                Ok(polygon) => polygon,
+                Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+            };
+
+            debug!(LOG, "appending polygon and returning");
+            return Ok(polygon);
+        }
+
+        let next_line = maybe_next_line.unwrap();
+        let next_line_value = next_line.line_value;
+        line_number = next_line.line_number;
+        let mut line_words_iter = next_line_value.split_whitespace();
+
+        loop {
+            let mut xyz_str_vec = vec![];
+            for _ in 0..3 {
+                if let Some(next) = line_words_iter.next() {
+                    xyz_str_vec.push(next);
+                }
+            }
+
+            if xyz_str_vec.len() == 0 {
+                // could take no more from line. go to next line
+                break;
+            }
+
+            match Coords::new_from_str_vec(xyz_str_vec) {
+                Ok(coords) => vertices.push(coords),
+                Err(error) => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        format!("{}", error),
+                    ))
+                }
+            }
+        }
+    }
 }
 
 fn process_surface(
@@ -523,9 +724,8 @@ fn process_surface(
             return Err(line_read_result.err().unwrap());
         }
 
-        let mut maybe_next_line = line_read_result.unwrap();
+        let maybe_next_line = line_read_result?;
         if maybe_next_line.is_none() {
-            // next line is none, entire file has been processed
             debug!(
                 LOG,
                 "process_surface() received None for next line. appending surface and returning"
@@ -537,7 +737,7 @@ fn process_surface(
         let next_line = maybe_next_line.unwrap();
         let next_line_value = next_line.line_value;
         let mut line_words_iter = next_line_value.split_whitespace();
-        let mut maybe_next_word = line_words_iter.next();
+        let maybe_next_word = line_words_iter.next();
 
         if maybe_next_word.is_none() {
             // blank line, skip
@@ -575,34 +775,97 @@ fn process_surface(
             .unwrap()
             .eq(first_word_next_line)
         {
-            warn!(LOG, "ambient is not currently supported")
+            debug!(
+                LOG,
+                "processing ambient color on line input file line {}", next_line.line_number
+            );
+
+            let rgba_vec: Vec<&str> = line_words_iter.take(4).collect();
+            let ambient_color_result = Color::new_from_str_vec(rgba_vec);
+
+            match ambient_color_result {
+                Ok(ambient_color) => {
+                    surface.diffuse = ambient_color;
+                }
+                Err(error) => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        error.to_string(),
+                    ))
+                }
+            }
         } else if SURFACE_KEYWORDS
             .get("specular")
             .unwrap()
             .eq(first_word_next_line)
         {
-            warn!(LOG, "specular is not currently supported")
+            debug!(
+                LOG,
+                "processing specular color on line input file line {}", next_line.line_number
+            );
+
+            let rgba_vec: Vec<&str> = line_words_iter.take(4).collect();
+            let specular_color_result = Color::new_from_str_vec(rgba_vec);
+
+            match specular_color_result {
+                Ok(specular_color) => {
+                    surface.diffuse = specular_color;
+                }
+                Err(error) => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        error.to_string(),
+                    ))
+                }
+            }
         } else if SURFACE_KEYWORDS
             .get("specpow")
             .unwrap()
             .eq(first_word_next_line)
         {
-            warn!(LOG, "specpow is not currently supported")
+            let maybe_specpow_str = match line_words_iter.next() {
+                Some(specpow_str) => specpow_str,
+                None => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        "missing specpow value".to_string(),
+                    ))
+                }
+            };
+
+            match maybe_specpow_str.parse::<f64>() {
+                Ok(specpow) => surface.specpow = specpow,
+                Err(_) => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        "specpow value must be valid decimal value".to_string(),
+                    ))
+                }
+            }
         } else if SURFACE_KEYWORDS
             .get("reflect")
             .unwrap()
             .eq(first_word_next_line)
         {
-            warn!(LOG, "relfect is not currently supported")
-        } else {
-            debug!(
-                    LOG,
-                    "key word {} on input file line {} is not associated with surfaces. stopping surface processing and appending surface",
-                    first_word_next_line,
-                    next_line.line_number
-                );
-            surfaces.insert(name, surface);
-            return Ok(());
+            let maybe_reflect_str = match line_words_iter.next() {
+                Some(reflect_str) => reflect_str,
+                None => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        "missing reflect value".to_string(),
+                    ))
+                }
+            };
+
+            match maybe_reflect_str.parse::<f64>() {
+                Ok(reflect) => surface.reflect = reflect,
+                Err(_) => {
+                    return Err(FailedToParseInputFile(
+                        next_line.line_number,
+                        "reflect value must be valid decimal value".to_string(),
+                    ))
+                }
+            }
         }
     }
 }

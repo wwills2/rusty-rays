@@ -1,7 +1,9 @@
 use std::fmt;
 
-use crate::tracer::color::Color;
+use uuid::Uuid;
+
 use crate::tracer::coords::Coords;
+use crate::tracer::shader::color::Color;
 
 // fov type and methods
 #[derive(Debug)]
@@ -71,12 +73,57 @@ impl fmt::Display for Surface {
     }
 }
 
+// ray type and methods
+#[derive(Debug, Copy)]
+pub struct Ray {
+    pub i: usize,
+    pub j: usize,
+    pub direction: Coords,
+    pub origin: Coords,
+}
+
+impl Clone for Ray {
+    fn clone(&self) -> Self {
+        Ray {
+            i: self.i,
+            j: self.j,
+            direction: self.direction.clone(),
+            origin: self.origin.clone(),
+        }
+    }
+}
+
+// intersection type and methods
+pub struct Intersection {
+    pub distance_along_ray: f64,
+    pub ray: Ray,
+    pub position: Coords,
+    pub surface_normal_at_intersection: Coords,
+    pub uuid: Uuid,
+}
+
 // entity trait and methods
-pub trait Entity {
-    fn calculate_intersection_distances(
-        &self,
-        ray_direction: &Coords,
-        ray_origin: &Coords,
-    ) -> Option<Vec<f64>>;
-    fn calculate_color(&self, intersection_point: &Coords) -> &Color;
+pub trait Entity: Send + Sync {
+    fn get_uuid(&self) -> Uuid;
+    fn get_type(&self) -> String;
+    fn get_surface(&self) -> &Surface;
+    fn calculate_intersection(&self, ray: &Ray) -> Option<Intersection>;
+    fn entity_clone(&self) -> Box<dyn Entity>;
+}
+
+impl fmt::Debug for dyn Entity {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "entity of type {} with uuid {}",
+            self.get_type(),
+            self.get_uuid()
+        )
+    }
+}
+
+impl Clone for Box<dyn Entity> {
+    fn clone(&self) -> Self {
+        self.entity_clone()
+    }
 }
