@@ -93,12 +93,13 @@ fn calculate_color(
     }
 
     if trace_depth < MAX_REFLECTIONS && surface.reflect != 0.0 {
-        let angle_normal_to_source_ray =
-            starting_intersection.position * starting_intersection.surface_normal_at_intersection;
+        let angle_normal_to_source_ray = starting_intersection.ray.direction
+            * starting_intersection.surface_normal_at_intersection;
+
         let scaled_normal_vector = &starting_intersection.surface_normal_at_intersection
             * (2.0 * angle_normal_to_source_ray);
         let reflection_ray_direction =
-            (ray_from_intersection_back_to_source - scaled_normal_vector).calc_normalized_vector();
+            (starting_intersection.ray.direction - scaled_normal_vector).calc_normalized_vector();
 
         /* move the origin just off the intersected object along the shadow ray to protect against
           intersection with the originally intersected object
