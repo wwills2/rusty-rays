@@ -139,14 +139,16 @@ fn adjust_color_for_diffuse_and_specular(
         point_color.adjust_by(diffuse_color_contribution);
 
         if surface.specpow > 0.0 {
-            let specular_half_vector =
-                (shadow_ray_direction + ray_to_eyep).calc_normalized_vector();
-            let specular_normal_angle: f64 = &specular_half_vector * surface_normal;
-            if specular_normal_angle > 0.0 {
-                let specular_intensity =
-                    light.intensity * specular_normal_angle.powf(surface.specpow);
-                let specular_color_contribution = &surface.specular.scale(specular_intensity);
-                point_color.adjust_by(specular_color_contribution)
+            let specular_reflection_incidence: f64 = 2.0 * (shadow_ray_direction * surface_normal);
+            if specular_reflection_incidence > 0.0 {
+                let specular_reflection_ray =
+                    &(surface_normal - shadow_ray_direction) * specular_reflection_incidence;
+                let specular_incidence = &specular_reflection_ray * ray_to_eyep;
+                if specular_incidence > 0.0 {
+                    let specular_intensity = specular_incidence.powf(surface.specpow);
+                    let specular_color_contribution = &surface.specular.scale(specular_intensity);
+                    point_color.adjust_by(specular_color_contribution)
+                }
             }
         }
     }
