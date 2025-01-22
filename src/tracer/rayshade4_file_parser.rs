@@ -697,25 +697,25 @@ fn process_surface(
     let mut surface = Surface {
         name: "name".to_string(),
         ambient: Color {
-            r: 0.1,
-            g: 0.1,
-            b: 0.1,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
             a: 1.0,
-        }, // Dark gray ambient, fully opaque
+        }, // black ambient, fully opaque
         diffuse: Color {
-            r: 0.1,
-            g: 0.1,
-            b: 0.1,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
             a: 1.0,
-        }, // Light gray diffuse, fully opaque
+        }, // black diffuse, fully opaque
         specular: Color {
-            r: 0.5,
-            g: 0.5,
-            b: 0.5,
+            r: 0.0,
+            g: 0.0,
+            b: 0.0,
             a: 1.0,
         },
-        specpow: 32.0, // Typical phong specular power
-        reflect: 0.0,  // Non-reflective
+        specpow: 0.0,
+        reflect: 0.0,
     };
 
     loop {
@@ -809,7 +809,7 @@ fn process_surface(
 
             match specular_color_result {
                 Ok(specular_color) => {
-                    surface.diffuse = specular_color;
+                    surface.specular = specular_color;
                 }
                 Err(error) => {
                     return Err(FailedToParseInputFile(

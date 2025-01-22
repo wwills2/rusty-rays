@@ -177,6 +177,17 @@ impl Sub<&Coords> for Coords {
     }
 }
 
+impl Sub<&Coords> for &Coords {
+    type Output = Coords;
+    fn sub(self, rhs: &Coords) -> Coords {
+        Coords {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+}
+
 impl Mul for Coords {
     type Output = f64;
     fn mul(self, rhs: Coords) -> f64 {

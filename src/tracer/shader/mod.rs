@@ -92,7 +92,7 @@ fn calculate_color(
         }
     }
 
-    if trace_depth < MAX_REFLECTIONS && surface.reflect != 0.0 {
+    if trace_depth < MAX_REFLECTIONS && surface.reflect > 0.0 {
         let angle_normal_to_source_ray = starting_intersection.ray.direction
             * starting_intersection.surface_normal_at_intersection;
 
@@ -133,16 +133,23 @@ fn adjust_color_for_diffuse_and_specular(
 ) {
     let surface_normal_relative_angle: f64 = shadow_ray_direction * surface_normal;
     if surface_normal_relative_angle > 0.0 {
-        let diffuse_intensity = light.intensity * surface_normal_relative_angle;
+        let diffuse_intensity =
+            (1.0 - surface.reflect) * light.intensity * surface_normal_relative_angle;
         let diffuse_color_contribution = &surface.diffuse.scale(diffuse_intensity);
         point_color.adjust_by(diffuse_color_contribution);
 
-        let specular_half_vector = (shadow_ray_direction + ray_to_eyep).calc_normalized_vector();
-        let specular_normal_angle: f64 = &specular_half_vector * surface_normal;
-        if specular_normal_angle > 0.0 {
-            let specular_intensity = light.intensity * specular_normal_angle.powf(surface.specpow);
-            let specular_color_contribution = &surface.specular.scale(specular_intensity);
-            point_color.adjust_by(specular_color_contribution)
+        if surface.specpow > 0.0 {
+            let specular_reflection_incidence: f64 = 2.0 * (shadow_ray_direction * surface_normal);
+            if specular_reflection_incidence > 0.0 {
+                let specular_reflection_ray =
+                    &(surface_normal - shadow_ray_direction) * specular_reflection_incidence;
+                let specular_incidence = &specular_reflection_ray * ray_to_eyep;
+                if specular_incidence > 0.0 {
+                    let specular_intensity = specular_incidence.powf(surface.specpow);
+                    let specular_color_contribution = &surface.specular.scale(specular_intensity);
+                    point_color.adjust_by(specular_color_contribution)
+                }
+            }
         }
     }
 }
