@@ -1,8 +1,8 @@
+use std::{f64, fmt, thread};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
-use std::{fmt, thread};
 
 use image::{ImageBuffer, RgbImage};
 use slog::{debug, error, info, trace, warn};
@@ -185,8 +185,10 @@ impl Tracer {
         let true_up = right.cross(&forward);
 
         let focal_len = direction.calc_vector_length();
-        let half_h_fov = focal_len * f64::tan(model.fov.horz / 2.0);
-        let half_v_fov = focal_len * f64::tan(model.fov.vert / 2.0);
+        let screen_plane_width =
+            2.0 * focal_len * f64::tan((model.fov.horz / 2.0) * (f64::consts::PI / 180.0));
+        let screen_plane_height =
+            2.0 * focal_len * f64::tan((model.fov.vert / 2.0) * (f64::consts::PI / 180.0));
 
         debug!(
             LOG,
@@ -203,19 +205,19 @@ screen plane height: {}",
             right,
             true_up,
             focal_len,
-            half_h_fov,
-            half_v_fov
+            screen_plane_width,
+            screen_plane_height
         );
 
         let mut rays: Vec<Ray> = Vec::new();
 
         let calc_ray_definition = |i, j| -> Coords {
-            let horz_pos = ((2.0 * (j as f64 + 0.5)) / model.screen.width as f64) - 1.0;
-            let vert_pos = 1.0 - ((2.0 * (i as f64 + 0.5)) / model.screen.height as f64);
+            let horz_pos = ((j as f64 + 0.5) / model.screen.width as f64) - 0.5;
+            let vert_pos = 0.5 - ((i as f64 + 0.5) / model.screen.height as f64);
 
             let pixel_pos = model.lookp
-                + (&right * (half_h_fov * horz_pos))
-                + (&true_up * (vert_pos * half_v_fov));
+                + (&right * (screen_plane_width * horz_pos))
+                + (&true_up * (vert_pos * screen_plane_height));
             trace!(
                 LOG,
                 "position of image plane pixel (i: {}, j: {}); {}",
