@@ -324,12 +324,12 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             };
 
             let v_fov: f64 = match line_words_iter.next() {
-                Some(h_fov_str) => match h_fov_str.parse::<f64>() {
-                    Ok(h_fov) => h_fov,
+                Some(v_fov_str) => match v_fov_str.parse::<f64>() {
+                    Ok(v_fov) => v_fov,
                     Err(_) => {
                         return Err(FailedToParseInputFile(
                             line_number,
-                            format!("invalid vertical fov value: {}", h_fov_str),
+                            format!("invalid vertical fov value: {}", v_fov_str),
                         ))
                     }
                 },
@@ -361,9 +361,9 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             // iterate past peeked keyword
             line_words_iter.next();
 
-            let h_screen_px = match line_words_iter.next() {
+            let horz_screen_px = match line_words_iter.next() {
                 Some(h_screen_px_str) => match h_screen_px_str.parse::<usize>() {
-                    Ok(h_fov) => h_fov,
+                    Ok(h_screen_px) => h_screen_px,
                     Err(_) => {
                         return Err(FailedToParseInputFile(
                             line_number,
@@ -379,9 +379,9 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 }
             };
 
-            let v_screen_px = match line_words_iter.next() {
+            let vert_screen_px = match line_words_iter.next() {
                 Some(v_screen_px_str) => match v_screen_px_str.parse::<usize>() {
-                    Ok(h_fov) => h_fov,
+                    Ok(v_screen_px) => v_screen_px,
                     Err(_) => {
                         return Err(FailedToParseInputFile(
                             line_number,
@@ -398,8 +398,8 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             };
 
             screen = Screen {
-                height: h_screen_px,
-                width: v_screen_px,
+                height: vert_screen_px,
+                width: horz_screen_px,
             };
 
             let invalid_value = line_words_iter.next();

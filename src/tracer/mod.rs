@@ -1,4 +1,4 @@
-use std::{fmt, thread};
+use std::{f64, fmt, thread};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
@@ -184,9 +184,11 @@ impl Tracer {
         let right = forward.cross(&model.up).calc_normalized_vector();
         let true_up = right.cross(&forward);
 
-        let focal_len = (model.lookp - model.eyep).calc_vector_length();
-        let screen_plane_width = 2.0 * focal_len * f64::tan(model.fov.horz / 2.0);
-        let screen_plane_height = 2.0 * focal_len * f64::tan(model.fov.vert / 2.0);
+        let focal_len = direction.calc_vector_length();
+        let screen_plane_width =
+            2.0 * focal_len * f64::tan((model.fov.horz / 2.0) * (f64::consts::PI / 180.0));
+        let screen_plane_height =
+            2.0 * focal_len * f64::tan((model.fov.vert / 2.0) * (f64::consts::PI / 180.0));
 
         debug!(
             LOG,
@@ -204,7 +206,7 @@ screen plane height: {}",
             true_up,
             focal_len,
             screen_plane_width,
-            screen_plane_width
+            screen_plane_height
         );
 
         let mut rays: Vec<Ray> = Vec::new();
