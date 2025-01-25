@@ -41,7 +41,7 @@ impl Polygon {
         let mut largest_axis_magnitude = 0.0;
         let mut plane_projected_vertices: Vec<PlaneCoords> = vec![];
         for vertex in &vertices {
-            let projection = project_to_plane(vertex, &projection_origin, &basis_vectors);
+            let projection = project_to_plane(vertex, projection_origin, &basis_vectors);
 
             if projection.x > largest_axis_magnitude {
                 largest_axis_magnitude = projection.x;
@@ -125,8 +125,8 @@ impl Entity for Polygon {
         let num_plane_projected_vertices = self.plane_projected_vertices.len();
         for edge_p1_index in 0..num_plane_projected_vertices {
             let edge_p2_index = (edge_p1_index + 1) % num_plane_projected_vertices;
-            let edge_p1 = self.plane_projected_vertices[edge_p1_index];
-            let edge_p2 = self.plane_projected_vertices[edge_p2_index];
+            let edge_p1 = &self.plane_projected_vertices[edge_p1_index];
+            let edge_p2 = &self.plane_projected_vertices[edge_p2_index];
 
             let a_matrix = edge_p2.x - edge_p1.x;
             let b_matrix = -self.point_in_polygon_inf_test_vector.x;
@@ -156,7 +156,7 @@ impl Entity for Polygon {
             };
 
             if solution.y >= 0.0 && solution.x >= 0.0 && solution.x <= 1.0 {
-                projected_edge_intersection_count = projected_edge_intersection_count + 1;
+                projected_edge_intersection_count += 1;
             }
         }
 
@@ -178,7 +178,7 @@ impl Entity for Polygon {
     }
 }
 
-pub fn calculate_plane_normal_vector(vertices: &Vec<Coords>) -> Result<Coords, String> {
+pub fn calculate_plane_normal_vector(vertices: &[Coords]) -> Result<Coords, String> {
     if vertices.len() < 3 {
         return Err("a polygon must have atleast 3 vertices".to_string());
     }
@@ -222,7 +222,7 @@ pub fn calculate_plane_normal_vector(vertices: &Vec<Coords>) -> Result<Coords, S
 }
 
 pub fn calculate_basis_vectors(
-    vertices: &Vec<Coords>,
+    vertices: &[Coords],
     normal: &Coords,
 ) -> Result<(Coords, Coords), String> {
     let mut index = 1;

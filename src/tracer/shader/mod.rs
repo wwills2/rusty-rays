@@ -22,7 +22,7 @@ pub fn process_ray(trace_depth: u8, ray: &Ray, model: &Model) -> Color {
             calculate_color(
                 trace_depth,
                 model,
-                &intersected_entity.get_surface(),
+                intersected_entity.get_surface(),
                 &intersection,
             )
         }
@@ -36,7 +36,7 @@ fn calculate_color(
     surface: &Surface,
     starting_intersection: &Intersection,
 ) -> Color {
-    if model.light_sources.len() == 0 {
+    if model.light_sources.is_empty() {
         return surface.ambient.clone();
     }
 

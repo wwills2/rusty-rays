@@ -31,16 +31,6 @@ impl fmt::Display for CoordsError {
 
 impl std::error::Error for CoordsError {}
 
-impl fmt::Display for Coords {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "\n{{\n  x: {}, \n  y: {}, \n  z: {},\n}}",
-            self.x, self.y, self.z
-        )
-    }
-}
-
 impl Coords {
     pub fn new() -> Self {
         Coords {
@@ -86,15 +76,15 @@ impl Coords {
             }
         }
 
-        return Ok(coords);
+        Ok(coords)
     }
 
     /// in-place
     pub fn normalize_vector(&mut self) {
         let len = self.calc_vector_length();
-        self.x = self.x / len;
-        self.y = self.y / len;
-        self.z = self.z / len;
+        self.x /= len;
+        self.y /= len;
+        self.z /= len;
     }
 
     /// returns new normalized vector
@@ -120,6 +110,22 @@ impl Coords {
         let z = self.x * rhs.y - self.y * rhs.x;
 
         Coords { x, y, z }
+    }
+}
+
+impl Default for Coords {
+    fn default() -> Self {
+        Coords::new()
+    }
+}
+
+impl fmt::Display for Coords {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "\n{{\n  x: {}, \n  y: {}, \n  z: {},\n}}",
+            self.x, self.y, self.z
+        )
     }
 }
 

@@ -144,8 +144,7 @@ impl Tracer {
         }
 
         let mut thread_error = false;
-        let mut joined_thread_num = 0;
-        for handle in thread_handles {
+        for (joined_thread_num, handle) in thread_handles.into_iter().enumerate() {
             match handle.join() {
                 Ok(_) => {
                     info!(LOG, "render thread #{} finished", joined_thread_num);
@@ -155,7 +154,6 @@ impl Tracer {
                     thread_error = true;
                 }
             }
-            joined_thread_num += 1;
         }
 
         if thread_error {
@@ -226,8 +224,7 @@ screen plane height: {}",
                 pixel_pos
             );
 
-            let camera_ray_direction = (pixel_pos - &model.eyep).calc_normalized_vector();
-            return camera_ray_direction;
+            (pixel_pos - &model.eyep).calc_normalized_vector()
         };
 
         for i in 0..model.screen.height {
@@ -263,8 +260,8 @@ fn calculate_ray_closest_intersection(ray: &Ray, model: &Model) -> Option<Inters
 
     let mut closest_intersection: Option<Intersection> = None;
 
-    for (_, entity) in &model.all_entities {
-        if let Some(intersection) = entity.calculate_intersection(&ray) {
+    for entity in model.all_entities.values() {
+        if let Some(intersection) = entity.calculate_intersection(ray) {
             match closest_intersection {
                 Some(ref current_intersection)
                     if intersection.distance_along_ray
@@ -284,10 +281,9 @@ fn calculate_ray_closest_intersection(ray: &Ray, model: &Model) -> Option<Inters
 }
 
 fn calculate_ray_first_intersection(ray: &Ray, model: &Model) -> Option<Intersection> {
-    for (_, entity) in &model.all_entities {
-        match entity.calculate_intersection(&ray) {
-            Some(intersection) => return Some(intersection),
-            _ => {}
+    for entity in model.all_entities.values() {
+        if let Some(intersection) = entity.calculate_intersection(ray) {
+            return Some(intersection);
         }
     }
 

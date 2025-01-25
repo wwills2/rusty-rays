@@ -10,8 +10,8 @@ use uuid::Uuid;
 
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Entity, Fov, Screen, Surface};
-use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::model::{Model, ModelError};
+use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::polygon::Polygon;
 use crate::tracer::shader::color::Color;
 use crate::tracer::shader::light::{Light, LightSourceType};
@@ -19,7 +19,7 @@ use crate::tracer::sphere::Sphere;
 use crate::utils::logger::LOG;
 
 static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
-    let map = HashMap::from([
+    HashMap::from([
         ("background", "background".to_string()),
         ("eyep", "eyep".to_string()),
         ("lookp", "lookp".to_string()),
@@ -30,21 +30,17 @@ static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
         ("up", "up".to_string()),
         ("surface", "surface".to_string()),
         ("light", "light".to_string()),
-    ]);
-
-    map
+    ])
 });
 
 static SURFACE_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
-    let map = HashMap::from([
+    HashMap::from([
         ("diffuse", "diffuse".to_string()),
         ("ambient", "ambient".to_string()),
         ("specular", "specular".to_string()),
         ("specpow", "specpow".to_string()),
         ("reflect", "reflect".to_string()),
-    ]);
-
-    map
+    ])
 });
 
 struct NextLine {
@@ -90,7 +86,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         let maybe_line_read_result = match maybe_next_eq_fn {
             Some(ref next_eq_fn) => file_iterator.next_if(|line_result| match line_result {
                 Ok(line) => next_eq_fn(line),
-                Err(_) => return false,
+                Err(_) => false,
             }),
             None => file_iterator.next(),
         };
@@ -414,14 +410,12 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             .unwrap()
             .eq(peeked_line_word)
         {
-            if let Err(result) = process_surface(
+            process_surface(
                 &mut get_next_line,
                 &mut line_words_iter,
                 &mut surfaces,
                 line_number,
-            ) {
-                return Err(result);
-            }
+            )?
         } else if SCENE_DATA_KEYWORDS
             .get("sphere")
             .unwrap()
@@ -459,11 +453,11 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
 
     let mut all_entities: HashMap<Uuid, Box<dyn Entity>> = HashMap::new();
     for (uuid, sphere) in &spheres {
-        all_entities.insert(uuid.clone(), Box::new(sphere.clone()));
+        all_entities.insert(*uuid, Box::new(sphere.clone()));
     }
 
     for (uuid, polygon) in &polygons {
-        all_entities.insert(uuid.clone(), Box::new(polygon.clone()));
+        all_entities.insert(*uuid, Box::new(polygon.clone()));
     }
 
     Ok(Model {
@@ -641,7 +635,7 @@ fn process_polygon(
                 }
             }
 
-            if xyz_str_vec.len() == 0 {
+            if xyz_str_vec.is_empty() {
                 // could take no more from line. go to next line
                 break;
             }
