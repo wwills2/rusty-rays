@@ -60,9 +60,6 @@ impl Tracer {
 
     fn _render(self: Arc<Self>) -> Result<Vec<Vec<Color>>, RenderError> {
         let num_threads = CONFIG.max_render_threads;
-        let max_thread_num = num_threads - 1;
-        let rays_per_thread: usize = self.primary_rays.len() / num_threads;
-        let surplus_rays = self.primary_rays.len() - (rays_per_thread * num_threads);
         let mut thread_handles = vec![];
 
         let counter_mutex_arc = Arc::new(Mutex::new(0usize));
@@ -74,7 +71,7 @@ impl Tracer {
             vec![Color::new(); self.model.screen.width];
             self.model.screen.height
         ]));
-        let self_arc = Arc::new(self);
+        let self_arc = Arc::new(self.clone());
 
         for thread_num in 0..num_threads {
             // these arc clones do not clone the underlying data
@@ -85,23 +82,20 @@ impl Tracer {
             let _ten_percent_arc_clone = Arc::clone(&ten_percent_arc);
             let _progress_block_mutex_arc_clone = Arc::clone(&progress_block_mutex_arc);
 
-            let start_index = thread_num * rays_per_thread;
-            let end_index = if thread_num == max_thread_num {
-                start_index + rays_per_thread + surplus_rays
-            } else {
-                start_index + rays_per_thread
-            };
-
             let handle = thread::spawn(move || {
                 info!(LOG, "starting render thread #{}", thread_num);
 
-                for ray_index in start_index..end_index {
-                    let ray = &_self_arc_clone.primary_rays[ray_index];
+                loop {
+                    let mut maybe_ray: Option<&Ray> = None;
 
                     // code block to release counter guard ASAP
                     {
                         match _counter_mutex_arc_clone.lock() {
                             Ok(mut counter_mutex_guard) => {
+                                if *counter_mutex_guard == _self_arc_clone.primary_rays.len() {
+                                    break;
+                                }
+
                                 match _progress_block_mutex_arc_clone.lock() {
                                     Ok(mut progress_block_mutex_guard) => {
                                         if *counter_mutex_guard != 0
@@ -114,27 +108,33 @@ impl Tracer {
                                             );
                                             *progress_block_mutex_guard += 1;
                                         }
-                                        *counter_mutex_guard += 1;
                                     }
                                     Err(_) => {
-                                        warn!(LOG, "thread {} encountered poisoned data error from mutex when updating counter. proceeding with render", thread_num);
+                                        warn!(LOG, "thread {} encountered poisoned data error from mutex when updating progress block counter. proceeding with render", thread_num);
                                     }
                                 }
+
+                                maybe_ray =
+                                    Some(&_self_arc_clone.primary_rays[*counter_mutex_guard]);
+                                *counter_mutex_guard += 1;
                             }
                             Err(_) => {
-                                warn!(LOG, "thread {} encountered poisoned data error from mutex when updating counter. proceeding with render", thread_num);
+                                warn!(LOG, "thread {} encountered poisoned data error from mutex when updating counter. this pixel will be black. proceeding with render", thread_num);
                             }
                         }
                     }
 
-                    let pixel_color = shader::process_ray(0, ray, &_self_arc_clone.model);
+                    if maybe_ray.is_some() {
+                        let ray = maybe_ray.unwrap();
+                        let pixel_color = shader::process_ray(0, ray, &_self_arc_clone.model);
 
-                    match _image_data_arc_clone.lock() {
-                        Ok(mut mutex_guard) => {
-                            mutex_guard[ray.i][ray.j] = pixel_color;
-                        }
-                        Err(_) => {
-                            warn!(LOG, "thread {} encountered poisoned data error from mutex when writing color for pixel ({}, {}). proceeding with render", thread_num, ray.i, ray.j);
+                        match _image_data_arc_clone.lock() {
+                            Ok(mut mutex_guard) => {
+                                mutex_guard[ray.i][ray.j] = pixel_color;
+                            }
+                            Err(_) => {
+                                warn!(LOG, "thread {} encountered poisoned data error from mutex when writing color for pixel ({}, {}). proceeding with render", thread_num, ray.i, ray.j);
+                            }
                         }
                     }
                 }
