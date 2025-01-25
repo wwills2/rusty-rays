@@ -10,8 +10,8 @@ use uuid::Uuid;
 
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Entity, Fov, Screen, Surface};
-use crate::tracer::model::{Model, ModelError};
 use crate::tracer::model::ModelError::FailedToParseInputFile;
+use crate::tracer::model::{Model, ModelError};
 use crate::tracer::polygon::Polygon;
 use crate::tracer::shader::color::Color;
 use crate::tracer::shader::light::{Light, LightSourceType};

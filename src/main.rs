@@ -3,8 +3,8 @@ use std::path::PathBuf;
 use clap::{arg, Parser};
 use slog::{error, info, warn};
 
-use crate::tracer::{Tracer, write};
 use crate::tracer::model::Model;
+use crate::tracer::{write, Tracer};
 use crate::utils::logger::{ASYNC_LOGGER, LOG};
 
 mod tracer;
