@@ -3,7 +3,7 @@ eyep 2.1 1.3 1.7
 lookp 0 0 0
 up 0 0 1
 fov 45 45
-screen 1500 1500
+screen 2000 2000
 sample 1 nojitter
 light 0.57735 point 3.5 4.3 2.3
 light 0.57735 point 4 3 2
@@ -12,9 +12,25 @@ light 0.57735 point -3 1 5
 surface txt001
     ambient 0.2 0.15 0.066
     diffuse 0.8 0.6 0.264
+surface mirror-border
+    diffuse 0.5 0.115 0.115
+surface mirror
+    ambient 0.0 0.0 0.0
+    diffuse 0.0 0.0 0.0
+    reflect .9
 polygon txt001 
 5 5 -0.5 -5 5 -0.5 -5 -5 -0.5
 5 -5 -0.5
+polygon mirror
+-1.999999 1.9 1.4
+-1.999999 -1.9 1.4
+-1.999999 -1.9 -0.4
+-1.999999 1.9 -0.4
+polygon mirror-border
+-2 2 1.5
+-2 -2 1.5
+-2 -2 -0.5
+-2 2 -0.5
 surface txt002
     ambient 0 0 0
     diffuse 0.5 0.45 0.35

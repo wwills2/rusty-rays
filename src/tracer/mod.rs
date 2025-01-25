@@ -1,8 +1,9 @@
-use std::{fmt, thread};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
+use std::{f64, fmt, thread};
 
 use image::{ImageBuffer, RgbImage};
 use slog::{debug, error, info, trace, warn};
@@ -60,9 +61,6 @@ impl Tracer {
 
     fn _render(self: Arc<Self>) -> Result<Vec<Vec<Color>>, RenderError> {
         let num_threads = CONFIG.max_render_threads;
-        let max_thread_num = num_threads - 1;
-        let rays_per_thread: usize = self.primary_rays.len() / num_threads;
-        let surplus_rays = self.primary_rays.len() - (rays_per_thread * num_threads);
         let mut thread_handles = vec![];
 
         let counter_mutex_arc = Arc::new(Mutex::new(0usize));
@@ -74,8 +72,9 @@ impl Tracer {
             vec![Color::new(); self.model.screen.width];
             self.model.screen.height
         ]));
-        let self_arc = Arc::new(self);
+        let self_arc = Arc::new(self.clone());
 
+        let start_time = SystemTime::now();
         for thread_num in 0..num_threads {
             // these arc clones do not clone the underlying data
             let _image_data_arc_clone = Arc::clone(&image_data_arc);
@@ -85,23 +84,20 @@ impl Tracer {
             let _ten_percent_arc_clone = Arc::clone(&ten_percent_arc);
             let _progress_block_mutex_arc_clone = Arc::clone(&progress_block_mutex_arc);
 
-            let start_index = thread_num * rays_per_thread;
-            let end_index = if thread_num == max_thread_num {
-                start_index + rays_per_thread + surplus_rays
-            } else {
-                start_index + rays_per_thread
-            };
-
             let handle = thread::spawn(move || {
                 info!(LOG, "starting render thread #{}", thread_num);
 
-                for ray_index in start_index..end_index {
-                    let ray = &_self_arc_clone.primary_rays[ray_index];
+                loop {
+                    let mut maybe_ray: Option<&Ray> = None;
 
                     // code block to release counter guard ASAP
                     {
                         match _counter_mutex_arc_clone.lock() {
                             Ok(mut counter_mutex_guard) => {
+                                if *counter_mutex_guard == _self_arc_clone.primary_rays.len() {
+                                    break;
+                                }
+
                                 match _progress_block_mutex_arc_clone.lock() {
                                     Ok(mut progress_block_mutex_guard) => {
                                         if *counter_mutex_guard != 0
@@ -114,27 +110,33 @@ impl Tracer {
                                             );
                                             *progress_block_mutex_guard += 1;
                                         }
-                                        *counter_mutex_guard += 1;
                                     }
                                     Err(_) => {
-                                        warn!(LOG, "thread {} encountered poisoned data error from mutex when updating counter. proceeding with render", thread_num);
+                                        warn!(LOG, "thread {} encountered poisoned data error from mutex when updating progress block counter. proceeding with render", thread_num);
                                     }
                                 }
+
+                                maybe_ray =
+                                    Some(&_self_arc_clone.primary_rays[*counter_mutex_guard]);
+                                *counter_mutex_guard += 1;
                             }
                             Err(_) => {
-                                warn!(LOG, "thread {} encountered poisoned data error from mutex when updating counter. proceeding with render", thread_num);
+                                warn!(LOG, "thread {} encountered poisoned data error from mutex when updating counter. this pixel will be black. proceeding with render", thread_num);
                             }
                         }
                     }
 
-                    let pixel_color = shader::process_ray(0, ray, &_self_arc_clone.model);
+                    if maybe_ray.is_some() {
+                        let ray = maybe_ray.unwrap();
+                        let pixel_color = shader::process_ray(0, ray, &_self_arc_clone.model);
 
-                    match _image_data_arc_clone.lock() {
-                        Ok(mut mutex_guard) => {
-                            mutex_guard[ray.i][ray.j] = pixel_color;
-                        }
-                        Err(_) => {
-                            warn!(LOG, "thread {} encountered poisoned data error from mutex when writing color for pixel ({}, {}). proceeding with render", thread_num, ray.i, ray.j);
+                        match _image_data_arc_clone.lock() {
+                            Ok(mut mutex_guard) => {
+                                mutex_guard[ray.i][ray.j] = pixel_color;
+                            }
+                            Err(_) => {
+                                warn!(LOG, "thread {} encountered poisoned data error from mutex when writing color for pixel ({}, {}). proceeding with render", thread_num, ray.i, ray.j);
+                            }
                         }
                     }
                 }
@@ -144,8 +146,7 @@ impl Tracer {
         }
 
         let mut thread_error = false;
-        let mut joined_thread_num = 0;
-        for handle in thread_handles {
+        for (joined_thread_num, handle) in thread_handles.into_iter().enumerate() {
             match handle.join() {
                 Ok(_) => {
                     info!(LOG, "render thread #{} finished", joined_thread_num);
@@ -155,7 +156,6 @@ impl Tracer {
                     thread_error = true;
                 }
             }
-            joined_thread_num += 1;
         }
 
         if thread_error {
@@ -166,7 +166,19 @@ impl Tracer {
 
         match Arc::try_unwrap(image_data_arc) {
             Ok(image_data_mutex) => match image_data_mutex.into_inner() {
-                Ok(raw_image_data) => Ok(raw_image_data),
+                Ok(raw_image_data) => {
+                    let stop_time = SystemTime::now();
+                    let maybe_duration = stop_time.duration_since(start_time);
+                    if let Ok(elapsed_time) = maybe_duration {
+                        info!(
+                            LOG,
+                            "render completed in {} seconds",
+                            elapsed_time.as_millis() as f64 / 1000.0
+                        )
+                    }
+
+                    Ok(raw_image_data)
+                }
                 Err(error) => Err(RenderError(format!(
                     "failed to get data from mutex. {}",
                     error
@@ -179,14 +191,16 @@ impl Tracer {
     }
 
     fn calculate_primary_rays(model: &Model) -> Vec<Ray> {
-        let direction = model.lookp - model.eyep;
+        let direction = &model.lookp - &model.eyep;
         let forward = direction.calc_normalized_vector();
         let right = forward.cross(&model.up).calc_normalized_vector();
         let true_up = right.cross(&forward);
 
-        let focal_len = (model.lookp - model.eyep).calc_vector_length();
-        let screen_plane_width = 2.0 * focal_len * f64::tan(model.fov.horz / 2.0);
-        let screen_plane_height = 2.0 * focal_len * f64::tan(model.fov.vert / 2.0);
+        let focal_len = direction.calc_vector_length();
+        let screen_plane_width =
+            2.0 * focal_len * f64::tan((model.fov.horz / 2.0) * (f64::consts::PI / 180.0));
+        let screen_plane_height =
+            2.0 * focal_len * f64::tan((model.fov.vert / 2.0) * (f64::consts::PI / 180.0));
 
         debug!(
             LOG,
@@ -204,7 +218,7 @@ screen plane height: {}",
             true_up,
             focal_len,
             screen_plane_width,
-            screen_plane_width
+            screen_plane_height
         );
 
         let mut rays: Vec<Ray> = Vec::new();
@@ -213,8 +227,8 @@ screen plane height: {}",
             let horz_pos = ((j as f64 + 0.5) / model.screen.width as f64) - 0.5;
             let vert_pos = 0.5 - ((i as f64 + 0.5) / model.screen.height as f64);
 
-            let pixel_pos = model.lookp
-                + (&right * (screen_plane_width * horz_pos))
+            let pixel_pos = &model.lookp
+                + &(&right * (screen_plane_width * horz_pos))
                 + (&true_up * (vert_pos * screen_plane_height));
             trace!(
                 LOG,
@@ -224,8 +238,7 @@ screen plane height: {}",
                 pixel_pos
             );
 
-            let camera_ray_direction = (pixel_pos - model.eyep).calc_normalized_vector();
-            return camera_ray_direction;
+            (pixel_pos - &model.eyep).calc_normalized_vector()
         };
 
         for i in 0..model.screen.height {
@@ -242,7 +255,7 @@ screen plane height: {}",
                     i,
                     j,
                     direction: coords,
-                    origin: model.eyep,
+                    origin: model.eyep.clone(),
                 });
             }
         }
@@ -261,8 +274,8 @@ fn calculate_ray_closest_intersection(ray: &Ray, model: &Model) -> Option<Inters
 
     let mut closest_intersection: Option<Intersection> = None;
 
-    for (_, entity) in &model.all_entities {
-        if let Some(intersection) = entity.calculate_intersection(&ray) {
+    for entity in model.all_entities.values() {
+        if let Some(intersection) = entity.calculate_intersection(ray) {
             match closest_intersection {
                 Some(ref current_intersection)
                     if intersection.distance_along_ray
@@ -282,10 +295,9 @@ fn calculate_ray_closest_intersection(ray: &Ray, model: &Model) -> Option<Inters
 }
 
 fn calculate_ray_first_intersection(ray: &Ray, model: &Model) -> Option<Intersection> {
-    for (_, entity) in &model.all_entities {
-        match entity.calculate_intersection(&ray) {
-            Some(intersection) => return Some(intersection),
-            _ => {}
+    for entity in model.all_entities.values() {
+        if let Some(intersection) = entity.calculate_intersection(ray) {
+            return Some(intersection);
         }
     }
 

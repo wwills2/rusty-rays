@@ -80,13 +80,13 @@ impl Entity for Sphere {
             return None;
         }
 
-        let location = ray.origin + (&ray.direction * distance);
-        let normal = (location - &self.position).calc_normalized_vector();
+        let location = &ray.origin + &(&ray.direction * distance);
+        let normal = (&location - &self.position).calc_normalized_vector();
 
         Some(Intersection {
             distance_along_ray: distance,
             ray: ray.clone(),
-            position: location,
+            position: location.clone(),
             surface_normal_at_intersection: normal,
             uuid: self.uuid,
         })

@@ -7,7 +7,7 @@ use CoordsError::FailedToParseFromVec;
 
 use crate::utils::logger::LOG;
 
-#[derive(PartialEq, Debug, Copy)]
+#[derive(PartialEq, Debug)]
 pub struct Coords {
     pub x: f64,
     pub y: f64,
@@ -30,16 +30,6 @@ impl fmt::Display for CoordsError {
 }
 
 impl std::error::Error for CoordsError {}
-
-impl fmt::Display for Coords {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "\n{{\n  x: {}, \n  y: {}, \n  z: {},\n}}",
-            self.x, self.y, self.z
-        )
-    }
-}
 
 impl Coords {
     pub fn new() -> Self {
@@ -86,15 +76,15 @@ impl Coords {
             }
         }
 
-        return Ok(coords);
+        Ok(coords)
     }
 
     /// in-place
     pub fn normalize_vector(&mut self) {
         let len = self.calc_vector_length();
-        self.x = self.x / len;
-        self.y = self.y / len;
-        self.z = self.z / len;
+        self.x /= len;
+        self.y /= len;
+        self.z /= len;
     }
 
     /// returns new normalized vector
@@ -120,6 +110,22 @@ impl Coords {
         let z = self.x * rhs.y - self.y * rhs.x;
 
         Coords { x, y, z }
+    }
+}
+
+impl Default for Coords {
+    fn default() -> Self {
+        Coords::new()
+    }
+}
+
+impl fmt::Display for Coords {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        write!(
+            f,
+            "\n{{\n  x: {}, \n  y: {}, \n  z: {},\n}}",
+            self.x, self.y, self.z
+        )
     }
 }
 
@@ -167,6 +173,17 @@ impl Sub for Coords {
 }
 
 impl Sub<&Coords> for Coords {
+    type Output = Coords;
+    fn sub(self, rhs: &Coords) -> Coords {
+        Coords {
+            x: self.x - rhs.x,
+            y: self.y - rhs.y,
+            z: self.z - rhs.z,
+        }
+    }
+}
+
+impl Sub<&Coords> for &Coords {
     type Output = Coords;
     fn sub(self, rhs: &Coords) -> Coords {
         Coords {
