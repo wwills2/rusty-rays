@@ -37,11 +37,11 @@ impl Polygon {
             }
         };
 
-        let projection_origin = vertices[0];
+        let projection_origin = &vertices[0];
         let mut largest_axis_magnitude = 0.0;
         let mut plane_projected_vertices: Vec<PlaneCoords> = vec![];
         for vertex in &vertices {
-            let projection = project_to_plane(vertex, &projection_origin, basis_vectors);
+            let projection = project_to_plane(vertex, &projection_origin, &basis_vectors);
 
             if projection.x > largest_axis_magnitude {
                 largest_axis_magnitude = projection.x;
@@ -67,7 +67,7 @@ impl Polygon {
             basis_vectors,
             plane_projected_vertices,
             point_in_polygon_inf_test_vector,
-            projection_origin,
+            projection_origin: projection_origin.clone(),
             vertices,
         })
     }
@@ -77,12 +77,12 @@ impl Clone for Polygon {
     fn clone(&self) -> Polygon {
         Polygon {
             uuid: self.uuid,
-            normal_vector: self.normal_vector,
+            normal_vector: self.normal_vector.clone(),
             surface: self.surface.clone(),
-            basis_vectors: self.basis_vectors,
+            basis_vectors: self.basis_vectors.clone(),
             plane_projected_vertices: self.plane_projected_vertices.clone(),
             point_in_polygon_inf_test_vector: self.point_in_polygon_inf_test_vector.clone(),
-            projection_origin: self.projection_origin,
+            projection_origin: self.projection_origin.clone(),
             vertices: self.vertices.clone(),
         }
     }
@@ -107,18 +107,18 @@ impl Entity for Polygon {
             return None;
         }
 
-        let distance = (self.normal_vector * (self.vertices[0] - ray.origin)) / denominator;
+        let distance = (&self.normal_vector * &(&self.vertices[0] - &ray.origin)) / denominator;
         if distance < 0.0 {
             return None;
         }
 
-        let plane_intersection_point = ray.origin + (&ray.direction * distance);
+        let plane_intersection_point = &ray.origin + &(&ray.direction * distance);
 
         // assume ray is cast from here to (inf, inf)
         let projected_intersection = project_to_plane(
             &plane_intersection_point,
             &self.projection_origin,
-            self.basis_vectors,
+            &self.basis_vectors,
         );
 
         let mut projected_edge_intersection_count = 0;
@@ -165,7 +165,7 @@ impl Entity for Polygon {
                 position: plane_intersection_point,
                 ray: ray.clone(),
                 distance_along_ray: distance,
-                surface_normal_at_intersection: self.normal_vector,
+                surface_normal_at_intersection: self.normal_vector.clone(),
                 uuid: self.uuid,
             })
         } else {
@@ -184,9 +184,9 @@ pub fn calculate_plane_normal_vector(vertices: &Vec<Coords>) -> Result<Coords, S
     }
 
     let start = 0;
-    let vertex_1 = vertices[start];
-    let mut vertex_2 = vertices[start + 1];
-    let mut vertex_3 = vertices[start + 2];
+    let vertex_1 = &vertices[start];
+    let mut vertex_2 = &vertices[start + 1];
+    let mut vertex_3 = &vertices[start + 2];
 
     let mut plane_edge_1 = vertex_2 - vertex_1;
     let mut plane_edge_2 = vertex_3 - vertex_1;
@@ -197,8 +197,8 @@ pub fn calculate_plane_normal_vector(vertices: &Vec<Coords>) -> Result<Coords, S
 
     if is_collinear {
         for i in 2..vertices.len() - 1 {
-            vertex_2 = vertices[i];
-            vertex_3 = vertices[i + 1];
+            vertex_2 = &vertices[i];
+            vertex_3 = &vertices[i + 1];
             plane_edge_1 = vertex_2 - vertex_1;
             plane_edge_2 = vertex_3 - vertex_1;
 
@@ -226,12 +226,12 @@ pub fn calculate_basis_vectors(
     normal: &Coords,
 ) -> Result<(Coords, Coords), String> {
     let mut index = 1;
-    let vertex_1 = vertices[0];
-    let mut vertex_2 = vertices[index];
+    let vertex_1 = &vertices[0];
+    let mut vertex_2 = &vertices[index];
 
     while vertex_1 == vertex_2 && index < vertices.len() {
         index += 1;
-        vertex_2 = vertices[index];
+        vertex_2 = &vertices[index];
     }
 
     if vertex_1 == vertex_2 {
@@ -247,11 +247,11 @@ pub fn calculate_basis_vectors(
 pub fn project_to_plane(
     coordinates: &Coords,
     projection_origin: &Coords,
-    plane_basis_vectors: (Coords, Coords),
+    plane_basis_vectors: &(Coords, Coords),
 ) -> PlaneCoords {
-    let diff_vector = *coordinates - projection_origin;
-    let u = plane_basis_vectors.0 * diff_vector;
-    let w = plane_basis_vectors.1 * diff_vector;
+    let diff_vector = coordinates - projection_origin;
+    let u = &plane_basis_vectors.0 * &diff_vector;
+    let w = &plane_basis_vectors.1 * &diff_vector;
 
     PlaneCoords { x: u, y: w }
 }

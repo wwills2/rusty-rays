@@ -179,7 +179,7 @@ impl Tracer {
     }
 
     fn calculate_primary_rays(model: &Model) -> Vec<Ray> {
-        let direction = model.lookp - model.eyep;
+        let direction = &model.lookp - &model.eyep;
         let forward = direction.calc_normalized_vector();
         let right = forward.cross(&model.up).calc_normalized_vector();
         let true_up = right.cross(&forward);
@@ -215,8 +215,8 @@ screen plane height: {}",
             let horz_pos = ((j as f64 + 0.5) / model.screen.width as f64) - 0.5;
             let vert_pos = 0.5 - ((i as f64 + 0.5) / model.screen.height as f64);
 
-            let pixel_pos = model.lookp
-                + (&right * (screen_plane_width * horz_pos))
+            let pixel_pos = &model.lookp
+                + &(&right * (screen_plane_width * horz_pos))
                 + (&true_up * (vert_pos * screen_plane_height));
             trace!(
                 LOG,
@@ -226,7 +226,7 @@ screen plane height: {}",
                 pixel_pos
             );
 
-            let camera_ray_direction = (pixel_pos - model.eyep).calc_normalized_vector();
+            let camera_ray_direction = (pixel_pos - &model.eyep).calc_normalized_vector();
             return camera_ray_direction;
         };
 
@@ -244,7 +244,7 @@ screen plane height: {}",
                     i,
                     j,
                     direction: coords,
-                    origin: model.eyep,
+                    origin: model.eyep.clone(),
                 });
             }
         }

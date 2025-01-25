@@ -1,6 +1,7 @@
-use crate::tracer::coords::Coords;
 use std::fmt;
 use std::str::FromStr;
+
+use crate::tracer::coords::Coords;
 
 #[derive(Debug)]
 pub struct Light {
@@ -12,7 +13,7 @@ pub struct Light {
 impl Clone for Light {
     fn clone(&self) -> Light {
         Light {
-            position: self.position,
+            position: self.position.clone(),
             intensity: self.intensity,
             source_type: self.source_type.clone(),
         }

@@ -7,7 +7,7 @@ use CoordsError::FailedToParseFromVec;
 
 use crate::utils::logger::LOG;
 
-#[derive(PartialEq, Debug, Copy)]
+#[derive(PartialEq, Debug)]
 pub struct Coords {
     pub x: f64,
     pub y: f64,

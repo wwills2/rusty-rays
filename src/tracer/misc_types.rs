@@ -74,7 +74,7 @@ impl fmt::Display for Surface {
 }
 
 // ray type and methods
-#[derive(Debug, Copy)]
+#[derive(Debug)]
 pub struct Ray {
     pub i: usize,
     pub j: usize,
