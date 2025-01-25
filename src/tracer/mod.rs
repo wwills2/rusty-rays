@@ -3,6 +3,7 @@ use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
+use std::time::SystemTime;
 
 use image::{ImageBuffer, RgbImage};
 use slog::{debug, error, info, trace, warn};
@@ -73,6 +74,7 @@ impl Tracer {
         ]));
         let self_arc = Arc::new(self.clone());
 
+        let start_time = SystemTime::now();
         for thread_num in 0..num_threads {
             // these arc clones do not clone the underlying data
             let _image_data_arc_clone = Arc::clone(&image_data_arc);
@@ -164,7 +166,19 @@ impl Tracer {
 
         match Arc::try_unwrap(image_data_arc) {
             Ok(image_data_mutex) => match image_data_mutex.into_inner() {
-                Ok(raw_image_data) => Ok(raw_image_data),
+                Ok(raw_image_data) => {
+                    let stop_time = SystemTime::now();
+                    let maybe_duration = stop_time.duration_since(start_time);
+                    if let Ok(elapsed_time) = maybe_duration {
+                        info!(
+                            LOG,
+                            "render completed in {} seconds",
+                            elapsed_time.as_millis() as f64 / 1000.0
+                        )
+                    }
+
+                    Ok(raw_image_data)
+                }
                 Err(error) => Err(RenderError(format!(
                     "failed to get data from mutex. {}",
                     error

@@ -1,9 +1,10 @@
-use clap::{arg, Parser};
-use slog::{error, info, warn};
 use std::path::PathBuf;
 
+use clap::{arg, Parser};
+use slog::{error, info, warn};
+
+use crate::tracer::{Tracer, write};
 use crate::tracer::model::Model;
-use crate::tracer::{write, Tracer};
 use crate::utils::logger::{ASYNC_LOGGER, LOG};
 
 mod tracer;
@@ -54,7 +55,7 @@ fn main() {
 
                 match maybe_raw_pixel_colors {
                     Ok(raw_pixel_colors) => {
-                        info!(LOG, "rendered raw image data");
+                        info!(LOG, "renderer generated raw image data");
                         match write(_output_file.as_path(), &raw_pixel_colors) {
                             Ok(_) => {
                                 info!(LOG, "wrote rendered image to {}", _output_file.display());
