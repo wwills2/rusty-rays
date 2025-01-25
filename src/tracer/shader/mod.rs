@@ -22,7 +22,7 @@ pub fn process_ray(trace_depth: u8, ray: &Ray, model: &Model) -> Color {
             calculate_color(
                 trace_depth,
                 model,
-                &intersected_entity.get_surface(),
+                intersected_entity.get_surface(),
                 &intersection,
             )
         }
@@ -36,18 +36,18 @@ fn calculate_color(
     surface: &Surface,
     starting_intersection: &Intersection,
 ) -> Color {
-    if model.light_sources.len() == 0 {
+    if model.light_sources.is_empty() {
         return surface.ambient.clone();
     }
 
-    let ray_from_intersection_back_to_source = (starting_intersection.ray.origin
-        - starting_intersection.position)
+    let ray_from_intersection_back_to_source = (&starting_intersection.ray.origin
+        - &starting_intersection.position)
         .calc_normalized_vector();
 
     let mut point_color = surface.ambient.clone();
 
     for light_source in &model.light_sources {
-        let mut shadow_ray_direction = light_source.position - starting_intersection.position;
+        let mut shadow_ray_direction = &light_source.position - &starting_intersection.position;
         let shadow_ray_length = shadow_ray_direction.calc_vector_length();
         shadow_ray_direction.normalize_vector();
 
@@ -55,7 +55,7 @@ fn calculate_color(
           intersection with the originally intersected object
         */
         let offset_shadow_ray_origin =
-            starting_intersection.position + (&shadow_ray_direction * 10e-5);
+            &starting_intersection.position + &(&shadow_ray_direction * 10e-5);
 
         let shadow_ray = Ray {
             origin: offset_shadow_ray_origin,
@@ -93,19 +93,19 @@ fn calculate_color(
     }
 
     if trace_depth < MAX_REFLECTIONS && surface.reflect > 0.0 {
-        let angle_normal_to_source_ray = starting_intersection.ray.direction
-            * starting_intersection.surface_normal_at_intersection;
+        let angle_normal_to_source_ray = &starting_intersection.ray.direction
+            * &starting_intersection.surface_normal_at_intersection;
 
         let scaled_normal_vector = &starting_intersection.surface_normal_at_intersection
             * (2.0 * angle_normal_to_source_ray);
         let reflection_ray_direction =
-            (starting_intersection.ray.direction - scaled_normal_vector).calc_normalized_vector();
+            (&starting_intersection.ray.direction - &scaled_normal_vector).calc_normalized_vector();
 
         /* move the origin just off the intersected object along the shadow ray to protect against
           intersection with the originally intersected object
         */
         let offset_reflection_ray_origin =
-            starting_intersection.position + (&reflection_ray_direction * 10e-5);
+            &starting_intersection.position + &(&reflection_ray_direction * 10e-5);
 
         let reflection_ray = Ray {
             direction: reflection_ray_direction,

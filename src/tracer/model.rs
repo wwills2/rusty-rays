@@ -1,15 +1,17 @@
+use std::collections::HashMap;
+use std::fmt;
+use std::fs::File;
+use std::io::BufReader;
+use std::path::Path;
+
+use uuid::Uuid;
+
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Entity, Fov, Screen};
 use crate::tracer::polygon::Polygon;
 use crate::tracer::shader::color::Color;
 use crate::tracer::shader::light::Light;
 use crate::tracer::sphere::Sphere;
-use std::collections::HashMap;
-use std::fmt;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
-use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct Model {
@@ -92,8 +94,8 @@ impl fmt::Display for Model {
             self.fov,
             self.screen,
             self.spheres
-                .iter()
-                .map(|(_, sphere)| format!("    {}", sphere))
+                .values()
+                .map(|sphere| format!("    {}", sphere))
                 .collect::<Vec<String>>()
                 .join(",\n")
         )

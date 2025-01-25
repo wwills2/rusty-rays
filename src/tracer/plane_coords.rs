@@ -1,6 +1,6 @@
 use std::ops::{Add, Div, Mul, Sub};
 
-#[derive(PartialEq, Debug, Copy)]
+#[derive(PartialEq, Debug)]
 pub struct PlaneCoords {
     pub x: f64,
     pub y: f64,
@@ -14,8 +14,8 @@ impl PlaneCoords {
     /// in-place
     pub fn normalize_vector(&mut self) {
         let len = self.calc_vector_length();
-        self.x = self.x / len;
-        self.y = self.y / len;
+        self.x /= len;
+        self.y /= len;
     }
 
     /// returns new normalized vector
@@ -32,6 +32,12 @@ impl PlaneCoords {
 
     pub fn calc_vector_length(&self) -> f64 {
         f64::sqrt(self.x.powi(2) + self.y.powi(2))
+    }
+}
+
+impl Default for PlaneCoords {
+    fn default() -> Self {
+        PlaneCoords::new()
     }
 }
 

@@ -72,11 +72,8 @@ pub static CONFIG: Lazy<Config> = Lazy::new(|| match get_config_file_content_str
     Err(error) => {
         eprintln!("failed to find or open config file. {}", error);
 
-        match create_config_file() {
-            Err(error) => {
-                eprintln!("failed to create config file. {}", error);
-            }
-            _ => {}
+        if let Err(create_file_error) = create_config_file() {
+            eprintln!("failed to create config file. {}", create_file_error);
         };
 
         println!("using default config");

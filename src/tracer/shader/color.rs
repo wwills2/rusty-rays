@@ -38,7 +38,7 @@ impl Color {
             ));
         }
         for (i, maybe_color_channel) in rgba_vec.iter().enumerate() {
-            let color_result = parse_color_channel_from_str(*maybe_color_channel);
+            let color_result = parse_color_channel_from_str(maybe_color_channel);
             match color_result {
                 Ok(channel_val) => match i {
                     0 => {
@@ -91,6 +91,12 @@ impl Color {
     }
 }
 
+impl Default for Color {
+    fn default() -> Self {
+        Color::new()
+    }
+}
+
 impl Clone for Color {
     fn clone(&self) -> Self {
         Color {
@@ -103,19 +109,13 @@ impl Clone for Color {
 }
 
 fn clamp(channel_value: f64) -> f64 {
-    if channel_value > 1.0 {
-        1.0
-    } else if channel_value < 0.0 {
-        0.0
-    } else {
-        channel_value
-    }
+    channel_value.clamp(0.0, 1.0)
 }
 
 fn parse_color_channel_from_str(color_str: &str) -> Result<f64, String> {
     match color_str.parse::<f64>() {
         Ok(color) => {
-            if color < 0.0 || color > 1.0 {
+            if !(0.0..=1.0).contains(&color) {
                 return Err(format!(
                     "failed to parse color. value {} not a valid rgba channel value",
                     color_str
@@ -126,7 +126,7 @@ fn parse_color_channel_from_str(color_str: &str) -> Result<f64, String> {
         Err(_) => match color_str.parse::<u8>() {
             Ok(color_int) => {
                 let color = color_int as f64 / 255.0;
-                if color < 0.0 || color > 1.0 {
+                if !(0.0..=1.0).contains(&color) {
                     return Err(format!(
                         "failed to parse color. value {} not a valid rgba channel value",
                         color_str
