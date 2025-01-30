@@ -49,7 +49,7 @@ impl Triangle {
         };
 
         let flat_shaded =
-            maybe_v1_normal.is_some() && maybe_v2_normal.is_some() && maybe_v3_normal.is_some();
+            maybe_v1_normal.is_none() && maybe_v2_normal.is_none() && maybe_v3_normal.is_none();
 
         Ok(Triangle {
             uuid: Uuid::new_v4(),
@@ -90,7 +90,9 @@ impl Triangle {
         let beta = beta_area / self.total_area;
         let gamma = gamma_area / self.total_area;
 
-        (&self.v1_normal * alpha) + (&self.v2_normal * beta) + (&self.v3_normal * gamma)
+        let interpolated_normal =
+            (&self.v1_normal * alpha) + (&self.v2_normal * beta) + (&self.v3_normal * gamma);
+        interpolated_normal.calc_normalized_vector()
     }
 }
 
