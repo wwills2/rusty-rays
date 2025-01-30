@@ -18,11 +18,14 @@ static MAX_REFLECTIONS: u8 = 5;
 pub fn process_ray(trace_depth: u8, ray: &Ray, model: &Model) -> Color {
     match calculate_ray_closest_intersection(ray, model) {
         Some(intersection) => {
-            let intersected_entity = model.all_entities.get(&intersection.uuid).unwrap();
+            let intersected_primitive = model
+                .all_primitives
+                .get(&intersection.intersected_primitive_uuid)
+                .unwrap();
             calculate_color(
                 trace_depth,
                 model,
-                intersected_entity.get_surface(),
+                intersected_primitive.get_surface(),
                 &intersection,
             )
         }

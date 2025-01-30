@@ -7,11 +7,12 @@ use std::path::Path;
 use uuid::Uuid;
 
 use crate::tracer::coords::Coords;
-use crate::tracer::misc_types::{Entity, Fov, Screen};
-use crate::tracer::polygon::Polygon;
+use crate::tracer::misc_types::{Fov, Screen};
+use crate::tracer::primitives::polygon::Polygon;
+use crate::tracer::primitives::Primitive;
+use crate::tracer::primitives::sphere::Sphere;
 use crate::tracer::shader::color::Color;
 use crate::tracer::shader::light::Light;
-use crate::tracer::sphere::Sphere;
 
 #[derive(Debug)]
 pub struct Model {
@@ -24,7 +25,7 @@ pub struct Model {
     pub light_sources: Vec<Light>,
     pub spheres: HashMap<Uuid, Sphere>,
     pub polygons: HashMap<Uuid, Polygon>,
-    pub all_entities: HashMap<Uuid, Box<dyn Entity>>,
+    pub all_primitives: HashMap<Uuid, Box<dyn Primitive>>,
 }
 
 #[derive(Debug)]
@@ -120,7 +121,7 @@ impl Clone for Model {
             light_sources: self.light_sources.clone(),
             spheres: self.spheres.clone(),
             polygons: self.polygons.clone(),
-            all_entities: self.all_entities.clone(),
+            all_primitives: self.all_primitives.clone(),
         }
     }
 }
