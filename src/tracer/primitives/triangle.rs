@@ -56,9 +56,9 @@ impl Triangle {
             vertex_1,
             vertex_2,
             vertex_3,
-            v1_normal: maybe_v1_normal.unwrap_or_else(|| Coords::new()),
-            v2_normal: maybe_v2_normal.unwrap_or_else(|| Coords::new()),
-            v3_normal: maybe_v3_normal.unwrap_or_else(|| Coords::new()),
+            v1_normal: maybe_v1_normal.unwrap_or_default(),
+            v2_normal: maybe_v2_normal.unwrap_or_default(),
+            v3_normal: maybe_v3_normal.unwrap_or_default(),
             edge_1,
             edge_2,
             edge_3,
@@ -162,7 +162,7 @@ impl Primitive for Triangle {
                 ray: ray.clone(),
             })
         } else {
-            return None;
+            None
         }
     }
 
