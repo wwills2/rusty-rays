@@ -1,14 +1,14 @@
 use std::ops::{Add, Div, Mul, Sub};
 
 #[derive(PartialEq, Debug)]
-pub struct PlaneCoords {
+pub struct PlaneCoords2D {
     pub x: f64,
     pub y: f64,
 }
 
-impl PlaneCoords {
+impl PlaneCoords2D {
     pub fn new() -> Self {
-        PlaneCoords { x: 0.0, y: 0.0 }
+        PlaneCoords2D { x: 0.0, y: 0.0 }
     }
 
     /// in-place
@@ -19,12 +19,12 @@ impl PlaneCoords {
     }
 
     /// returns new normalized vector
-    pub fn calc_normalized_vector(&self) -> PlaneCoords {
+    pub fn calc_normalized_vector(&self) -> PlaneCoords2D {
         let len = match self.calc_vector_length() {
             length if length == 0.0 => 1.0,
             length => length,
         };
-        PlaneCoords {
+        PlaneCoords2D {
             x: self.x / len,
             y: self.y / len,
         }
@@ -35,89 +35,89 @@ impl PlaneCoords {
     }
 }
 
-impl Default for PlaneCoords {
+impl Default for PlaneCoords2D {
     fn default() -> Self {
-        PlaneCoords::new()
+        PlaneCoords2D::new()
     }
 }
 
-impl Clone for PlaneCoords {
+impl Clone for PlaneCoords2D {
     fn clone(&self) -> Self {
-        PlaneCoords {
+        PlaneCoords2D {
             x: self.x,
             y: self.y,
         }
     }
 }
 
-impl Add for PlaneCoords {
-    type Output = PlaneCoords;
-    fn add(self, rhs: PlaneCoords) -> PlaneCoords {
-        PlaneCoords {
+impl Add for PlaneCoords2D {
+    type Output = PlaneCoords2D;
+    fn add(self, rhs: PlaneCoords2D) -> PlaneCoords2D {
+        PlaneCoords2D {
             x: self.x + rhs.x,
             y: self.y + rhs.y,
         }
     }
 }
 
-impl Add for &PlaneCoords {
-    type Output = PlaneCoords;
-    fn add(self, rhs: &PlaneCoords) -> PlaneCoords {
-        PlaneCoords {
+impl Add for &PlaneCoords2D {
+    type Output = PlaneCoords2D;
+    fn add(self, rhs: &PlaneCoords2D) -> PlaneCoords2D {
+        PlaneCoords2D {
             x: self.x + rhs.x,
             y: self.y + rhs.y,
         }
     }
 }
 
-impl Sub for PlaneCoords {
-    type Output = PlaneCoords;
-    fn sub(self, rhs: PlaneCoords) -> PlaneCoords {
-        PlaneCoords {
+impl Sub for PlaneCoords2D {
+    type Output = PlaneCoords2D;
+    fn sub(self, rhs: PlaneCoords2D) -> PlaneCoords2D {
+        PlaneCoords2D {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
         }
     }
 }
 
-impl Sub<&PlaneCoords> for PlaneCoords {
-    type Output = PlaneCoords;
-    fn sub(self, rhs: &PlaneCoords) -> PlaneCoords {
-        PlaneCoords {
+impl Sub<&PlaneCoords2D> for PlaneCoords2D {
+    type Output = PlaneCoords2D;
+    fn sub(self, rhs: &PlaneCoords2D) -> PlaneCoords2D {
+        PlaneCoords2D {
             x: self.x - rhs.x,
             y: self.y - rhs.y,
         }
     }
 }
 
-impl Mul for PlaneCoords {
+impl Mul for PlaneCoords2D {
     type Output = f64;
-    fn mul(self, rhs: PlaneCoords) -> f64 {
+    fn mul(self, rhs: PlaneCoords2D) -> f64 {
         self.x * rhs.x + self.y * rhs.y
     }
 }
 
-impl Mul<&PlaneCoords> for &PlaneCoords {
+impl Mul<&PlaneCoords2D> for &PlaneCoords2D {
     type Output = f64;
-    fn mul(self, rhs: &PlaneCoords) -> f64 {
+    fn mul(self, rhs: &PlaneCoords2D) -> f64 {
         self.x * rhs.x + self.y * rhs.y
     }
 }
 
-impl Mul<f64> for &PlaneCoords {
-    type Output = PlaneCoords;
-    fn mul(self, rhs: f64) -> PlaneCoords {
-        PlaneCoords {
+impl Mul<f64> for &PlaneCoords2D {
+    type Output = PlaneCoords2D;
+    fn mul(self, rhs: f64) -> PlaneCoords2D {
+        PlaneCoords2D {
             x: self.x * rhs,
             y: self.y * rhs,
         }
     }
 }
 
-impl Div for &PlaneCoords {
-    type Output = PlaneCoords;
-    fn div(self, rhs: &PlaneCoords) -> PlaneCoords {
-        PlaneCoords {
+impl Div for &PlaneCoords2D {
+    type Output = PlaneCoords2D;
+    fn div(self, rhs: &PlaneCoords2D) -> PlaneCoords2D {
+        PlaneCoords2D {
             x: self.x / rhs.x,
             y: self.y / rhs.y,
         }

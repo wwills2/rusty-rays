@@ -3,7 +3,8 @@ use std::fmt;
 use uuid::Uuid;
 
 use crate::tracer::coords::Coords;
-use crate::tracer::misc_types::{Entity, Intersection, Ray, Surface};
+use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::primitives::Primitive;
 
 pub static TYPE_NAME: &str = "sphere";
 
@@ -32,7 +33,7 @@ impl fmt::Display for Sphere {
     }
 }
 
-impl Entity for Sphere {
+impl Primitive for Sphere {
     fn get_uuid(&self) -> Uuid {
         self.uuid
     }
@@ -88,11 +89,11 @@ impl Entity for Sphere {
             ray: ray.clone(),
             position: location.clone(),
             surface_normal_at_intersection: normal,
-            uuid: self.uuid,
+            intersected_primitive_uuid: self.uuid,
         })
     }
 
-    fn entity_clone(&self) -> Box<dyn Entity> {
+    fn primitive_clone(&self) -> Box<dyn Primitive> {
         Box::new((*self).clone())
     }
 }
