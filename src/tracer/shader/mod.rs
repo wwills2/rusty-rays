@@ -22,6 +22,7 @@ pub fn process_ray(trace_depth: u8, ray: &Ray, model: &Model) -> Color {
                 .all_primitives
                 .get(&intersection.intersected_primitive_uuid)
                 .unwrap();
+
             calculate_color(
                 trace_depth,
                 model,
@@ -142,10 +143,10 @@ fn adjust_color_for_diffuse_and_specular(
         point_color.adjust_by(diffuse_color_contribution);
 
         if surface.specpow > 0.0 {
-            let specular_reflection_incidence: f64 = 2.0 * (shadow_ray_direction * surface_normal);
+            let specular_reflection_incidence: f64 = 2.0 * (surface_normal * shadow_ray_direction);
             if specular_reflection_incidence > 0.0 {
                 let specular_reflection_ray =
-                    &(surface_normal - shadow_ray_direction) * specular_reflection_incidence;
+                    (surface_normal * specular_reflection_incidence) - shadow_ray_direction;
                 let specular_incidence = &specular_reflection_ray * ray_to_eyep;
                 if specular_incidence > 0.0 {
                     let specular_intensity = specular_incidence.powf(surface.specpow);
