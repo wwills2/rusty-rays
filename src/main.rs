@@ -76,7 +76,6 @@ fn main() {
         }
     } else if args.start {
         info!(LOG, "when implemented this will start the application");
-        todo!()
     } else {
         warn!(LOG, "No functionality matching provided arguments. Exiting");
     }
