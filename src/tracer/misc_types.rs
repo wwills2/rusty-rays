@@ -99,31 +99,5 @@ pub struct Intersection {
     pub ray: Ray,
     pub position: Coords,
     pub surface_normal_at_intersection: Coords,
-    pub uuid: Uuid,
-}
-
-// entity trait and methods
-pub trait Entity: Send + Sync {
-    fn get_uuid(&self) -> Uuid;
-    fn get_type(&self) -> String;
-    fn get_surface(&self) -> &Surface;
-    fn calculate_intersection(&self, ray: &Ray) -> Option<Intersection>;
-    fn entity_clone(&self) -> Box<dyn Entity>;
-}
-
-impl fmt::Debug for dyn Entity {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(
-            f,
-            "entity of type {} with uuid {}",
-            self.get_type(),
-            self.get_uuid()
-        )
-    }
-}
-
-impl Clone for Box<dyn Entity> {
-    fn clone(&self) -> Self {
-        self.entity_clone()
-    }
+    pub intersected_primitive_uuid: Uuid,
 }

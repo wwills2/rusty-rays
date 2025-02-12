@@ -9,18 +9,21 @@ use slog::{debug, warn};
 use uuid::Uuid;
 
 use crate::tracer::coords::Coords;
-use crate::tracer::misc_types::{Entity, Fov, Screen, Surface};
-use crate::tracer::model::ModelError::FailedToParseInputFile;
+use crate::tracer::misc_types::{Fov, Screen, Surface};
 use crate::tracer::model::{Model, ModelError};
-use crate::tracer::polygon::Polygon;
+use crate::tracer::model::ModelError::FailedToParseInputFile;
+use crate::tracer::primitives::polygon::Polygon;
+use crate::tracer::primitives::Primitive;
+use crate::tracer::primitives::sphere::Sphere;
+use crate::tracer::primitives::triangle::Triangle;
 use crate::tracer::shader::color::Color;
 use crate::tracer::shader::light::{Light, LightSourceType};
-use crate::tracer::sphere::Sphere;
 use crate::utils::logger::LOG;
 
 mod parse_polygon;
 mod parse_sphere;
 mod parse_surface;
+mod parse_triangle;
 
 static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
     HashMap::from([
@@ -31,6 +34,7 @@ static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
         ("screen", "screen".to_string()),
         ("sphere", "sphere".to_string()),
         ("polygon", "polygon".to_string()),
+        ("triangle", "triangle".to_string()),
         ("up", "up".to_string()),
         ("surface", "surface".to_string()),
         ("light", "light".to_string()),
@@ -73,6 +77,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
     let mut light_sources: Vec<Light> = Vec::new();
     let mut spheres: HashMap<Uuid, Sphere> = HashMap::new();
     let mut polygons: HashMap<Uuid, Polygon> = HashMap::new();
+    let mut triangles: HashMap<Uuid, Triangle> = HashMap::new();
     let mut surfaces: HashMap<String, Surface> = HashMap::new();
 
     let mut line_number = 1;
@@ -448,6 +453,22 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             };
             debug!(LOG, "processed polygon");
             polygons.insert(polygon.uuid, polygon);
+        } else if SCENE_DATA_KEYWORDS
+            .get("triangle")
+            .unwrap()
+            .eq(peeked_line_word)
+        {
+            let triangle = match parse_triangle::process_triangle(
+                &mut get_next_line,
+                &mut line_words_iter,
+                &surfaces,
+                line_number,
+            ) {
+                Ok(polygon) => polygon,
+                Err(error) => return Err(error),
+            };
+            debug!(LOG, "processed polygon");
+            triangles.insert(triangle.uuid, triangle);
         } else {
             warn!(
                 LOG,
@@ -456,13 +477,18 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         }
     }
 
-    let mut all_entities: HashMap<Uuid, Box<dyn Entity>> = HashMap::new();
+    let mut all_primitives: HashMap<Uuid, Box<dyn Primitive>> = HashMap::new();
+
     for (uuid, sphere) in &spheres {
-        all_entities.insert(*uuid, Box::new(sphere.clone()));
+        all_primitives.insert(*uuid, Box::new(sphere.clone()));
     }
 
     for (uuid, polygon) in &polygons {
-        all_entities.insert(*uuid, Box::new(polygon.clone()));
+        all_primitives.insert(*uuid, Box::new(polygon.clone()));
+    }
+
+    for (uuid, triangle) in &triangles {
+        all_primitives.insert(*uuid, Box::new(triangle.clone()));
     }
 
     Ok(Model {
@@ -475,6 +501,6 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         light_sources,
         spheres,
         polygons,
-        all_entities,
+        all_primitives,
     })
 }

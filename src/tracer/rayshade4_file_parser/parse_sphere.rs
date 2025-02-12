@@ -9,7 +9,7 @@ use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
-use crate::tracer::sphere::Sphere;
+use crate::tracer::primitives::sphere::Sphere;
 use crate::utils::logger::LOG;
 
 pub fn process_sphere(
