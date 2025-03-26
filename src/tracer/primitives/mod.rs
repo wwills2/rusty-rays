@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 
+pub mod cylinder;
 pub mod plane;
 pub mod polygon;
 pub mod sphere;
