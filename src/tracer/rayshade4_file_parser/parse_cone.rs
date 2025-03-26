@@ -9,17 +9,17 @@ use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
-use crate::tracer::primitives::cylinder::Cylinder;
+use crate::tracer::primitives::cone::Cone;
 use crate::utils::logger::LOG;
 
-pub fn process_cylinder(
+pub fn process_cone(
     keyword_line_iter: &mut Peekable<SplitWhitespace>,
     surfaces: &HashMap<String, Surface>,
     line_number: usize,
-) -> Result<Cylinder, ModelError> {
-    debug!(LOG, "processing cylinder");
+) -> Result<Cone, ModelError> {
+    debug!(LOG, "processing cone");
 
-    // advance past cylinder keyword
+    // advance past cone keyword
     keyword_line_iter.next();
 
     let maybe_surface_name = keyword_line_iter.next();
@@ -39,26 +39,27 @@ pub fn process_cylinder(
         None => {
             return Err(FailedToParseInputFile(
                 line_number,
-                "cylinder declaration missing surface".to_string(),
+                "cone declaration missing surface".to_string(),
             ))
         }
     };
 
-    let maybe_radius_str = keyword_line_iter.next();
-    let radius = match maybe_radius_str {
+    // Parse base radius
+    let maybe_base_radius_str = keyword_line_iter.next();
+    let base_radius = match maybe_base_radius_str {
         Some(radius) => match radius.parse::<f64>() {
             Ok(radius) => radius,
             Err(_) => {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    "invalid radius value".to_string(),
+                    "invalid base radius value".to_string(),
                 ))
             }
         },
         None => {
             return Err(FailedToParseInputFile(
                 line_number,
-                "cylinder missing radius".to_string(),
+                "cone missing base radius".to_string(),
             ))
         }
     };
@@ -68,45 +69,35 @@ pub fn process_cylinder(
     let base_result = Coords::new_from_str_vec(base_xyz_vec);
     let base = match base_result {
         Ok(base) => base,
-        Err(error) => {
-            return Err(FailedToParseInputFile(
-                line_number,
-                format!("error parsing cylinder base: {}", error.to_string()),
-            ))
-        }
+        Err(error) => return Err(FailedToParseInputFile(line_number, format!("error parsing cone base: {}", error.to_string()))),
     };
 
-    // Parse axis direction (x, y, z)
-    let axis_xyz_vec: Vec<&str> = keyword_line_iter.take(3).collect();
-    let axis_result = Coords::new_from_str_vec(axis_xyz_vec);
-    let axis = match axis_result {
-        Ok(axis) => axis,
-        Err(error) => {
-            return Err(FailedToParseInputFile(
-                line_number,
-                format!("error parsing cylinder axis: {}", error.to_string()),
-            ))
-        }
-    };
-
-    // Parse height
-    let maybe_height_str = keyword_line_iter.next();
-    let height = match maybe_height_str {
-        Some(height) => match height.parse::<f64>() {
-            Ok(height) => height,
+    // Parse apex radius
+    let maybe_apex_radius_str = keyword_line_iter.next();
+    let apex_radius = match maybe_apex_radius_str {
+        Some(radius) => match radius.parse::<f64>() {
+            Ok(radius) => radius,
             Err(_) => {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    "invalid height value".to_string(),
+                    "invalid apex radius value".to_string(),
                 ))
             }
         },
         None => {
             return Err(FailedToParseInputFile(
                 line_number,
-                "cylinder missing height".to_string(),
+                "cone missing apex radius".to_string(),
             ))
         }
+    };
+
+    // Parse apex point (x, y, z)
+    let apex_xyz_vec: Vec<&str> = keyword_line_iter.take(3).collect();
+    let apex_result = Coords::new_from_str_vec(apex_xyz_vec);
+    let apex = match apex_result {
+        Ok(apex) => apex,
+        Err(error) => return Err(FailedToParseInputFile(line_number, format!("error parsing cone apex: {}", error.to_string()))),
     };
 
     let invalid_value = keyword_line_iter.next();
@@ -117,12 +108,12 @@ pub fn process_cylinder(
         ));
     }
 
-    Ok(Cylinder {
+    Ok(Cone {
         uuid: Uuid::new_v4(),
         surface: surface.clone(),
-        radius,
+        base_radius,
         base,
-        axis,
-        height,
+        apex_radius,
+        apex,
     })
 }

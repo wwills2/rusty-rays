@@ -58,13 +58,13 @@ impl Primitive for Cylinder {
         let oc = &ray.origin - &self.base;
 
         // Calculate coefficients for the quadratic equation
-        let a = ray.direction.x.powi(2) + ray.direction.z.powi(2) - 
+        let a = ray.direction.x.powi(2) + ray.direction.y.powi(2) + ray.direction.z.powi(2) - 
                 (ray.direction.clone() * axis.clone()).powi(2);
 
-        let b = 2.0 * (oc.x * ray.direction.x + oc.z * ray.direction.z - 
+        let b = 2.0 * (oc.x * ray.direction.x + oc.y * ray.direction.y + oc.z * ray.direction.z - 
                 (oc.clone() * axis.clone()) * (ray.direction.clone() * axis.clone()));
 
-        let c = oc.x.powi(2) + oc.z.powi(2) - 
+        let c = oc.x.powi(2) + oc.y.powi(2) + oc.z.powi(2) - 
                 (oc.clone() * axis.clone()).powi(2) - self.radius.powi(2);
 
         // Solve the quadratic equation
