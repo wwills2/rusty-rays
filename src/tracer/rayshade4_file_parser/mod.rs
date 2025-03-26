@@ -234,10 +234,24 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 }
             };
 
-            let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(4).collect();
+            let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
             let position = match Coords::new_from_str_vec(xyz_vec) {
                 Ok(position) => position,
                 Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+            };
+
+            // Parse optional radius parameter for soft shadows
+            let radius = match line_words_iter.next() {
+                Some(radius_str) => match radius_str.parse::<f64>() {
+                    Ok(radius) => radius,
+                    Err(_) => {
+                        return Err(FailedToParseInputFile(
+                            line_number,
+                            "light radius must be a valid decimal value".to_string(),
+                        ))
+                    }
+                },
+                None => 0.0, // Default radius is 0.0 (no soft shadows)
             };
 
             let invalid_value = line_words_iter.next();
@@ -252,6 +266,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 position,
                 intensity,
                 source_type: light_source_type,
+                radius,
             })
         } else if SCENE_DATA_KEYWORDS
             .get("eyep")

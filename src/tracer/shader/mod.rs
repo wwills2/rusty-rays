@@ -51,48 +51,137 @@ fn calculate_color(
     let mut point_color = surface.ambient.clone();
 
     for light_source in &model.light_sources {
-        let mut shadow_ray_direction = &light_source.position - &starting_intersection.position;
-        let shadow_ray_length = shadow_ray_direction.calc_vector_length();
-        shadow_ray_direction.normalize_vector();
+        // If radius is 0 or very small, treat as a point light (hard shadows)
+        if light_source.radius <= 1e-5 {
+            let mut shadow_ray_direction = &light_source.position - &starting_intersection.position;
+            let shadow_ray_length = shadow_ray_direction.calc_vector_length();
+            shadow_ray_direction.normalize_vector();
 
-        /*  move the origin just off the intersected object along the shadow ray to protect against
-          intersection with the originally intersected object
-        */
-        let offset_shadow_ray_origin =
-            &starting_intersection.position + &(&shadow_ray_direction * 10e-5);
+            /*  move the origin just off the intersected object along the shadow ray to protect against
+              intersection with the originally intersected object
+            */
+            let offset_shadow_ray_origin =
+                &starting_intersection.position + &(&shadow_ray_direction * 10e-5);
 
-        let shadow_ray = Ray {
-            origin: offset_shadow_ray_origin,
-            direction: shadow_ray_direction,
-            i: 0,
-            j: 0,
-        };
-
-        let shadow_ray_intersection =
-            match tracer::calculate_ray_first_intersection(&shadow_ray, model) {
-                Some(intersection) => intersection,
-                None => {
-                    adjust_color_for_diffuse_and_specular(
-                        &mut point_color,
-                        light_source,
-                        &shadow_ray.direction,
-                        &starting_intersection.surface_normal_at_intersection,
-                        &ray_from_intersection_back_to_source,
-                        surface,
-                    );
-                    continue;
-                }
+            let shadow_ray = Ray {
+                origin: offset_shadow_ray_origin,
+                direction: shadow_ray_direction,
+                i: 0,
+                j: 0,
             };
 
-        if shadow_ray_intersection.distance_along_ray > shadow_ray_length {
-            adjust_color_for_diffuse_and_specular(
-                &mut point_color,
-                light_source,
-                &shadow_ray.direction,
-                &starting_intersection.surface_normal_at_intersection,
-                &ray_from_intersection_back_to_source,
-                surface,
-            )
+            let shadow_ray_intersection =
+                match tracer::calculate_ray_first_intersection(&shadow_ray, model) {
+                    Some(intersection) => intersection,
+                    None => {
+                        adjust_color_for_diffuse_and_specular(
+                            &mut point_color,
+                            light_source,
+                            &shadow_ray.direction,
+                            &starting_intersection.surface_normal_at_intersection,
+                            &ray_from_intersection_back_to_source,
+                            surface,
+                        );
+                        continue;
+                    }
+                };
+
+            if shadow_ray_intersection.distance_along_ray > shadow_ray_length {
+                adjust_color_for_diffuse_and_specular(
+                    &mut point_color,
+                    light_source,
+                    &shadow_ray.direction,
+                    &starting_intersection.surface_normal_at_intersection,
+                    &ray_from_intersection_back_to_source,
+                    surface,
+                )
+            }
+        } else {
+            // Area light (soft shadows)
+            // Calculate the main direction to the light center
+            let mut main_shadow_ray_direction = &light_source.position - &starting_intersection.position;
+            let _shadow_ray_length = main_shadow_ray_direction.calc_vector_length();
+            main_shadow_ray_direction.normalize_vector();
+
+            // Create a coordinate system around the main direction
+            // Find two vectors perpendicular to the main direction
+            let mut tangent1 = Coords { x: 1.0, y: 0.0, z: 0.0 };
+            if main_shadow_ray_direction.x.abs() > 0.9 {
+                tangent1 = Coords { x: 0.0, y: 1.0, z: 0.0 };
+            }
+
+            // Gram-Schmidt process to make tangent1 perpendicular to main_shadow_ray_direction
+            let dot_product = &tangent1 * &main_shadow_ray_direction;
+            let scaled_main_dir = &main_shadow_ray_direction * dot_product;
+            let tangent1 = (&tangent1 - &scaled_main_dir).calc_normalized_vector();
+            let tangent2 = main_shadow_ray_direction.cross(&tangent1).calc_normalized_vector();
+
+            // Number of shadow rays to cast (more rays = smoother shadows but slower)
+            const NUM_SHADOW_RAYS: usize = 16;
+            let mut visible_samples = 0;
+
+            for i in 0..NUM_SHADOW_RAYS {
+                // Generate random point on the disk
+                // Using stratified sampling for better distribution
+                let angle = 2.0 * std::f64::consts::PI * (i as f64 / NUM_SHADOW_RAYS as f64);
+                let distance = light_source.radius * (i as f64 / NUM_SHADOW_RAYS as f64).sqrt();
+
+                // Calculate the offset from the light center
+                let offset = &(&tangent1 * (distance * angle.cos())) + &(&tangent2 * (distance * angle.sin()));
+
+                // Calculate the position of the sample on the light
+                let light_sample_position = &light_source.position + &offset;
+
+                // Calculate direction to the light sample
+                let mut shadow_ray_direction = &light_sample_position - &starting_intersection.position;
+                let sample_ray_length = shadow_ray_direction.calc_vector_length();
+                shadow_ray_direction.normalize_vector();
+
+                // Move the origin slightly off the surface
+                let offset_shadow_ray_origin =
+                    &starting_intersection.position + &(&shadow_ray_direction * 10e-5);
+
+                let shadow_ray = Ray {
+                    origin: offset_shadow_ray_origin,
+                    direction: shadow_ray_direction,
+                    i: 0,
+                    j: 0,
+                };
+
+                // Check if this ray is blocked
+                let shadow_ray_intersection =
+                    match tracer::calculate_ray_first_intersection(&shadow_ray, model) {
+                        Some(intersection) => intersection,
+                        None => {
+                            // This ray is not blocked
+                            visible_samples += 1;
+                            continue;
+                        }
+                    };
+
+                if shadow_ray_intersection.distance_along_ray > sample_ray_length {
+                    // This ray reaches the light
+                    visible_samples += 1;
+                }
+            }
+
+            // Calculate the visibility factor (percentage of rays that reach the light)
+            let visibility = visible_samples as f64 / NUM_SHADOW_RAYS as f64;
+
+            if visibility > 0.0 {
+                // Apply lighting with the visibility factor
+                let mut scaled_light = light_source.clone();
+                scaled_light.intensity *= visibility;
+
+                adjust_color_for_diffuse_and_specular(
+                    &mut point_color,
+                    &scaled_light,
+                    &main_shadow_ray_direction,
+                    &starting_intersection.surface_normal_at_intersection,
+                    &ray_from_intersection_back_to_source,
+                    surface,
+                );
+            }
         }
     }
 
