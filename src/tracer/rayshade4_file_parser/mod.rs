@@ -82,7 +82,6 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
     };
     let mut light_sources: Vec<Light> = Vec::new();
     let mut spheres: HashMap<Uuid, Sphere> = HashMap::new();
-    let mut cylinders: HashMap<Uuid, Cylinder> = HashMap::new();
     let mut cones: HashMap<Uuid, Cone> = HashMap::new();
     let mut polygons: HashMap<Uuid, Polygon> = HashMap::new();
     let mut triangles: HashMap<Uuid, Triangle> = HashMap::new();

@@ -69,7 +69,7 @@ pub fn process_cone(
     let base_result = Coords::new_from_str_vec(base_xyz_vec);
     let base = match base_result {
         Ok(base) => base,
-        Err(error) => return Err(FailedToParseInputFile(line_number, format!("error parsing cone base: {}", error.to_string()))),
+        Err(error) => return Err(FailedToParseInputFile(line_number, format!("error parsing cone base: {}", error))),
     };
 
     // Parse apex radius
@@ -97,7 +97,7 @@ pub fn process_cone(
     let apex_result = Coords::new_from_str_vec(apex_xyz_vec);
     let apex = match apex_result {
         Ok(apex) => apex,
-        Err(error) => return Err(FailedToParseInputFile(line_number, format!("error parsing cone apex: {}", error.to_string()))),
+        Err(error) => return Err(FailedToParseInputFile(line_number, format!("error parsing cone apex: {}", error))),
     };
 
     let invalid_value = keyword_line_iter.next();

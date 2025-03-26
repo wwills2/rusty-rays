@@ -71,7 +71,7 @@ pub fn process_cylinder_to_cone(
         Err(error) => {
             return Err(FailedToParseInputFile(
                 line_number,
-                format!("error parsing cylinder base: {}", error.to_string()),
+                format!("error parsing cylinder base: {}", error),
             ))
         }
     };
@@ -84,7 +84,7 @@ pub fn process_cylinder_to_cone(
         Err(error) => {
             return Err(FailedToParseInputFile(
                 line_number,
-                format!("error parsing cylinder axis: {}", error.to_string()),
+                format!("error parsing cylinder axis: {}", error),
             ))
         }
     };
