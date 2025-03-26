@@ -9,7 +9,6 @@ use uuid::Uuid;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Fov, Screen};
 use crate::tracer::primitives::cone::Cone;
-use crate::tracer::primitives::cylinder::Cylinder;
 use crate::tracer::primitives::polygon::Polygon;
 use crate::tracer::primitives::sphere::Sphere;
 use crate::tracer::primitives::Primitive;
@@ -26,7 +25,6 @@ pub struct Model {
     pub screen: Screen,
     pub light_sources: Vec<Light>,
     pub spheres: HashMap<Uuid, Sphere>,
-    pub cylinders: HashMap<Uuid, Cylinder>,
     pub cones: HashMap<Uuid, Cone>,
     pub polygons: HashMap<Uuid, Polygon>,
     pub all_primitives: HashMap<Uuid, Box<dyn Primitive>>,
@@ -124,7 +122,6 @@ impl Clone for Model {
             },
             light_sources: self.light_sources.clone(),
             spheres: self.spheres.clone(),
-            cylinders: self.cylinders.clone(),
             cones: self.cones.clone(),
             polygons: self.polygons.clone(),
             all_primitives: self.all_primitives.clone(),

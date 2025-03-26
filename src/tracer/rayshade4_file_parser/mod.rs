@@ -13,7 +13,6 @@ use crate::tracer::misc_types::{Fov, Screen, Surface};
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::model::{Model, ModelError};
 use crate::tracer::primitives::cone::Cone;
-use crate::tracer::primitives::cylinder::Cylinder;
 use crate::tracer::primitives::polygon::Polygon;
 use crate::tracer::primitives::sphere::Sphere;
 use crate::tracer::primitives::triangle::Triangle;
@@ -540,7 +539,6 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         screen,
         light_sources,
         spheres,
-        cylinders,
         cones,
         polygons,
         all_primitives,
