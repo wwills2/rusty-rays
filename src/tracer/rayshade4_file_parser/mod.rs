@@ -10,16 +10,19 @@ use uuid::Uuid;
 
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Fov, Screen, Surface};
-use crate::tracer::model::{Model, ModelError};
 use crate::tracer::model::ModelError::FailedToParseInputFile;
+use crate::tracer::model::{Model, ModelError};
+use crate::tracer::primitives::cone::Cone;
 use crate::tracer::primitives::polygon::Polygon;
-use crate::tracer::primitives::Primitive;
 use crate::tracer::primitives::sphere::Sphere;
 use crate::tracer::primitives::triangle::Triangle;
+use crate::tracer::primitives::Primitive;
 use crate::tracer::shader::color::Color;
 use crate::tracer::shader::light::{Light, LightSourceType};
 use crate::utils::logger::LOG;
 
+mod parse_cone;
+mod parse_cylinder_to_cone;
 mod parse_polygon;
 mod parse_sphere;
 mod parse_surface;
@@ -33,6 +36,8 @@ static SCENE_DATA_KEYWORDS: Lazy<HashMap<&'static str, String>> = Lazy::new(|| {
         ("fov", "fov".to_string()),
         ("screen", "screen".to_string()),
         ("sphere", "sphere".to_string()),
+        ("cylinder", "cylinder".to_string()),
+        ("cone", "cone".to_string()),
         ("polygon", "polygon".to_string()),
         ("triangle", "triangle".to_string()),
         ("up", "up".to_string()),
@@ -76,6 +81,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
     };
     let mut light_sources: Vec<Light> = Vec::new();
     let mut spheres: HashMap<Uuid, Sphere> = HashMap::new();
+    let mut cones: HashMap<Uuid, Cone> = HashMap::new();
     let mut polygons: HashMap<Uuid, Polygon> = HashMap::new();
     let mut triangles: HashMap<Uuid, Triangle> = HashMap::new();
     let mut surfaces: HashMap<String, Surface> = HashMap::new();
@@ -438,6 +444,33 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             debug!(LOG, "processed sphere {}", sphere);
             spheres.insert(sphere.uuid, sphere);
         } else if SCENE_DATA_KEYWORDS
+            .get("cylinder")
+            .unwrap()
+            .eq(peeked_line_word)
+        {
+            let cone = match parse_cylinder_to_cone::process_cylinder_to_cone(
+                &mut line_words_iter,
+                &surfaces,
+                line_number,
+            ) {
+                Ok(cone) => cone,
+                Err(error) => return Err(error),
+            };
+            debug!(LOG, "processed cylinder as cone {}", cone);
+            cones.insert(cone.uuid, cone);
+        } else if SCENE_DATA_KEYWORDS
+            .get("cone")
+            .unwrap()
+            .eq(peeked_line_word)
+        {
+            let cone = match parse_cone::process_cone(&mut line_words_iter, &surfaces, line_number)
+            {
+                Ok(cone) => cone,
+                Err(error) => return Err(error),
+            };
+            debug!(LOG, "processed cone {}", cone);
+            cones.insert(cone.uuid, cone);
+        } else if SCENE_DATA_KEYWORDS
             .get("polygon")
             .unwrap()
             .eq(peeked_line_word)
@@ -483,6 +516,12 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         all_primitives.insert(*uuid, Box::new(sphere.clone()));
     }
 
+    // Cylinders are now converted to cones, so we don't add any cylinders to all_primitives
+
+    for (uuid, cone) in &cones {
+        all_primitives.insert(*uuid, Box::new(cone.clone()));
+    }
+
     for (uuid, polygon) in &polygons {
         all_primitives.insert(*uuid, Box::new(polygon.clone()));
     }
@@ -500,6 +539,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         screen,
         light_sources,
         spheres,
+        cones,
         polygons,
         all_primitives,
     })
