@@ -9,15 +9,15 @@ use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
-use crate::tracer::primitives::cylinder::Cylinder;
+use crate::tracer::primitives::cone::Cone;
 use crate::utils::logger::LOG;
 
-pub fn process_cylinder(
+pub fn process_cylinder_to_cone(
     keyword_line_iter: &mut Peekable<SplitWhitespace>,
     surfaces: &HashMap<String, Surface>,
     line_number: usize,
-) -> Result<Cylinder, ModelError> {
-    debug!(LOG, "processing cylinder");
+) -> Result<Cone, ModelError> {
+    debug!(LOG, "processing cylinder as cone");
 
     // advance past cylinder keyword
     keyword_line_iter.next();
@@ -45,7 +45,7 @@ pub fn process_cylinder(
     };
 
     let maybe_radius_str = keyword_line_iter.next();
-    let radius = match maybe_radius_str {
+    let base_radius = match maybe_radius_str {
         Some(radius) => match radius.parse::<f64>() {
             Ok(radius) => radius,
             Err(_) => {
@@ -117,12 +117,20 @@ pub fn process_cylinder(
         ));
     }
 
-    Ok(Cylinder {
+    // Calculate apex point from base, axis, and height
+    let normalized_axis = axis.calc_normalized_vector();
+    let apex = &base + &(&normalized_axis * height);
+
+    // Use the same radius for apex (making it a cylinder-like cone)
+    // To make it a true cone, set apex_radius to 0.0
+    let apex_radius = 0.0;
+
+    Ok(Cone {
         uuid: Uuid::new_v4(),
         surface: surface.clone(),
-        radius,
+        base_radius,
         base,
-        axis,
-        height,
+        apex_radius,
+        apex,
     })
 }

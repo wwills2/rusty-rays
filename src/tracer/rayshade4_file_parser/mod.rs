@@ -23,7 +23,7 @@ use crate::tracer::shader::light::{Light, LightSourceType};
 use crate::utils::logger::LOG;
 
 mod parse_cone;
-mod parse_cylinder;
+mod parse_cylinder_to_cone;
 mod parse_polygon;
 mod parse_sphere;
 mod parse_surface;
@@ -450,16 +450,16 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             .unwrap()
             .eq(peeked_line_word)
         {
-            let cylinder = match parse_cylinder::process_cylinder(
+            let cone = match parse_cylinder_to_cone::process_cylinder_to_cone(
                 &mut line_words_iter,
                 &surfaces,
                 line_number,
             ) {
-                Ok(cylinder) => cylinder,
+                Ok(cone) => cone,
                 Err(error) => return Err(error),
             };
-            debug!(LOG, "processed cylinder {}", cylinder);
-            cylinders.insert(cylinder.uuid, cylinder);
+            debug!(LOG, "processed cylinder as cone {}", cone);
+            cones.insert(cone.uuid, cone);
         } else if SCENE_DATA_KEYWORDS
             .get("cone")
             .unwrap()
@@ -518,9 +518,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         all_primitives.insert(*uuid, Box::new(sphere.clone()));
     }
 
-    for (uuid, cylinder) in &cylinders {
-        all_primitives.insert(*uuid, Box::new(cylinder.clone()));
-    }
+    // Cylinders are now converted to cones, so we don't add any cylinders to all_primitives
 
     for (uuid, cone) in &cones {
         all_primitives.insert(*uuid, Box::new(cone.clone()));
