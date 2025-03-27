@@ -234,10 +234,58 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 }
             };
 
-            let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(4).collect();
-            let position = match Coords::new_from_str_vec(xyz_vec) {
-                Ok(position) => position,
-                Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+            // Handle different light types according to the specification
+            let (position, radius) = match light_source_type {
+                LightSourceType::Ambient => {
+                    // Ambient lights don't have position or radius
+                    (Coords::new(), 0.0)
+                },
+                LightSourceType::Point => {
+                    // Point lights have position only (Xpos, Ypos, Zpos)
+                    let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
+                    let position = match Coords::new_from_str_vec(xyz_vec) {
+                        Ok(position) => position,
+                        Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+                    };
+                    (position, 0.0) // No radius for point lights
+                },
+                LightSourceType::Directional => {
+                    // Directional lights have direction (Xdir, Ydir, Zdir)
+                    let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
+                    let direction = match Coords::new_from_str_vec(xyz_vec) {
+                        Ok(direction) => direction,
+                        Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+                    };
+                    (direction, 0.0) // No radius for directional lights
+                },
+                LightSourceType::Extended => {
+                    // Extended lights have radius and position (Radius, Xpos, Ypos, Zpos)
+                    let radius = match line_words_iter.next() {
+                        Some(radius_str) => match radius_str.parse::<f64>() {
+                            Ok(radius) => radius,
+                            Err(_) => {
+                                return Err(FailedToParseInputFile(
+                                    line_number,
+                                    "light radius must be a valid decimal value".to_string(),
+                                ))
+                            }
+                        },
+                        None => {
+                            return Err(FailedToParseInputFile(
+                                line_number,
+                                "missing radius for extended light".to_string(),
+                            ))
+                        }
+                    };
+
+                    let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
+                    let position = match Coords::new_from_str_vec(xyz_vec) {
+                        Ok(position) => position,
+                        Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+                    };
+
+                    (position, radius)
+                },
             };
 
             let invalid_value = line_words_iter.next();
@@ -252,6 +300,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 position,
                 intensity,
                 source_type: light_source_type,
+                radius,
             })
         } else if SCENE_DATA_KEYWORDS
             .get("eyep")
