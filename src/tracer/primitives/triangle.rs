@@ -2,6 +2,7 @@ use std::fmt;
 
 use uuid::Uuid;
 
+use crate::tracer::bvh::AABB;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::primitives::plane::Plane;
@@ -168,6 +169,26 @@ impl Primitive for Triangle {
 
     fn primitive_clone(&self) -> Box<dyn Primitive> {
         Box::new((*self).clone())
+    }
+
+    fn compute_bounding_box(&self) -> AABB {
+        // For a triangle, the bounding box is determined by the min and max coordinates of its vertices
+        let points = vec![
+            self.vertex_1.clone(),
+            self.vertex_2.clone(),
+            self.vertex_3.clone(),
+        ];
+        AABB::from_points(&points)
+    }
+
+    fn compute_centroid(&self) -> Coords {
+        // The centroid of a triangle is the average of its three vertices
+        let sum = &(&self.vertex_1 + &self.vertex_2) + &self.vertex_3;
+        Coords {
+            x: sum.x / 3.0,
+            y: sum.y / 3.0,
+            z: sum.z / 3.0,
+        }
     }
 }
 

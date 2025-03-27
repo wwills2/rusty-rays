@@ -2,7 +2,9 @@ use std::fmt;
 
 use uuid::Uuid;
 
+use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::bvh::AABB;
 
 pub mod cone;
 pub mod plane;
@@ -17,6 +19,10 @@ pub trait Primitive: Send + Sync {
     fn get_surface(&self) -> &Surface;
     fn calculate_intersection(&self, ray: &Ray) -> Option<Intersection>;
     fn primitive_clone(&self) -> Box<dyn Primitive>;
+
+    // New methods for bounding box and centroid calculation
+    fn compute_bounding_box(&self) -> AABB;
+    fn compute_centroid(&self) -> Coords;
 }
 
 impl fmt::Debug for dyn Primitive {

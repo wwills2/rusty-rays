@@ -176,7 +176,7 @@ impl BVH {
 
     pub fn build(&mut self, primitives: Vec<Box<dyn Primitive>>) {
         debug!(LOG, "Building BVH with {} primitives", primitives.len());
-        
+
         if primitives.is_empty() {
             self.root = None;
             return;
@@ -190,7 +190,7 @@ impl BVH {
 
         // Build the BVH tree
         self.root = Some(self.build_node(&primitives));
-        
+
         debug!(LOG, "BVH construction complete");
     }
 
@@ -198,20 +198,19 @@ impl BVH {
         if primitives.len() == 1 {
             // Create a leaf node for a single primitive
             let primitive = Arc::clone(&primitives[0]);
-            
-            // For simplicity, we're using a simple bounding box.
-            // In a real implementation, you would compute a tight AABB for each primitive.
+
+            // Compute a tight AABB for the primitive
             let aabb = self.compute_primitive_aabb(&primitive);
-            
+
             return BVHNode::Leaf { aabb, primitive };
         }
 
         // Compute bounding box for all primitives
         let aabb = self.compute_primitives_aabb(primitives);
-        
+
         // Find the longest axis of the bounding box
         let axis = aabb.get_longest_axis();
-        
+
         // Sort primitives along the chosen axis
         let mut sorted_primitives = primitives.to_vec();
         match axis {
@@ -231,45 +230,27 @@ impl BVH {
                 centroid_a.z.partial_cmp(&centroid_b.z).unwrap_or(Ordering::Equal)
             }),
         }
-        
+
         // Split primitives into two groups
         let mid = sorted_primitives.len() / 2;
         let left_primitives = sorted_primitives[..mid].to_vec();
         let right_primitives = sorted_primitives[mid..].to_vec();
-        
+
         // Recursively build left and right subtrees
         let left = Box::new(self.build_node(&left_primitives));
         let right = Box::new(self.build_node(&right_primitives));
-        
+
         BVHNode::Branch { aabb, left, right }
     }
 
     fn compute_primitive_aabb(&self, primitive: &Arc<Box<dyn Primitive>>) -> AABB {
-        // This is a simplified implementation.
-        // In a real implementation, you would compute a tight AABB for each primitive type.
-        // For now, we'll use a placeholder implementation.
-        
-        // Get the primitive's type to determine how to compute its AABB
-        let primitive_type = primitive.get_type();
-        
-        // This is just a placeholder. In a real implementation, you would compute
-        // the actual AABB based on the primitive's geometry.
-        let min = Coords { x: -1.0, y: -1.0, z: -1.0 };
-        let max = Coords { x: 1.0, y: 1.0, z: 1.0 };
-        
-        AABB { min, max }
+        // Use the primitive's compute_bounding_box method to get a tight AABB
+        primitive.compute_bounding_box()
     }
 
     fn compute_primitive_centroid(&self, primitive: &Arc<Box<dyn Primitive>>) -> Coords {
-        // This is a simplified implementation.
-        // In a real implementation, you would compute the actual centroid of the primitive.
-        
-        let aabb = self.compute_primitive_aabb(primitive);
-        Coords {
-            x: (aabb.min.x + aabb.max.x) / 2.0,
-            y: (aabb.min.y + aabb.max.y) / 2.0,
-            z: (aabb.min.z + aabb.max.z) / 2.0,
-        }
+        // Use the primitive's compute_centroid method to get the actual centroid
+        primitive.compute_centroid()
     }
 
     fn compute_primitives_aabb(&self, primitives: &[Arc<Box<dyn Primitive>>]) -> AABB {
@@ -281,12 +262,12 @@ impl BVH {
         }
 
         let mut aabb = self.compute_primitive_aabb(&primitives[0]);
-        
+
         for primitive in primitives.iter().skip(1) {
             let primitive_aabb = self.compute_primitive_aabb(primitive);
             aabb = aabb.merge(&primitive_aabb);
         }
-        
+
         aabb
     }
 

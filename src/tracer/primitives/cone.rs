@@ -2,6 +2,7 @@ use std::fmt;
 
 use uuid::Uuid;
 
+use crate::tracer::bvh::AABB;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::primitives::Primitive;
@@ -138,5 +139,87 @@ impl Primitive for Cone {
 
     fn primitive_clone(&self) -> Box<dyn Primitive> {
         Box::new((*self).clone())
+    }
+
+    fn compute_bounding_box(&self) -> AABB {
+        // For a cone, we need to consider both the base and apex circles
+        // First, calculate points on the base circle in different directions
+        let axis = (&self.apex - &self.base).calc_normalized_vector();
+
+        // Find two vectors perpendicular to the axis
+        let mut tangent1 = Coords {
+            x: 1.0,
+            y: 0.0,
+            z: 0.0,
+        };
+        if axis.x.abs() > 0.9 {
+            tangent1 = Coords {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            };
+        }
+
+        // Make tangent1 perpendicular to axis
+        let dot_product = &tangent1 * &axis;
+        let scaled_axis = &axis * dot_product;
+        let tangent1 = (&tangent1 - &scaled_axis).calc_normalized_vector();
+        let tangent2 = axis.cross(&tangent1).calc_normalized_vector();
+
+        // Create points on the base circle
+        let mut points = Vec::new();
+
+        // Add base center
+        points.push(self.base.clone());
+
+        // Add apex center
+        points.push(self.apex.clone());
+
+        // Add points on the base circle
+        for i in 0..8 {
+            let angle = 2.0 * std::f64::consts::PI * (i as f64 / 8.0);
+            let x_offset = self.base_radius * angle.cos();
+            let y_offset = self.base_radius * angle.sin();
+            let point = &(&self.base + &(&tangent1 * x_offset)) + &(&tangent2 * y_offset);
+            points.push(point);
+        }
+
+        // Add points on the apex circle (if apex_radius > 0)
+        if self.apex_radius > 0.0 {
+            for i in 0..8 {
+                let angle = 2.0 * std::f64::consts::PI * (i as f64 / 8.0);
+                let x_offset = self.apex_radius * angle.cos();
+                let y_offset = self.apex_radius * angle.sin();
+                let point = &(&self.apex + &(&tangent1 * x_offset)) + &(&tangent2 * y_offset);
+                points.push(point);
+            }
+        }
+
+        // Create AABB from all points
+        AABB::from_points(&points)
+    }
+
+    fn compute_centroid(&self) -> Coords {
+        // For a cone, the centroid is at 1/4 of the height from the base
+        // if the apex radius is 0 (true cone), or at the center of the
+        // frustum if both radii are non-zero
+        let axis = &self.apex - &self.base;
+        let height = axis.calc_vector_length();
+        let normalized_axis = axis.calc_normalized_vector();
+
+        if self.apex_radius == 0.0 {
+            // True cone: centroid is at 1/4 of the height from the base
+            &self.base + &(&normalized_axis * (height * 0.25))
+        } else {
+            // Frustum: centroid is at the weighted average of the centers
+            let base_weight = self.base_radius.powi(2) + self.base_radius * self.apex_radius + self.apex_radius.powi(2);
+            let apex_weight = self.apex_radius.powi(2);
+            let total_weight = base_weight + apex_weight;
+
+            let weighted_base = &self.base * (base_weight / total_weight);
+            let weighted_apex = &self.apex * (apex_weight / total_weight);
+
+            &weighted_base + &weighted_apex
+        }
     }
 }
