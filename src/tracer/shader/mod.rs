@@ -10,6 +10,7 @@ pub mod color;
 pub mod light;
 
 static MAX_REFLECTIONS: u8 = 5;
+static NUM_SHADOW_RAYS: u8 = 16;
 
 // !!!
 // DO NOT USE model.eyep anywhere in this file
@@ -99,25 +100,35 @@ fn calculate_color(
         } else {
             // Area light (soft shadows)
             // Calculate the main direction to the light center
-            let mut main_shadow_ray_direction = &light_source.position - &starting_intersection.position;
+            let mut main_shadow_ray_direction =
+                &light_source.position - &starting_intersection.position;
             let _shadow_ray_length = main_shadow_ray_direction.calc_vector_length();
             main_shadow_ray_direction.normalize_vector();
 
             // Create a coordinate system around the main direction
             // Find two vectors perpendicular to the main direction
-            let mut tangent1 = Coords { x: 1.0, y: 0.0, z: 0.0 };
+            let mut tangent1 = Coords {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            };
             if main_shadow_ray_direction.x.abs() > 0.9 {
-                tangent1 = Coords { x: 0.0, y: 1.0, z: 0.0 };
+                tangent1 = Coords {
+                    x: 0.0,
+                    y: 1.0,
+                    z: 0.0,
+                };
             }
 
             // Gram-Schmidt process to make tangent1 perpendicular to main_shadow_ray_direction
             let dot_product = &tangent1 * &main_shadow_ray_direction;
             let scaled_main_dir = &main_shadow_ray_direction * dot_product;
             let tangent1 = (&tangent1 - &scaled_main_dir).calc_normalized_vector();
-            let tangent2 = main_shadow_ray_direction.cross(&tangent1).calc_normalized_vector();
+            let tangent2 = main_shadow_ray_direction
+                .cross(&tangent1)
+                .calc_normalized_vector();
 
             // Number of shadow rays to cast (more rays = smoother shadows but slower)
-            const NUM_SHADOW_RAYS: usize = 16;
             let mut visible_samples = 0;
 
             for i in 0..NUM_SHADOW_RAYS {
@@ -127,13 +138,15 @@ fn calculate_color(
                 let distance = light_source.radius * (i as f64 / NUM_SHADOW_RAYS as f64).sqrt();
 
                 // Calculate the offset from the light center
-                let offset = &(&tangent1 * (distance * angle.cos())) + &(&tangent2 * (distance * angle.sin()));
+                let offset = &(&tangent1 * (distance * angle.cos()))
+                    + &(&tangent2 * (distance * angle.sin()));
 
                 // Calculate the position of the sample on the light
                 let light_sample_position = &light_source.position + &offset;
 
                 // Calculate direction to the light sample
-                let mut shadow_ray_direction = &light_sample_position - &starting_intersection.position;
+                let mut shadow_ray_direction =
+                    &light_sample_position - &starting_intersection.position;
                 let sample_ray_length = shadow_ray_direction.calc_vector_length();
                 shadow_ray_direction.normalize_vector();
 
