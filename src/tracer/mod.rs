@@ -1,9 +1,9 @@
-use std::{f64, fmt, thread};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
+use std::{f64, fmt, thread};
 
 use image::{ImageBuffer, RgbImage};
 use slog::{debug, error, info, trace, warn};
@@ -16,6 +16,7 @@ use crate::tracer::model::{Model, ModelError};
 use crate::utils::config::CONFIG;
 use crate::utils::logger::LOG;
 
+mod bvh;
 mod coords;
 mod misc_types;
 pub mod model;
@@ -271,36 +272,14 @@ fn calculate_ray_closest_intersection(ray: &Ray, model: &Model) -> Option<Inters
         ray.j
     );
 
-    let mut closest_intersection: Option<Intersection> = None;
-
-    for primitive in model.all_primitives.values() {
-        if let Some(intersection) = primitive.calculate_intersection(ray) {
-            match closest_intersection {
-                Some(ref current_intersection)
-                    if intersection.distance_along_ray
-                        < current_intersection.distance_along_ray =>
-                {
-                    closest_intersection = Some(intersection);
-                }
-                None => {
-                    closest_intersection = Some(intersection);
-                }
-                _ => {}
-            }
-        }
-    }
-
-    closest_intersection
+    // Use the BVH to find the closest intersection
+    model.bvh.intersect(ray)
 }
 
 fn calculate_ray_first_intersection(ray: &Ray, model: &Model) -> Option<Intersection> {
-    for primitive in model.all_primitives.values() {
-        if let Some(intersection) = primitive.calculate_intersection(ray) {
-            return Some(intersection);
-        }
-    }
-
-    None
+    // Use the BVH to find the first intersection
+    // Since the BVH already returns the closest intersection, this is equivalent
+    model.bvh.intersect(ray)
 }
 
 pub fn write(output_file_path: &Path, raw_image_data: &Vec<Vec<Color>>) -> Result<(), WriteError> {
