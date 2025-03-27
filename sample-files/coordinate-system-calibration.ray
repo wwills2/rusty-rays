@@ -4,7 +4,7 @@ lookp 0 0 0
 up 0 1 0
 fov 45 45
 screen 1500 1500
-light 0.97735 point 1 3 2
+light 0.97735 extended 0.5 1 3 2
 surface zero-vec
     diffuse 1.0 1.0 1.0
 surface x-blue-0
