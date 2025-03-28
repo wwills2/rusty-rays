@@ -1,5 +1,3 @@
-use crate::tracer;
-use crate::tracer::calculate_ray_closest_intersection;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::model::Model;
@@ -17,19 +15,18 @@ static NUM_SHADOW_RAYS: u8 = 16;
 // !!!
 
 pub fn process_ray(trace_depth: u8, ray: &Ray, model: &Model) -> Color {
-    match calculate_ray_closest_intersection(ray, model) {
+    match model.bvh.intersect(ray) {
         Some(intersection) => {
-            let intersected_primitive = model
+            // Get the primitive from the model's collections using the UUID
+            let surface = match model
                 .all_primitives
                 .get(&intersection.intersected_primitive_uuid)
-                .unwrap();
+            {
+                Some(intersected_primitive) => intersected_primitive.get_surface(),
+                None => return model.background.clone(),
+            };
 
-            calculate_color(
-                trace_depth,
-                model,
-                intersected_primitive.get_surface(),
-                &intersection,
-            )
+            calculate_color(trace_depth, model, surface, &intersection)
         }
         None => model.background.clone(),
     }
@@ -71,21 +68,20 @@ fn calculate_color(
                 j: 0,
             };
 
-            let shadow_ray_intersection =
-                match tracer::calculate_ray_first_intersection(&shadow_ray, model) {
-                    Some(intersection) => intersection,
-                    None => {
-                        adjust_color_for_diffuse_and_specular(
-                            &mut point_color,
-                            light_source,
-                            &shadow_ray.direction,
-                            &starting_intersection.surface_normal_at_intersection,
-                            &ray_from_intersection_back_to_source,
-                            surface,
-                        );
-                        continue;
-                    }
-                };
+            let shadow_ray_intersection = match model.bvh.intersect(&shadow_ray) {
+                Some(intersection) => intersection,
+                None => {
+                    adjust_color_for_diffuse_and_specular(
+                        &mut point_color,
+                        light_source,
+                        &shadow_ray.direction,
+                        &starting_intersection.surface_normal_at_intersection,
+                        &ray_from_intersection_back_to_source,
+                        surface,
+                    );
+                    continue;
+                }
+            };
 
             if shadow_ray_intersection.distance_along_ray > shadow_ray_length {
                 adjust_color_for_diffuse_and_specular(
@@ -162,15 +158,14 @@ fn calculate_color(
                 };
 
                 // Check if this ray is blocked
-                let shadow_ray_intersection =
-                    match tracer::calculate_ray_first_intersection(&shadow_ray, model) {
-                        Some(intersection) => intersection,
-                        None => {
-                            // This ray is not blocked
-                            visible_samples += 1;
-                            continue;
-                        }
-                    };
+                let shadow_ray_intersection = match model.bvh.intersect(&shadow_ray) {
+                    Some(intersection) => intersection,
+                    None => {
+                        // This ray is not blocked
+                        visible_samples += 1;
+                        continue;
+                    }
+                };
 
                 if shadow_ray_intersection.distance_along_ray > sample_ray_length {
                     // This ray reaches the light

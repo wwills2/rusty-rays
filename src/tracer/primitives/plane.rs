@@ -2,6 +2,7 @@ use std::fmt;
 
 use uuid::Uuid;
 
+use crate::tracer::bvh::Aabb;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::plane_coords_2d::PlaneCoords2D;
@@ -98,6 +99,42 @@ impl Primitive for Plane {
 
     fn primitive_clone(&self) -> Box<dyn Primitive> {
         Box::new((*self).clone())
+    }
+
+    fn compute_bounding_box(&self) -> Aabb {
+        // For a plane, we create a very large bounding box centered at the sample point
+        // and extending in the direction of the basis vectors
+        let large_value = 1000000.0; // A large value to represent "infinity"
+
+        // Create points in the plane at a large distance from the sample point
+        let mut points = Vec::new();
+
+        // Add the sample point
+        points.push(self.sample_point.clone());
+
+        // Add points in the direction of the basis vectors
+        let basis1 = &self.basis_vectors.0;
+        let basis2 = &self.basis_vectors.1;
+
+        // Add points in the positive and negative directions of the basis vectors
+        points.push(&self.sample_point + &(basis1 * large_value));
+        points.push(&self.sample_point - &(basis1 * large_value));
+        points.push(&self.sample_point + &(basis2 * large_value));
+        points.push(&self.sample_point - &(basis2 * large_value));
+
+        // Add points in the diagonal directions
+        points.push(&(&self.sample_point + &(basis1 * large_value)) + &(basis2 * large_value));
+        points.push(&(&self.sample_point - &(basis1 * large_value)) + &(basis2 * large_value));
+        points.push(&(&self.sample_point + &(basis1 * large_value)) - &(basis2 * large_value));
+        points.push(&(&self.sample_point - &(basis1 * large_value)) - &(basis2 * large_value));
+
+        // Create Aabb from all points
+        Aabb::from_points(&points)
+    }
+
+    fn compute_centroid(&self) -> Coords {
+        // The centroid of a plane is its sample point
+        self.sample_point.clone()
     }
 }
 

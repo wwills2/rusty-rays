@@ -1,9 +1,9 @@
-use std::{f64, fmt, thread};
 use std::fs::File;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
+use std::{f64, fmt, thread};
 
 use image::{ImageBuffer, RgbImage};
 use slog::{debug, error, info, trace, warn};
@@ -11,11 +11,12 @@ use slog::{debug, error, info, trace, warn};
 use shader::color::Color;
 
 use crate::tracer::coords::Coords;
-use crate::tracer::misc_types::{Intersection, Ray};
+use crate::tracer::misc_types::Ray;
 use crate::tracer::model::{Model, ModelError};
 use crate::utils::config::CONFIG;
 use crate::utils::logger::LOG;
 
+mod bvh;
 mod coords;
 mod misc_types;
 pub mod model;
@@ -261,46 +262,6 @@ screen plane height: {}",
 
         rays
     }
-}
-
-fn calculate_ray_closest_intersection(ray: &Ray, model: &Model) -> Option<Intersection> {
-    trace!(
-        LOG,
-        "Calculating primary ray color for pixel ({}, {})",
-        ray.i,
-        ray.j
-    );
-
-    let mut closest_intersection: Option<Intersection> = None;
-
-    for primitive in model.all_primitives.values() {
-        if let Some(intersection) = primitive.calculate_intersection(ray) {
-            match closest_intersection {
-                Some(ref current_intersection)
-                    if intersection.distance_along_ray
-                        < current_intersection.distance_along_ray =>
-                {
-                    closest_intersection = Some(intersection);
-                }
-                None => {
-                    closest_intersection = Some(intersection);
-                }
-                _ => {}
-            }
-        }
-    }
-
-    closest_intersection
-}
-
-fn calculate_ray_first_intersection(ray: &Ray, model: &Model) -> Option<Intersection> {
-    for primitive in model.all_primitives.values() {
-        if let Some(intersection) = primitive.calculate_intersection(ray) {
-            return Some(intersection);
-        }
-    }
-
-    None
 }
 
 pub fn write(output_file_path: &Path, raw_image_data: &Vec<Vec<Color>>) -> Result<(), WriteError> {

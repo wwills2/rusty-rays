@@ -2,6 +2,7 @@ use std::fmt;
 
 use uuid::Uuid;
 
+use crate::tracer::bvh::Aabb;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::plane_coords_2d::PlaneCoords2D;
@@ -154,6 +155,32 @@ impl Primitive for Polygon {
 
     fn primitive_clone(&self) -> Box<dyn Primitive> {
         Box::new((*self).clone())
+    }
+
+    fn compute_bounding_box(&self) -> Aabb {
+        // For a polygon, the bounding box is determined by the min and max coordinates of its vertices
+        Aabb::from_points(&self.vertices)
+    }
+
+    fn compute_centroid(&self) -> Coords {
+        // The centroid of a polygon is the average of its vertices
+        if self.vertices.is_empty() {
+            return Coords::new();
+        }
+
+        let mut sum = Coords::new();
+        for vertex in &self.vertices {
+            sum.x += vertex.x;
+            sum.y += vertex.y;
+            sum.z += vertex.z;
+        }
+
+        let num_vertices = self.vertices.len() as f64;
+        Coords {
+            x: sum.x / num_vertices,
+            y: sum.y / num_vertices,
+            z: sum.z / num_vertices,
+        }
     }
 }
 

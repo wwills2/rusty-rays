@@ -6,6 +6,7 @@ use std::path::Path;
 
 use uuid::Uuid;
 
+use crate::tracer::bvh::Bvh;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Fov, Screen};
 use crate::tracer::primitives::cone::Cone;
@@ -28,6 +29,7 @@ pub struct Model {
     pub cones: HashMap<Uuid, Cone>,
     pub polygons: HashMap<Uuid, Polygon>,
     pub all_primitives: HashMap<Uuid, Box<dyn Primitive>>,
+    pub bvh: Bvh,
 }
 
 #[derive(Debug)]
@@ -125,6 +127,7 @@ impl Clone for Model {
             cones: self.cones.clone(),
             polygons: self.polygons.clone(),
             all_primitives: self.all_primitives.clone(),
+            bvh: self.bvh.clone(),
         }
     }
 }

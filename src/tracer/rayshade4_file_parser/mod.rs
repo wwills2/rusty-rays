@@ -8,6 +8,7 @@ use once_cell::sync::Lazy;
 use slog::{debug, warn};
 use uuid::Uuid;
 
+use crate::tracer::bvh::Bvh;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Fov, Screen, Surface};
 use crate::tracer::model::ModelError::FailedToParseInputFile;
@@ -559,25 +560,37 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         }
     }
 
-    let mut all_primitives: HashMap<Uuid, Box<dyn Primitive>> = HashMap::new();
+    // Create a HashMap for all primitives
+    let mut all_primitives_map: HashMap<Uuid, Box<dyn Primitive>> = HashMap::new();
 
     for (uuid, sphere) in &spheres {
-        all_primitives.insert(*uuid, Box::new(sphere.clone()));
+        all_primitives_map.insert(*uuid, Box::new(sphere.clone()));
     }
 
     // Cylinders are now converted to cones, so we don't add any cylinders to all_primitives
 
     for (uuid, cone) in &cones {
-        all_primitives.insert(*uuid, Box::new(cone.clone()));
+        all_primitives_map.insert(*uuid, Box::new(cone.clone()));
     }
 
     for (uuid, polygon) in &polygons {
-        all_primitives.insert(*uuid, Box::new(polygon.clone()));
+        all_primitives_map.insert(*uuid, Box::new(polygon.clone()));
     }
 
     for (uuid, triangle) in &triangles {
-        all_primitives.insert(*uuid, Box::new(triangle.clone()));
+        all_primitives_map.insert(*uuid, Box::new(triangle.clone()));
     }
+
+    // Collect all primitives into a vector for Bvh construction
+    let primitives_for_bvh: Vec<Box<dyn Primitive>> = all_primitives_map
+        .values().cloned()
+        .collect();
+
+    // Build the Bvh from the collected primitives
+    debug!(LOG, "Building Bvh with {} primitives", primitives_for_bvh.len());
+    let mut bvh = Bvh::new();
+    bvh.build(primitives_for_bvh);
+    debug!(LOG, "Bvh construction complete");
 
     Ok(Model {
         background,
@@ -590,6 +603,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         spheres,
         cones,
         polygons,
-        all_primitives,
+        all_primitives: all_primitives_map,
+        bvh,
     })
 }
