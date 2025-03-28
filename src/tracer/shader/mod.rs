@@ -1,7 +1,6 @@
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::model::Model;
-use crate::tracer::primitives::Primitive;
 use crate::tracer::shader::color::Color;
 use crate::tracer::shader::light::Light;
 
@@ -16,7 +15,7 @@ static NUM_SHADOW_RAYS: u8 = 16;
 // !!!
 
 pub fn process_ray(trace_depth: u8, ray: &Ray, model: &Model) -> Color {
-    match model.bvh.intersect(&ray) {
+    match model.bvh.intersect(ray) {
         Some(intersection) => {
             // Get the primitive from the model's collections using the UUID
             let surface = match model

@@ -2,7 +2,7 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::tracer::bvh::AABB;
+use crate::tracer::bvh::Aabb;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::plane_coords_2d::PlaneCoords2D;
@@ -101,7 +101,7 @@ impl Primitive for Plane {
         Box::new((*self).clone())
     }
 
-    fn compute_bounding_box(&self) -> AABB {
+    fn compute_bounding_box(&self) -> Aabb {
         // For a plane, we create a very large bounding box centered at the sample point
         // and extending in the direction of the basis vectors
         let large_value = 1000000.0; // A large value to represent "infinity"
@@ -128,8 +128,8 @@ impl Primitive for Plane {
         points.push(&(&self.sample_point + &(basis1 * large_value)) - &(basis2 * large_value));
         points.push(&(&self.sample_point - &(basis1 * large_value)) - &(basis2 * large_value));
 
-        // Create AABB from all points
-        AABB::from_points(&points)
+        // Create Aabb from all points
+        Aabb::from_points(&points)
     }
 
     fn compute_centroid(&self) -> Coords {

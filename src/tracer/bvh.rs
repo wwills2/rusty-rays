@@ -2,24 +2,23 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::sync::Arc;
 
-use uuid::Uuid;
 
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray};
 use crate::tracer::primitives::Primitive;
 use crate::utils::logger::LOG;
-use slog::{debug, trace};
+use slog::debug;
 
 // Axis-aligned bounding box
 #[derive(Debug, Clone)]
-pub struct AABB {
+pub struct Aabb {
     pub min: Coords,
     pub max: Coords,
 }
 
-impl AABB {
+impl Aabb {
     pub fn new(min: Coords, max: Coords) -> Self {
-        AABB { min, max }
+        Aabb { min, max }
     }
 
     pub fn from_points(points: &[Coords]) -> Self {
@@ -44,10 +43,10 @@ impl AABB {
             max.z = max.z.max(point.z);
         }
 
-        AABB { min, max }
+        Aabb { min, max }
     }
 
-    pub fn merge(&self, other: &AABB) -> AABB {
+    pub fn merge(&self, other: &Aabb) -> Aabb {
         let min = Coords {
             x: self.min.x.min(other.min.x),
             y: self.min.y.min(other.min.y),
@@ -58,11 +57,11 @@ impl AABB {
             y: self.max.y.max(other.max.y),
             z: self.max.z.max(other.max.z),
         };
-        AABB { min, max }
+        Aabb { min, max }
     }
 
     pub fn intersect(&self, ray: &Ray) -> bool {
-        // Ray-AABB intersection using slab method
+        // Ray-Aabb intersection using slab method
         let mut tmin = f64::NEG_INFINITY;
         let mut tmax = f64::INFINITY;
 
@@ -114,25 +113,25 @@ impl AABB {
     }
 }
 
-// BVH Node
+// Bvh Node
 #[derive(Debug, Clone)]
-pub enum BVHNode {
+pub enum BvhNode {
     Branch {
-        aabb: AABB,
-        left: Box<BVHNode>,
-        right: Box<BVHNode>,
+        aabb: Aabb,
+        left: Box<BvhNode>,
+        right: Box<BvhNode>,
     },
     Leaf {
-        aabb: AABB,
+        aabb: Aabb,
         primitive: Arc<Box<dyn Primitive>>,
     },
 }
 
-impl BVHNode {
-    pub fn get_aabb(&self) -> &AABB {
+impl BvhNode {
+    pub fn get_aabb(&self) -> &Aabb {
         match self {
-            BVHNode::Branch { aabb, .. } => aabb,
-            BVHNode::Leaf { aabb, .. } => aabb,
+            BvhNode::Branch { aabb, .. } => aabb,
+            BvhNode::Leaf { aabb, .. } => aabb,
         }
     }
 
@@ -142,7 +141,7 @@ impl BVHNode {
         }
 
         match self {
-            BVHNode::Branch { left, right, .. } => {
+            BvhNode::Branch { left, right, .. } => {
                 let left_hit = left.intersect(ray);
                 let right_hit = right.intersect(ray);
 
@@ -158,24 +157,24 @@ impl BVHNode {
                     (None, None) => None,
                 }
             }
-            BVHNode::Leaf { primitive, .. } => primitive.calculate_intersection(ray),
+            BvhNode::Leaf { primitive, .. } => primitive.calculate_intersection(ray),
         }
     }
 }
 
-// BVH Tree
+// Bvh Tree
 #[derive(Debug, Clone)]
-pub struct BVH {
-    root: Option<BVHNode>,
+pub struct Bvh {
+    root: Option<BvhNode>,
 }
 
-impl BVH {
+impl Bvh {
     pub fn new() -> Self {
-        BVH { root: None }
+        Bvh { root: None }
     }
 
     pub fn build(&mut self, primitives: Vec<Box<dyn Primitive>>) {
-        debug!(LOG, "Building BVH with {} primitives", primitives.len());
+        debug!(LOG, "Building Bvh with {} primitives", primitives.len());
 
         if primitives.is_empty() {
             self.root = None;
@@ -185,24 +184,24 @@ impl BVH {
         // Convert primitives to Arc for shared ownership
         let primitives: Vec<Arc<Box<dyn Primitive>>> = primitives
             .into_iter()
-            .map(|p| Arc::new(p))
+            .map(Arc::new)
             .collect();
 
-        // Build the BVH tree
+        // Build the Bvh tree
         self.root = Some(self.build_node(&primitives));
 
-        debug!(LOG, "BVH construction complete");
+        debug!(LOG, "Bvh construction complete");
     }
 
-    fn build_node(&self, primitives: &[Arc<Box<dyn Primitive>>]) -> BVHNode {
+    fn build_node(&self, primitives: &[Arc<Box<dyn Primitive>>]) -> BvhNode {
         if primitives.len() == 1 {
             // Create a leaf node for a single primitive
             let primitive = Arc::clone(&primitives[0]);
 
-            // Compute a tight AABB for the primitive
+            // Compute a tight Aabb for the primitive
             let aabb = self.compute_primitive_aabb(&primitive);
 
-            return BVHNode::Leaf { aabb, primitive };
+            return BvhNode::Leaf { aabb, primitive };
         }
 
         // Compute bounding box for all primitives
@@ -213,23 +212,24 @@ impl BVH {
 
         // Sort primitives along the chosen axis
         let mut sorted_primitives = primitives.to_vec();
-        match axis {
-            0 => sorted_primitives.sort_by(|a, b| {
-                let centroid_a = self.compute_primitive_centroid(&a);
-                let centroid_b = self.compute_primitive_centroid(&b);
+        sorted_primitives.sort_by(|a, b| {
+            if axis == 0 {
+                // Sort by x-coordinate of centroid
+                let centroid_a = self.compute_primitive_centroid(a);
+                let centroid_b = self.compute_primitive_centroid(b);
                 centroid_a.x.partial_cmp(&centroid_b.x).unwrap_or(Ordering::Equal)
-            }),
-            1 => sorted_primitives.sort_by(|a, b| {
-                let centroid_a = self.compute_primitive_centroid(&a);
-                let centroid_b = self.compute_primitive_centroid(&b);
+            } else if axis == 1 {
+                // Sort by y-coordinate of centroid
+                let centroid_a = self.compute_primitive_centroid(a);
+                let centroid_b = self.compute_primitive_centroid(b);
                 centroid_a.y.partial_cmp(&centroid_b.y).unwrap_or(Ordering::Equal)
-            }),
-            _ => sorted_primitives.sort_by(|a, b| {
-                let centroid_a = self.compute_primitive_centroid(&a);
-                let centroid_b = self.compute_primitive_centroid(&b);
+            } else {
+                // Sort by z-coordinate of centroid
+                let centroid_a = self.compute_primitive_centroid(a);
+                let centroid_b = self.compute_primitive_centroid(b);
                 centroid_a.z.partial_cmp(&centroid_b.z).unwrap_or(Ordering::Equal)
-            }),
-        }
+            }
+        });
 
         // Split primitives into two groups
         let mid = sorted_primitives.len() / 2;
@@ -240,11 +240,11 @@ impl BVH {
         let left = Box::new(self.build_node(&left_primitives));
         let right = Box::new(self.build_node(&right_primitives));
 
-        BVHNode::Branch { aabb, left, right }
+        BvhNode::Branch { aabb, left, right }
     }
 
-    fn compute_primitive_aabb(&self, primitive: &Arc<Box<dyn Primitive>>) -> AABB {
-        // Use the primitive's compute_bounding_box method to get a tight AABB
+    fn compute_primitive_aabb(&self, primitive: &Arc<Box<dyn Primitive>>) -> Aabb {
+        // Use the primitive's compute_bounding_box method to get a tight Aabb
         primitive.compute_bounding_box()
     }
 
@@ -253,16 +253,18 @@ impl BVH {
         primitive.compute_centroid()
     }
 
-    fn compute_primitives_aabb(&self, primitives: &[Arc<Box<dyn Primitive>>]) -> AABB {
+    fn compute_primitives_aabb(&self, primitives: &[Arc<Box<dyn Primitive>>]) -> Aabb {
         if primitives.is_empty() {
-            return AABB {
+            return Aabb {
                 min: Coords { x: 0.0, y: 0.0, z: 0.0 },
                 max: Coords { x: 0.0, y: 0.0, z: 0.0 },
             };
         }
 
+        // Start with the Aabb of the first primitive
         let mut aabb = self.compute_primitive_aabb(&primitives[0]);
 
+        // Expand to include all other primitives
         for primitive in primitives.iter().skip(1) {
             let primitive_aabb = self.compute_primitive_aabb(primitive);
             aabb = aabb.merge(&primitive_aabb);
@@ -279,11 +281,11 @@ impl BVH {
     }
 }
 
-impl fmt::Display for BVH {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+impl fmt::Display for Bvh {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match &self.root {
-            Some(_) => write!(f, "BVH with root node"),
-            None => write!(f, "Empty BVH"),
+            Some(_) => write!(f, "Bvh with root node"),
+            None => write!(f, "Empty Bvh"),
         }
     }
 }

@@ -2,7 +2,7 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::tracer::bvh::AABB;
+use crate::tracer::bvh::Aabb;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::primitives::Primitive;
@@ -98,7 +98,7 @@ impl Primitive for Sphere {
         Box::new((*self).clone())
     }
 
-    fn compute_bounding_box(&self) -> AABB {
+    fn compute_bounding_box(&self) -> Aabb {
         // For a sphere, the bounding box is a cube centered at the sphere's position
         // with side length 2*radius
         let min = Coords {
@@ -111,7 +111,7 @@ impl Primitive for Sphere {
             y: self.position.y + self.radius,
             z: self.position.z + self.radius,
         };
-        AABB::new(min, max)
+        Aabb::new(min, max)
     }
 
     fn compute_centroid(&self) -> Coords {

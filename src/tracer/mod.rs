@@ -11,7 +11,7 @@ use slog::{debug, error, info, trace, warn};
 use shader::color::Color;
 
 use crate::tracer::coords::Coords;
-use crate::tracer::misc_types::{Intersection, Ray};
+use crate::tracer::misc_types::Ray;
 use crate::tracer::model::{Model, ModelError};
 use crate::utils::config::CONFIG;
 use crate::utils::logger::LOG;
@@ -262,24 +262,6 @@ screen plane height: {}",
 
         rays
     }
-}
-
-fn calculate_ray_closest_intersection(ray: &Ray, model: &Model) -> Option<Intersection> {
-    trace!(
-        LOG,
-        "Calculating primary ray color for pixel ({}, {})",
-        ray.i,
-        ray.j
-    );
-
-    // Use the BVH to find the closest intersection
-    model.bvh.intersect(ray)
-}
-
-fn calculate_ray_first_intersection(ray: &Ray, model: &Model) -> Option<Intersection> {
-    // Use the BVH to find the first intersection
-    // Since the BVH already returns the closest intersection, this is equivalent
-    model.bvh.intersect(ray)
 }
 
 pub fn write(output_file_path: &Path, raw_image_data: &Vec<Vec<Color>>) -> Result<(), WriteError> {

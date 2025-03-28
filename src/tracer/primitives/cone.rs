@@ -2,7 +2,7 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::tracer::bvh::AABB;
+use crate::tracer::bvh::Aabb;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::primitives::Primitive;
@@ -141,7 +141,7 @@ impl Primitive for Cone {
         Box::new((*self).clone())
     }
 
-    fn compute_bounding_box(&self) -> AABB {
+    fn compute_bounding_box(&self) -> Aabb {
         // For a cone, we need to consider both the base and apex circles
         // First, calculate points on the base circle in different directions
         let axis = (&self.apex - &self.base).calc_normalized_vector();
@@ -195,8 +195,8 @@ impl Primitive for Cone {
             }
         }
 
-        // Create AABB from all points
-        AABB::from_points(&points)
+        // Create Aabb from all points
+        Aabb::from_points(&points)
     }
 
     fn compute_centroid(&self) -> Coords {

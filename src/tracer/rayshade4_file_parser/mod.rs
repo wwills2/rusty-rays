@@ -8,7 +8,7 @@ use once_cell::sync::Lazy;
 use slog::{debug, warn};
 use uuid::Uuid;
 
-use crate::tracer::bvh::BVH;
+use crate::tracer::bvh::Bvh;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Fov, Screen, Surface};
 use crate::tracer::model::ModelError::FailedToParseInputFile;
@@ -581,17 +581,16 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
         all_primitives_map.insert(*uuid, Box::new(triangle.clone()));
     }
 
-    // Collect all primitives into a vector for BVH construction
+    // Collect all primitives into a vector for Bvh construction
     let primitives_for_bvh: Vec<Box<dyn Primitive>> = all_primitives_map
-        .values()
-        .map(|p| p.clone())
+        .values().cloned()
         .collect();
 
-    // Build the BVH from the collected primitives
-    debug!(LOG, "Building BVH with {} primitives", primitives_for_bvh.len());
-    let mut bvh = BVH::new();
+    // Build the Bvh from the collected primitives
+    debug!(LOG, "Building Bvh with {} primitives", primitives_for_bvh.len());
+    let mut bvh = Bvh::new();
     bvh.build(primitives_for_bvh);
-    debug!(LOG, "BVH construction complete");
+    debug!(LOG, "Bvh construction complete");
 
     Ok(Model {
         background,

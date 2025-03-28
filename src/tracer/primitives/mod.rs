@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
-use crate::tracer::bvh::AABB;
+use crate::tracer::bvh::Aabb;
 
 pub mod cone;
 pub mod plane;
@@ -21,7 +21,7 @@ pub trait Primitive: Send + Sync {
     fn primitive_clone(&self) -> Box<dyn Primitive>;
 
     // New methods for bounding box and centroid calculation
-    fn compute_bounding_box(&self) -> AABB;
+    fn compute_bounding_box(&self) -> Aabb;
     fn compute_centroid(&self) -> Coords;
 }
 
