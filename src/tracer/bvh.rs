@@ -2,7 +2,6 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::sync::Arc;
 
-
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray};
 use crate::tracer::primitives::Primitive;
@@ -147,7 +146,9 @@ impl BvhNode {
 
                 match (left_hit, right_hit) {
                     (Some(left_intersection), Some(right_intersection)) => {
-                        if left_intersection.distance_along_ray < right_intersection.distance_along_ray {
+                        if left_intersection.distance_along_ray
+                            < right_intersection.distance_along_ray
+                        {
                             Some(left_intersection)
                         } else {
                             Some(right_intersection)
@@ -168,6 +169,12 @@ pub struct Bvh {
     root: Option<BvhNode>,
 }
 
+impl Default for Bvh {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Bvh {
     pub fn new() -> Self {
         Bvh { root: None }
@@ -182,10 +189,8 @@ impl Bvh {
         }
 
         // Convert primitives to Arc for shared ownership
-        let primitives: Vec<Arc<Box<dyn Primitive>>> = primitives
-            .into_iter()
-            .map(Arc::new)
-            .collect();
+        let primitives: Vec<Arc<Box<dyn Primitive>>> =
+            primitives.into_iter().map(Arc::new).collect();
 
         // Build the Bvh tree
         self.root = Some(self.build_node(&primitives));
@@ -217,17 +222,26 @@ impl Bvh {
                 // Sort by x-coordinate of centroid
                 let centroid_a = self.compute_primitive_centroid(a);
                 let centroid_b = self.compute_primitive_centroid(b);
-                centroid_a.x.partial_cmp(&centroid_b.x).unwrap_or(Ordering::Equal)
+                centroid_a
+                    .x
+                    .partial_cmp(&centroid_b.x)
+                    .unwrap_or(Ordering::Equal)
             } else if axis == 1 {
                 // Sort by y-coordinate of centroid
                 let centroid_a = self.compute_primitive_centroid(a);
                 let centroid_b = self.compute_primitive_centroid(b);
-                centroid_a.y.partial_cmp(&centroid_b.y).unwrap_or(Ordering::Equal)
+                centroid_a
+                    .y
+                    .partial_cmp(&centroid_b.y)
+                    .unwrap_or(Ordering::Equal)
             } else {
                 // Sort by z-coordinate of centroid
                 let centroid_a = self.compute_primitive_centroid(a);
                 let centroid_b = self.compute_primitive_centroid(b);
-                centroid_a.z.partial_cmp(&centroid_b.z).unwrap_or(Ordering::Equal)
+                centroid_a
+                    .z
+                    .partial_cmp(&centroid_b.z)
+                    .unwrap_or(Ordering::Equal)
             }
         });
 
@@ -256,8 +270,16 @@ impl Bvh {
     fn compute_primitives_aabb(&self, primitives: &[Arc<Box<dyn Primitive>>]) -> Aabb {
         if primitives.is_empty() {
             return Aabb {
-                min: Coords { x: 0.0, y: 0.0, z: 0.0 },
-                max: Coords { x: 0.0, y: 0.0, z: 0.0 },
+                min: Coords {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
+                max: Coords {
+                    x: 0.0,
+                    y: 0.0,
+                    z: 0.0,
+                },
             };
         }
 

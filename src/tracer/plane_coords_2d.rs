@@ -21,7 +21,7 @@ impl PlaneCoords2D {
     /// returns new normalized vector
     pub fn calc_normalized_vector(&self) -> PlaneCoords2D {
         let len = match self.calc_vector_length() {
-            length if length == 0.0 => 1.0,
+            0.0 => 1.0,
             length => length,
         };
         PlaneCoords2D {

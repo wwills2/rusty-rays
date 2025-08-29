@@ -90,7 +90,7 @@ impl Coords {
     /// returns new normalized vector
     pub fn calc_normalized_vector(&self) -> Coords {
         let len = match self.calc_vector_length() {
-            length if length == 0.0 => 1.0,
+            0.0 => 1.0,
             length => length,
         };
         Coords {

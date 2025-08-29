@@ -1,6 +1,5 @@
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{BufReader, Lines};
+use std::io::{BufRead, Lines};
 use std::iter::Peekable;
 use std::str::FromStr;
 
@@ -62,12 +61,13 @@ struct NextLine {
     line_number: usize,
 }
 
-type FileIterator = Peekable<Lines<BufReader<File>>>;
 type GetNextLineClosure<'a> = Box<dyn FnMut(Option<&NextIfClosure>) -> GetNextLineResult<'a>>;
 type GetNextLineResult<'a> = Result<Option<NextLine>, ModelError>;
 type NextIfClosure = Box<dyn Fn(&String) -> bool>;
 
-pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, ModelError> {
+pub fn iterate_input_data<R: BufRead + 'static>(
+    mut file_iterator: Peekable<Lines<R>>,
+) -> Result<Model, ModelError> {
     let mut background = Color::new();
     let mut eyep = Coords::new();
     let mut lookp = Coords::new();
@@ -240,25 +240,29 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                 LightSourceType::Ambient => {
                     // Ambient lights don't have position or radius
                     (Coords::new(), 0.0)
-                },
+                }
                 LightSourceType::Point => {
                     // Point lights have position only (Xpos, Ypos, Zpos)
                     let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
                     let position = match Coords::new_from_str_vec(xyz_vec) {
                         Ok(position) => position,
-                        Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+                        Err(error) => {
+                            return Err(FailedToParseInputFile(line_number, error.to_string()))
+                        }
                     };
                     (position, 0.0) // No radius for point lights
-                },
+                }
                 LightSourceType::Directional => {
                     // Directional lights have direction (Xdir, Ydir, Zdir)
                     let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
                     let direction = match Coords::new_from_str_vec(xyz_vec) {
                         Ok(direction) => direction,
-                        Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+                        Err(error) => {
+                            return Err(FailedToParseInputFile(line_number, error.to_string()))
+                        }
                     };
                     (direction, 0.0) // No radius for directional lights
-                },
+                }
                 LightSourceType::Extended => {
                     // Extended lights have radius and position (Radius, Xpos, Ypos, Zpos)
                     let radius = match line_words_iter.next() {
@@ -282,11 +286,13 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
                     let xyz_vec: Vec<&str> = line_words_iter.by_ref().take(3).collect();
                     let position = match Coords::new_from_str_vec(xyz_vec) {
                         Ok(position) => position,
-                        Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
+                        Err(error) => {
+                            return Err(FailedToParseInputFile(line_number, error.to_string()))
+                        }
                     };
 
                     (position, radius)
-                },
+                }
             };
 
             let invalid_value = line_words_iter.next();
@@ -487,10 +493,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             .eq(peeked_line_word)
         {
             let sphere =
-                match parse_sphere::process_sphere(&mut line_words_iter, &surfaces, line_number) {
-                    Ok(sphere) => sphere,
-                    Err(error) => return Err(error),
-                };
+                parse_sphere::process_sphere(&mut line_words_iter, &surfaces, line_number)?;
             debug!(LOG, "processed sphere {}", sphere);
             spheres.insert(sphere.uuid, sphere);
         } else if SCENE_DATA_KEYWORDS
@@ -498,14 +501,11 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             .unwrap()
             .eq(peeked_line_word)
         {
-            let cone = match parse_cylinder_to_cone::process_cylinder_to_cone(
+            let cone = parse_cylinder_to_cone::process_cylinder_to_cone(
                 &mut line_words_iter,
                 &surfaces,
                 line_number,
-            ) {
-                Ok(cone) => cone,
-                Err(error) => return Err(error),
-            };
+            )?;
             debug!(LOG, "processed cylinder as cone {}", cone);
             cones.insert(cone.uuid, cone);
         } else if SCENE_DATA_KEYWORDS
@@ -513,11 +513,7 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             .unwrap()
             .eq(peeked_line_word)
         {
-            let cone = match parse_cone::process_cone(&mut line_words_iter, &surfaces, line_number)
-            {
-                Ok(cone) => cone,
-                Err(error) => return Err(error),
-            };
+            let cone = parse_cone::process_cone(&mut line_words_iter, &surfaces, line_number)?;
             debug!(LOG, "processed cone {}", cone);
             cones.insert(cone.uuid, cone);
         } else if SCENE_DATA_KEYWORDS
@@ -525,15 +521,12 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             .unwrap()
             .eq(peeked_line_word)
         {
-            let polygon = match parse_polygon::process_polygon(
+            let polygon = parse_polygon::process_polygon(
                 &mut get_next_line,
                 &mut line_words_iter,
                 &surfaces,
                 line_number,
-            ) {
-                Ok(polygon) => polygon,
-                Err(error) => return Err(error),
-            };
+            )?;
             debug!(LOG, "processed polygon");
             polygons.insert(polygon.uuid, polygon);
         } else if SCENE_DATA_KEYWORDS
@@ -541,15 +534,12 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
             .unwrap()
             .eq(peeked_line_word)
         {
-            let triangle = match parse_triangle::process_triangle(
+            let triangle = parse_triangle::process_triangle(
                 &mut get_next_line,
                 &mut line_words_iter,
                 &surfaces,
                 line_number,
-            ) {
-                Ok(polygon) => polygon,
-                Err(error) => return Err(error),
-            };
+            )?;
             debug!(LOG, "processed polygon");
             triangles.insert(triangle.uuid, triangle);
         } else {
@@ -582,12 +572,15 @@ pub fn iterate_input_data(mut file_iterator: FileIterator) -> Result<Model, Mode
     }
 
     // Collect all primitives into a vector for Bvh construction
-    let primitives_for_bvh: Vec<Box<dyn Primitive>> = all_primitives_map
-        .values().cloned()
-        .collect();
+    let primitives_for_bvh: Vec<Box<dyn Primitive>> =
+        all_primitives_map.values().cloned().collect();
 
     // Build the Bvh from the collected primitives
-    debug!(LOG, "Building Bvh with {} primitives", primitives_for_bvh.len());
+    debug!(
+        LOG,
+        "Building Bvh with {} primitives",
+        primitives_for_bvh.len()
+    );
     let mut bvh = Bvh::new();
     bvh.build(primitives_for_bvh);
     debug!(LOG, "Bvh construction complete");

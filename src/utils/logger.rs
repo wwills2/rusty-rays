@@ -25,8 +25,7 @@ pub static ASYNC_LOGGER: Lazy<AsyncLoggerWithGuard> = Lazy::new(|| {
     let maybe_log_dir = dirs_next::cache_dir();
     let mut maybe_filtered_file_drain = None;
 
-    if maybe_log_dir.is_some() {
-        let mut log_dir = maybe_log_dir.unwrap();
+    if let Some(mut log_dir) = maybe_log_dir {
         let package_name = env!("CARGO_PKG_NAME");
         log_dir.push(package_name);
         log_dir.push("logs");
@@ -65,17 +64,16 @@ pub static ASYNC_LOGGER: Lazy<AsyncLoggerWithGuard> = Lazy::new(|| {
         }
     }
 
-    let (async_drain, async_guard) = if maybe_filtered_file_drain.is_none() {
-        slog_async::Async::new(filtered_console_drain)
-            .chan_size(log_channel_size)
-            .build_with_guard()
-    } else {
-        let filtered_file_drain = maybe_filtered_file_drain.unwrap();
+    let (async_drain, async_guard) = if let Some(filtered_file_drain) = maybe_filtered_file_drain {
         slog_async::Async::new(
             slog::Duplicate::new(filtered_console_drain, filtered_file_drain).fuse(),
         )
         .chan_size(log_channel_size)
         .build_with_guard()
+    } else {
+        slog_async::Async::new(filtered_console_drain)
+            .chan_size(log_channel_size)
+            .build_with_guard()
     };
 
     AsyncLoggerWithGuard {

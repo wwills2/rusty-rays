@@ -1,25 +1,20 @@
-use std::fs::File;
-use std::io::{BufRead, BufReader};
-use std::path::Path;
+use slog::{debug, error, info, trace, warn};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use std::{f64, fmt, thread};
 
-use image::{ImageBuffer, RgbImage};
-use slog::{debug, error, info, trace, warn};
-
-use shader::color::Color;
+pub use crate::tracer::model::Model;
+pub use shader::color::Color;
 
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::Ray;
-use crate::tracer::model::{Model, ModelError};
 use crate::utils::config::CONFIG;
 use crate::utils::logger::LOG;
 
 mod bvh;
 mod coords;
 mod misc_types;
-pub mod model;
+mod model;
 mod plane_coords_2d;
 mod primitives;
 mod rayshade4_file_parser;
@@ -47,7 +42,7 @@ impl Tracer {
             "initializing renderer and calculating primary ray definitions"
         );
         let primary_rays = Self::calculate_primary_rays(&model);
-        Tracer {
+        Self {
             model,
             primary_rays,
         }
@@ -126,8 +121,7 @@ impl Tracer {
                         }
                     }
 
-                    if maybe_ray.is_some() {
-                        let ray = maybe_ray.unwrap();
+                    if let Some(ray) = maybe_ray {
                         let pixel_color = shader::process_ray(0, ray, &_self_arc_clone.model);
 
                         match _image_data_arc_clone.lock() {
@@ -264,53 +258,6 @@ screen plane height: {}",
     }
 }
 
-pub fn write(output_file_path: &Path, raw_image_data: &Vec<Vec<Color>>) -> Result<(), WriteError> {
-    let height = raw_image_data.len();
-    let width = raw_image_data[0].len();
-    let normalized_image_data = normalize_and_flatten_to_u8_rgb(raw_image_data);
-
-    let maybe_image: Option<RgbImage> =
-        ImageBuffer::from_raw(width as u32, height as u32, normalized_image_data);
-    let image = match maybe_image {
-        Some(image) => image,
-        None => {
-            return Err(WriteError(
-                "cannot write raw render data into image format".to_string(),
-            ))
-        }
-    };
-
-    match image.save(output_file_path) {
-        Ok(_) => Ok(()),
-        Err(error) => Err(WriteError(format!(
-            "cannot write image data to {}. Error: {}",
-            output_file_path.display(),
-            error
-        ))),
-    }
-}
-
-fn normalize_and_flatten_to_u8_rgb(image_data: &Vec<Vec<Color>>) -> Vec<u8> {
-    let mut normalized_image_data: Vec<u8> = Vec::new();
-    for row in image_data {
-        for color in row {
-            let normalized_color = color.normalize();
-            normalized_image_data.push(normalized_color.r);
-            normalized_image_data.push(normalized_color.g);
-            normalized_image_data.push(normalized_color.b);
-        }
-    }
-
-    normalized_image_data
-}
-
-fn parse(input_file_buf_reader: BufReader<File>) -> Result<Model, ModelError> {
-    let model =
-        rayshade4_file_parser::iterate_input_data(input_file_buf_reader.lines().peekable())?;
-    trace!(LOG, "parsed model:\n{}", model);
-    Ok(model)
-}
-
 #[derive(Debug)]
 pub struct RenderError(String);
 
@@ -321,14 +268,3 @@ impl fmt::Display for RenderError {
 }
 
 impl std::error::Error for RenderError {}
-
-#[derive(Debug)]
-pub struct WriteError(String);
-
-impl fmt::Display for WriteError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "failed to write render data to file. Error: {}", self.0)
-    }
-}
-
-impl std::error::Error for WriteError {}

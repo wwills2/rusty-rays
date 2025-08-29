@@ -1,11 +1,11 @@
-use std::fmt;
-
+use serde::{Deserialize, Serialize};
 use slog::warn;
+use std::fmt;
 
 use crate::tracer::shader::color::ColorError::FailedToParseFromVec;
 use crate::utils::logger::LOG;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct Color {
     pub r: f64,
     pub g: f64,

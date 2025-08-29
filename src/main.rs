@@ -3,12 +3,10 @@ use std::path::PathBuf;
 use clap::{arg, Parser};
 use slog::{error, info, warn};
 
-use crate::tracer::model::Model;
-use crate::tracer::{write, Tracer};
-use crate::utils::logger::{ASYNC_LOGGER, LOG};
-
-mod tracer;
-mod utils;
+use rusty_rays::{
+    deserialize_blob_to_raw_render, serialize_raw_render_to_blob, shutdown_logger,
+    write_render_to_file, Model, Tracer, LOG,
+};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -47,7 +45,7 @@ fn main() {
             _output_file.display()
         );
 
-        match Model::new(_input_file.as_path()) {
+        match Model::from_file_path(_input_file) {
             Ok(model) => {
                 info!(LOG, "initialized model from input file");
                 let tracer = Tracer::new(model);
@@ -55,8 +53,32 @@ fn main() {
 
                 match maybe_raw_pixel_colors {
                     Ok(raw_pixel_colors) => {
-                        info!(LOG, "renderer generated raw image data");
-                        match write(_output_file.as_path(), &raw_pixel_colors) {
+                        info!(LOG, "tracer generated raw image data");
+
+                        // the next two steps for serialization and deserialization are not necessary
+                        // this is just to test functionality
+                        info!(LOG, "testing raw image data serialization");
+                        let serialized_raw_image =
+                            match serialize_raw_render_to_blob(&raw_pixel_colors) {
+                                Ok(serialized_raw_image) => serialized_raw_image,
+                                Err(error) => {
+                                    error!(LOG, "failed to encode raw image. {}", error);
+                                    return;
+                                }
+                            };
+
+                        info!(LOG, "testing serialized raw image data deserialization");
+                        let deserialized_raw_image =
+                            match deserialize_blob_to_raw_render(&serialized_raw_image) {
+                                Ok(deserialized_raw_image) => deserialized_raw_image,
+                                Err(error) => {
+                                    error!(LOG, "failed to decode raw image. {}", error);
+                                    return;
+                                }
+                            };
+
+                        match write_render_to_file(_output_file.as_path(), &deserialized_raw_image)
+                        {
                             Ok(_) => {
                                 info!(LOG, "wrote rendered image to {}", _output_file.display());
                             }
@@ -71,7 +93,7 @@ fn main() {
                 }
             }
             Err(error) => {
-                error!(LOG, "failed to read file, error: {}", error);
+                error!(LOG, "failed to instantiate model. error: {}", error);
             }
         }
     } else if args.start {
@@ -80,10 +102,5 @@ fn main() {
         warn!(LOG, "No functionality matching provided arguments. Exiting");
     }
 
-    // flush the async logger - important that this runs
-    if let Ok(mut guard) = ASYNC_LOGGER.async_guard.lock() {
-        if let Some(guard) = guard.take() {
-            drop(guard);
-        }
-    }
+    shutdown_logger();
 }

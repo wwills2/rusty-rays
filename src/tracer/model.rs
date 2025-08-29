@@ -1,11 +1,3 @@
-use std::collections::HashMap;
-use std::fmt;
-use std::fs::File;
-use std::io::BufReader;
-use std::path::Path;
-
-use uuid::Uuid;
-
 use crate::tracer::bvh::Bvh;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Fov, Screen};
@@ -13,8 +5,17 @@ use crate::tracer::primitives::cone::Cone;
 use crate::tracer::primitives::polygon::Polygon;
 use crate::tracer::primitives::sphere::Sphere;
 use crate::tracer::primitives::Primitive;
+use crate::tracer::rayshade4_file_parser;
 use crate::tracer::shader::color::Color;
 use crate::tracer::shader::light::Light;
+use crate::LOG;
+use slog::trace;
+use std::collections::HashMap;
+use std::fmt;
+use std::fs::File;
+use std::io::{BufRead, BufReader, Cursor};
+use std::path::PathBuf;
+use uuid::Uuid;
 
 #[derive(Debug)]
 pub struct Model {
@@ -58,16 +59,26 @@ impl fmt::Display for ModelError {
 impl std::error::Error for ModelError {}
 
 impl Model {
-    pub fn new(input_file_path: &Path) -> Result<Self, ModelError> {
-        let open_file_result = match File::open(input_file_path) {
-            Ok(input_file) => input_file,
-            Err(error) => {
-                return Err(ModelError::FailedToOpenInputFile(error.to_string()));
-            }
-        };
+    pub fn from_file(input_file: File) -> Result<Self, ModelError> {
+        let file_reader = BufReader::new(input_file);
+        let model = rayshade4_file_parser::iterate_input_data(file_reader.lines().peekable())?;
+        trace!(LOG, "parsed model from file:\n{}", model);
+        Ok(model)
+    }
 
-        let file_reader = BufReader::new(open_file_result);
-        crate::tracer::parse(file_reader)
+    pub fn from_file_path(path_to_input_file: PathBuf) -> Result<Self, ModelError> {
+        match File::open(path_to_input_file) {
+            Ok(input_file) => Ok(Self::from_file(input_file)?),
+            Err(error) => Err(ModelError::FailedToOpenInputFile(error.to_string())),
+        }
+    }
+
+    pub fn from_string(input_string: String) -> Result<Self, ModelError> {
+        let cursor = Cursor::new(input_string);
+        let reader = BufReader::new(cursor);
+        let model = rayshade4_file_parser::iterate_input_data(reader.lines().peekable())?;
+        trace!(LOG, "parsed model from input string:\n{}", model);
+        Ok(model)
     }
 }
 
