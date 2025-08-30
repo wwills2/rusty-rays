@@ -1,0 +1,38 @@
+[package]
+name = "rusty-rays-core"
+version = "0.2.0"
+edition = "2024"
+authors = ['William Wills']
+
+# Use feature resolver v2 for precise feature resolution
+resolver = "2"
+
+[lib]
+name = "rusty_rays_core"
+path = "src/lib.rs"
+
+
+[dependencies]
+chrono = "0.4.38"
+dirs-next = "2.0.0"
+once_cell = "1.20.2"
+slog = "2.7.0"
+slog-async = "2.8.0"
+slog-term = "2.9.1"
+image = "0.25.5"
+num_cpus = "1.16.0"
+serde_json5 = "0.1.0"
+serde = { version = "1.0.217", features = ["derive"] }
+
+[dependencies.uuid]
+version = "1.11.0"
+features = [
+    "v4", # Lets you generate random UUIDs
+    "fast-rng", # Use a faster (but still sufficiently random) RNG
+]
+
+[dependencies.bincode]
+version = "2.0.1"
+features = [
+    "serde"
+]
