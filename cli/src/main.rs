@@ -1,20 +1,15 @@
 use std::path::PathBuf;
 
 use clap::{arg, Parser};
-use slog::{error, info, warn};
 
-use rusty_rays::{
-    deserialize_blob_to_raw_render, serialize_raw_render_to_blob, shutdown_logger,
-    write_render_to_file, Model, Tracer, LOG,
+use rusty_rays_core::{
+    deserialize_blob_to_raw_render, error, info, serialize_raw_render_to_blob, shutdown_logger, warn, write_render_to_file,
+    Model, Tracer, LOG,
 };
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
 struct Args {
-    /// Starts Renderer Management Application
-    #[arg(short, long, conflicts_with_all = & ["input_file", "output_file"])]
-    start: bool,
-
     /// Path to the input file
     #[arg(
         short,
@@ -96,8 +91,6 @@ fn main() {
                 error!(LOG, "failed to instantiate model. error: {}", error);
             }
         }
-    } else if args.start {
-        info!(LOG, "when implemented this will start the application");
     } else {
         warn!(LOG, "No functionality matching provided arguments. Exiting");
     }

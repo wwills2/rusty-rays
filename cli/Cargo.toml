@@ -1,0 +1,8 @@
+[package]
+name = "cli"
+version = "0.2.0"
+edition = "2024"
+
+[dependencies]
+rusty-rays-core = { path = "../rusty-rays-core" }
+clap = { version = "4.5.14", features = ["derive"] }

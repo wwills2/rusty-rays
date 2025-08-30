@@ -7,6 +7,8 @@ pub use tracer::{Model, Tracer};
 pub use utils::logger::LOG;
 pub use utils::*;
 
+pub use slog::{debug, error, info, trace, warn};
+
 /// It is important to call this function when exiting the program
 pub fn shutdown_logger() {
     // flush the async logger - important that this runs
