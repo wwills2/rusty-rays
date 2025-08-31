@@ -2,6 +2,9 @@
 name = "rusty-rays-cli"
 version = "0.2.0"
 edition = "2024"
+authors = ['William Wills']
+
+resolver = "2"
 
 [[bin]]
 name = "rusty-rays-cli"
