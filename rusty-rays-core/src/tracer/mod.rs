@@ -3,13 +3,12 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use std::{f64, fmt, thread};
 
-pub use crate::tracer::model::Model;
-pub use shader::color::Color;
-
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::Ray;
-use crate::utils::config::CONFIG;
-use crate::utils::logger::LOG;
+pub use crate::tracer::model::Model;
+use crate::utils::LOG;
+use crate::Config;
+pub use shader::color::Color;
 
 mod bvh;
 mod coords;
@@ -55,7 +54,7 @@ impl Tracer {
     }
 
     fn _render(self: Arc<Self>) -> Result<Vec<Vec<Color>>, RenderError> {
-        let num_threads = CONFIG.max_render_threads;
+        let num_threads = Config::get().max_render_threads;
         let mut thread_handles = vec![];
 
         let counter_mutex_arc = Arc::new(Mutex::new(0usize));
@@ -107,7 +106,11 @@ impl Tracer {
                                         }
                                     }
                                     Err(_) => {
-                                        warn!(LOG, "thread {} encountered poisoned data error from mutex when updating progress block counter. proceeding with render", thread_num);
+                                        warn!(
+                                            LOG,
+                                            "thread {} encountered poisoned data error from mutex when updating progress block counter. proceeding with render",
+                                            thread_num
+                                        );
                                     }
                                 }
 
@@ -116,7 +119,11 @@ impl Tracer {
                                 *counter_mutex_guard += 1;
                             }
                             Err(_) => {
-                                warn!(LOG, "thread {} encountered poisoned data error from mutex when updating counter. this pixel will be black. proceeding with render", thread_num);
+                                warn!(
+                                    LOG,
+                                    "thread {} encountered poisoned data error from mutex when updating counter. this pixel will be black. proceeding with render",
+                                    thread_num
+                                );
                             }
                         }
                     }
@@ -129,7 +136,13 @@ impl Tracer {
                                 mutex_guard[ray.i][ray.j] = pixel_color;
                             }
                             Err(_) => {
-                                warn!(LOG, "thread {} encountered poisoned data error from mutex when writing color for pixel ({}, {}). proceeding with render", thread_num, ray.i, ray.j);
+                                warn!(
+                                    LOG,
+                                    "thread {} encountered poisoned data error from mutex when writing color for pixel ({}, {}). proceeding with render",
+                                    thread_num,
+                                    ray.i,
+                                    ray.j
+                                );
                             }
                         }
                     }
@@ -226,10 +239,7 @@ screen plane height: {}",
                 + (&true_up * (vert_pos * screen_plane_height));
             trace!(
                 LOG,
-                "position of image plane pixel (i: {}, j: {}); {}",
-                i,
-                j,
-                pixel_pos
+                "position of image plane pixel (i: {}, j: {}); {}", i, j, pixel_pos
             );
 
             (pixel_pos - &model.eyep).calc_normalized_vector()

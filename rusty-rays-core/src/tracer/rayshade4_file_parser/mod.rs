@@ -19,7 +19,7 @@ use crate::tracer::primitives::triangle::Triangle;
 use crate::tracer::primitives::Primitive;
 use crate::tracer::shader::color::Color;
 use crate::tracer::shader::light::{Light, LightSourceType};
-use crate::utils::logger::LOG;
+use crate::utils::LOG;
 
 mod parse_cone;
 mod parse_cylinder_to_cone;
@@ -209,14 +209,14 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                         return Err(FailedToParseInputFile(
                             line_number,
                             "light intensity must be a valid decimal value".to_string(),
-                        ))
+                        ));
                     }
                 },
                 None => {
                     return Err(FailedToParseInputFile(
                         line_number,
                         "missing light source intensity value".to_string(),
-                    ))
+                    ));
                 }
             };
 
@@ -224,14 +224,14 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                 Some(source_type) => match LightSourceType::from_str(source_type) {
                     Ok(light_source_type) => light_source_type,
                     Err(error) => {
-                        return Err(FailedToParseInputFile(line_number, error.to_string()))
+                        return Err(FailedToParseInputFile(line_number, error.to_string()));
                     }
                 },
                 None => {
                     return Err(FailedToParseInputFile(
                         line_number,
                         "missing light source type".to_string(),
-                    ))
+                    ));
                 }
             };
 
@@ -247,7 +247,7 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                     let position = match Coords::new_from_str_vec(xyz_vec) {
                         Ok(position) => position,
                         Err(error) => {
-                            return Err(FailedToParseInputFile(line_number, error.to_string()))
+                            return Err(FailedToParseInputFile(line_number, error.to_string()));
                         }
                     };
                     (position, 0.0) // No radius for point lights
@@ -258,7 +258,7 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                     let direction = match Coords::new_from_str_vec(xyz_vec) {
                         Ok(direction) => direction,
                         Err(error) => {
-                            return Err(FailedToParseInputFile(line_number, error.to_string()))
+                            return Err(FailedToParseInputFile(line_number, error.to_string()));
                         }
                     };
                     (direction, 0.0) // No radius for directional lights
@@ -272,14 +272,14 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                                 return Err(FailedToParseInputFile(
                                     line_number,
                                     "light radius must be a valid decimal value".to_string(),
-                                ))
+                                ));
                             }
                         },
                         None => {
                             return Err(FailedToParseInputFile(
                                 line_number,
                                 "missing radius for extended light".to_string(),
-                            ))
+                            ));
                         }
                     };
 
@@ -287,7 +287,7 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                     let position = match Coords::new_from_str_vec(xyz_vec) {
                         Ok(position) => position,
                         Err(error) => {
-                            return Err(FailedToParseInputFile(line_number, error.to_string()))
+                            return Err(FailedToParseInputFile(line_number, error.to_string()));
                         }
                     };
 
@@ -379,14 +379,14 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                         return Err(FailedToParseInputFile(
                             line_number,
                             format!("invalid horizontal fov value: {}", h_fov_str),
-                        ))
+                        ));
                     }
                 },
                 None => {
                     return Err(FailedToParseInputFile(
                         line_number,
                         "missing horizontal fov value".to_string(),
-                    ))
+                    ));
                 }
             };
 
@@ -397,14 +397,14 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                         return Err(FailedToParseInputFile(
                             line_number,
                             format!("invalid vertical fov value: {}", v_fov_str),
-                        ))
+                        ));
                     }
                 },
                 None => {
                     return Err(FailedToParseInputFile(
                         line_number,
                         "missing vertical fov value".to_string(),
-                    ))
+                    ));
                 }
             };
 
@@ -435,14 +435,14 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                         return Err(FailedToParseInputFile(
                             line_number,
                             format!("invalid horizontal screen size: {}", h_screen_px_str),
-                        ))
+                        ));
                     }
                 },
                 None => {
                     return Err(FailedToParseInputFile(
                         line_number,
                         "missing horizontal screen size value".to_string(),
-                    ))
+                    ));
                 }
             };
 
@@ -453,14 +453,14 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                         return Err(FailedToParseInputFile(
                             line_number,
                             format!("invalid vertical screen size: {}", v_screen_px_str),
-                        ))
+                        ));
                     }
                 },
                 None => {
                     return Err(FailedToParseInputFile(
                         line_number,
                         "missing horizontal screen size value".to_string(),
-                    ))
+                    ));
                 }
             };
 

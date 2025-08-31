@@ -2,6 +2,6 @@
 
 members = [
     "rusty-rays-core",
-    "cli",
+    "rusty-rays-cli",
 ]
 resolver = "2"

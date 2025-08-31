@@ -10,7 +10,7 @@ use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::primitives::cone::Cone;
-use crate::utils::logger::LOG;
+use crate::utils::LOG;
 
 pub fn process_cylinder_to_cone(
     keyword_line_iter: &mut Peekable<SplitWhitespace>,
@@ -32,7 +32,7 @@ pub fn process_cylinder_to_cone(
                     return Err(FailedToParseInputFile(
                         line_number,
                         format!("surface {} referenced before definition", surface_name),
-                    ))
+                    ));
                 }
             }
         }
@@ -40,7 +40,7 @@ pub fn process_cylinder_to_cone(
             return Err(FailedToParseInputFile(
                 line_number,
                 "cylinder declaration missing surface".to_string(),
-            ))
+            ));
         }
     };
 
@@ -52,14 +52,14 @@ pub fn process_cylinder_to_cone(
                 return Err(FailedToParseInputFile(
                     line_number,
                     "invalid radius value".to_string(),
-                ))
+                ));
             }
         },
         None => {
             return Err(FailedToParseInputFile(
                 line_number,
                 "cylinder missing radius".to_string(),
-            ))
+            ));
         }
     };
 
@@ -72,7 +72,7 @@ pub fn process_cylinder_to_cone(
             return Err(FailedToParseInputFile(
                 line_number,
                 format!("error parsing cylinder base: {}", error),
-            ))
+            ));
         }
     };
 
@@ -85,7 +85,7 @@ pub fn process_cylinder_to_cone(
             return Err(FailedToParseInputFile(
                 line_number,
                 format!("error parsing cylinder axis: {}", error),
-            ))
+            ));
         }
     };
 
@@ -98,14 +98,14 @@ pub fn process_cylinder_to_cone(
                 return Err(FailedToParseInputFile(
                     line_number,
                     "invalid height value".to_string(),
-                ))
+                ));
             }
         },
         None => {
             return Err(FailedToParseInputFile(
                 line_number,
                 "cylinder missing height".to_string(),
-            ))
+            ));
         }
     };
 

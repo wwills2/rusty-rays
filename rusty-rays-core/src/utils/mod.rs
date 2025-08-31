@@ -5,8 +5,11 @@ use image::{ImageBuffer, RgbImage};
 use std::fmt;
 use std::path::Path;
 
-pub mod config;
-pub mod logger;
+mod config;
+mod logger;
+
+pub use config::Config;
+pub use logger::{ASYNC_LOGGER, LOG};
 
 /// Serializes the 2D vector of pixel Colors into a blob of u8 for lossless binary storage.
 /// Deserialize with deserialize_raw_to_blob
@@ -23,8 +26,7 @@ pub fn deserialize_blob_to_raw_render(
     serialized_raw_image_data: &[u8],
 ) -> Result<Vec<Vec<Color>>, DecodeError> {
     let config: Configuration<BigEndian, Varint> = Configuration::default();
-    let (raw_image_data, _) =
-        bincode::serde::decode_from_slice(serialized_raw_image_data, config)?;
+    let (raw_image_data, _) = bincode::serde::decode_from_slice(serialized_raw_image_data, config)?;
 
     Ok(raw_image_data)
 }

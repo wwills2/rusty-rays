@@ -1,7 +1,12 @@
 [package]
-name = "cli"
+name = "rusty-rays-cli"
 version = "0.2.0"
 edition = "2024"
+
+[[bin]]
+name = "rusty-rays-cli"
+path = "src/main.rs"
+
 
 [dependencies]
 rusty-rays-core = { path = "../rusty-rays-core" }

@@ -1,7 +1,7 @@
 use std::fs::{self, File};
 use std::sync::Mutex;
 
-use crate::utils::config::CONFIG;
+use crate::utils::config::Config;
 use once_cell::sync::Lazy;
 use slog::{o, Drain, Logger};
 use slog_async;
@@ -16,20 +16,15 @@ pub struct AsyncLoggerWithGuard {
 pub static LOG: Lazy<&Logger> = Lazy::new(|| &ASYNC_LOGGER.logger);
 
 pub static ASYNC_LOGGER: Lazy<AsyncLoggerWithGuard> = Lazy::new(|| {
-    let log_level = CONFIG.log_level;
-    let log_channel_size = CONFIG.log_message_cache_overflow_limit;
+    let log_level = Config::get().log_level;
+    let log_channel_size = Config::get().log_message_cache_overflow_limit;
     let decorator = slog_term::TermDecorator::new().build();
     let console_drain = slog_term::CompactFormat::new(decorator).build().fuse();
     let filtered_console_drain = slog::LevelFilter::new(console_drain, log_level).fuse();
 
-    let maybe_log_dir = dirs_next::cache_dir();
     let mut maybe_filtered_file_drain = None;
 
-    if let Some(mut log_dir) = maybe_log_dir {
-        let package_name = env!("CARGO_PKG_NAME");
-        log_dir.push(package_name);
-        log_dir.push("logs");
-
+    if let Some(log_dir) = Config::get().log_files_dir {
         match fs::create_dir_all(&log_dir) {
             Ok(_) => {
                 let log_file_path = log_dir.join(format!(

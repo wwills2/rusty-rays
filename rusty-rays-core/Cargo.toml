@@ -21,8 +21,8 @@ slog-async = "2.8.0"
 slog-term = "2.9.1"
 image = "0.25.5"
 num_cpus = "1.16.0"
-serde_json5 = "0.1.0"
 serde = { version = "1.0.217", features = ["derive"] }
+serde_json = "1.0.143"
 
 [dependencies.uuid]
 version = "1.11.0"

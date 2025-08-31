@@ -12,7 +12,7 @@ use crate::tracer::primitives::triangle::Triangle;
 use crate::tracer::rayshade4_file_parser::{
     GetNextLineClosure, NextIfClosure, NextLine, SCENE_DATA_KEYWORDS,
 };
-use crate::utils::logger::LOG;
+use crate::utils::LOG;
 
 pub fn process_triangle(
     determine_next_line_iter: &mut GetNextLineClosure,
@@ -44,7 +44,7 @@ pub fn process_triangle(
                     return Err(FailedToParseInputFile(
                         line_number,
                         format!("surface {} referenced before definition", surface_name),
-                    ))
+                    ));
                 }
             }
         }
@@ -52,7 +52,7 @@ pub fn process_triangle(
             return Err(FailedToParseInputFile(
                 starting_line_number,
                 "triangle declaration missing surface".to_string(),
-            ))
+            ));
         }
     };
 
@@ -108,7 +108,13 @@ pub fn process_triangle(
                     surface.clone(),
                 )
             } else {
-                return Err(FailedToParseInputFile(line_number, format!("a triangle definition should contain a 3 or 6 3D coordinate values. got {}", defining_coords.len())));
+                return Err(FailedToParseInputFile(
+                    line_number,
+                    format!(
+                        "a triangle definition should contain a 3 or 6 3D coordinate values. got {}",
+                        defining_coords.len()
+                    ),
+                ));
             };
 
             return match triangle_result {
@@ -150,7 +156,7 @@ fn iterate_and_collect_single_line_def_coords(
                 return Err(FailedToParseInputFile(
                     next_line.line_number,
                     format!("{}", error),
-                ))
+                ));
             }
         }
     }

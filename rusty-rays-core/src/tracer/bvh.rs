@@ -5,7 +5,7 @@ use std::sync::Arc;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray};
 use crate::tracer::primitives::Primitive;
-use crate::utils::logger::LOG;
+use crate::utils::LOG;
 use slog::debug;
 
 // Axis-aligned bounding box

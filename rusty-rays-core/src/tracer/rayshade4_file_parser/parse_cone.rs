@@ -10,7 +10,7 @@ use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::primitives::cone::Cone;
-use crate::utils::logger::LOG;
+use crate::utils::LOG;
 
 pub fn process_cone(
     keyword_line_iter: &mut Peekable<SplitWhitespace>,
@@ -32,7 +32,7 @@ pub fn process_cone(
                     return Err(FailedToParseInputFile(
                         line_number,
                         format!("surface {} referenced before definition", surface_name),
-                    ))
+                    ));
                 }
             }
         }
@@ -40,7 +40,7 @@ pub fn process_cone(
             return Err(FailedToParseInputFile(
                 line_number,
                 "cone declaration missing surface".to_string(),
-            ))
+            ));
         }
     };
 
@@ -53,14 +53,14 @@ pub fn process_cone(
                 return Err(FailedToParseInputFile(
                     line_number,
                     "invalid base radius value".to_string(),
-                ))
+                ));
             }
         },
         None => {
             return Err(FailedToParseInputFile(
                 line_number,
                 "cone missing base radius".to_string(),
-            ))
+            ));
         }
     };
 
@@ -69,7 +69,12 @@ pub fn process_cone(
     let base_result = Coords::new_from_str_vec(base_xyz_vec);
     let base = match base_result {
         Ok(base) => base,
-        Err(error) => return Err(FailedToParseInputFile(line_number, format!("error parsing cone base: {}", error))),
+        Err(error) => {
+            return Err(FailedToParseInputFile(
+                line_number,
+                format!("error parsing cone base: {}", error),
+            ));
+        }
     };
 
     // Parse apex radius
@@ -81,14 +86,14 @@ pub fn process_cone(
                 return Err(FailedToParseInputFile(
                     line_number,
                     "invalid apex radius value".to_string(),
-                ))
+                ));
             }
         },
         None => {
             return Err(FailedToParseInputFile(
                 line_number,
                 "cone missing apex radius".to_string(),
-            ))
+            ));
         }
     };
 
@@ -97,7 +102,12 @@ pub fn process_cone(
     let apex_result = Coords::new_from_str_vec(apex_xyz_vec);
     let apex = match apex_result {
         Ok(apex) => apex,
-        Err(error) => return Err(FailedToParseInputFile(line_number, format!("error parsing cone apex: {}", error))),
+        Err(error) => {
+            return Err(FailedToParseInputFile(
+                line_number,
+                format!("error parsing cone apex: {}", error),
+            ));
+        }
     };
 
     let invalid_value = keyword_line_iter.next();

@@ -5,7 +5,7 @@ use slog::warn;
 
 use CoordsError::FailedToParseFromVec;
 
-use crate::utils::logger::LOG;
+use crate::utils::LOG;
 
 #[derive(PartialEq, Debug)]
 pub struct Coords {

@@ -10,7 +10,7 @@ use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::primitives::sphere::Sphere;
-use crate::utils::logger::LOG;
+use crate::utils::LOG;
 
 pub fn process_sphere(
     keyword_line_iter: &mut Peekable<SplitWhitespace>,
@@ -32,7 +32,7 @@ pub fn process_sphere(
                     return Err(FailedToParseInputFile(
                         line_number,
                         format!("surface {} referenced before definition", surface_name),
-                    ))
+                    ));
                 }
             }
         }
@@ -40,7 +40,7 @@ pub fn process_sphere(
             return Err(FailedToParseInputFile(
                 line_number,
                 "sphere declaration missing surface".to_string(),
-            ))
+            ));
         }
     };
 
@@ -52,14 +52,14 @@ pub fn process_sphere(
                 return Err(FailedToParseInputFile(
                     line_number,
                     "invalid radius value".to_string(),
-                ))
+                ));
             }
         },
         None => {
             return Err(FailedToParseInputFile(
                 line_number,
                 "sphere missing radius".to_string(),
-            ))
+            ));
         }
     };
 

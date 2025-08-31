@@ -1,19 +1,22 @@
+use crate::CONFIG_DIR_OVERRIDE;
+use once_cell::sync::Lazy;
+use serde::{Deserialize, Serialize};
+use slog::Level;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
 use std::path::PathBuf;
 use std::str::FromStr;
-
-use once_cell::sync::Lazy;
-use serde::{Deserialize, Serialize};
-use serde_json5;
-use slog::Level;
+use std::sync::RwLock;
 
 /// the logger is dependent on this file
+
+static CONFIG: Lazy<RwLock<Config>> = Lazy::new(|| RwLock::new(init_config()));
 
 #[derive(Debug, PartialEq, Clone)]
 pub struct Config {
     pub log_level: Level,
+    pub log_files_dir: Option<PathBuf>,
     pub log_message_cache_overflow_limit: usize,
     pub max_render_threads: usize,
     pub loaded_from_file: bool,
@@ -22,12 +25,90 @@ pub struct Config {
 #[derive(Serialize, Deserialize, Debug, PartialEq)]
 struct ParsedConfig {
     log_level: Option<String>,
+    log_files_dir: Option<PathBuf>,
     log_message_cache_overflow_limit: Option<usize>,
-    pub max_render_threads: Option<usize>,
+    max_render_threads: Option<usize>,
 }
 
-pub static CONFIG: Lazy<Config> = Lazy::new(|| match get_config_file_content_string() {
-    Ok(config_json5) => match serde_json5::from_str::<ParsedConfig>(config_json5.as_str()) {
+static DEFAULT_CONFIG: Lazy<Config> = Lazy::new(|| {
+    let log_dir: Option<PathBuf> = match dirs_next::cache_dir() {
+        Some(mut user_cache_dir) => {
+            let package_name = env!("CARGO_PKG_NAME");
+            user_cache_dir.push(package_name);
+            user_cache_dir.push("logs");
+
+            Some(user_cache_dir)
+        }
+        None => {
+            eprintln!("cannot find or access user cache directory.");
+            None
+        }
+    };
+
+    Config {
+        log_level: Level::Info,
+        log_files_dir: log_dir,
+        log_message_cache_overflow_limit: 500_000,
+        max_render_threads: num_cpus::get_physical(),
+        loaded_from_file: false,
+    }
+});
+
+impl Config {
+    pub fn get() -> Config {
+        let config_read_result = CONFIG.read();
+        if let Ok(config) = config_read_result {
+            return config.clone();
+        };
+
+        eprintln!("failed to read in-memory config. attempting to read from file");
+        init_config()
+    }
+
+    pub fn set(updated_config: Config) -> Result<(), String> {
+        match CONFIG.write() {
+            Ok(mut config) => {
+                config.log_level = updated_config.log_level;
+                config.log_message_cache_overflow_limit =
+                    updated_config.log_message_cache_overflow_limit;
+                config.max_render_threads = updated_config.max_render_threads;
+                config.loaded_from_file = updated_config.loaded_from_file;
+
+                write_config_to_file(updated_config)
+            }
+            Err(error) => Err(format!("failed to set config. Error: {}", error)),
+        }
+    }
+}
+
+fn init_config() -> Config {
+    match get_config_file_content_string() {
+        Ok(config_json) => parse_config_file_content(config_json),
+        Err(error) => {
+            eprintln!("failed to find or open config file. {}", error);
+
+            let config = ParsedConfig {
+                log_level: Some(DEFAULT_CONFIG.log_level.to_string()),
+                log_message_cache_overflow_limit: Some(
+                    DEFAULT_CONFIG.log_message_cache_overflow_limit,
+                ),
+                log_files_dir: DEFAULT_CONFIG.log_files_dir.clone(),
+                max_render_threads: None, // set null
+            };
+
+            if let Err(create_file_error) = create_config_file(config) {
+                eprintln!("failed to create config file. {}", create_file_error);
+            };
+
+            println!("using default config");
+
+            DEFAULT_CONFIG.clone()
+        }
+    }
+}
+
+fn parse_config_file_content(config_json: String) -> Config {
+    match serde_json::from_str::<ParsedConfig>(config_json.as_str()) {
         Ok(parsed_config) => Config {
             log_level: match parsed_config.log_level {
                 Some(parsed_log_level) => match Level::from_str(parsed_log_level.as_str()) {
@@ -60,36 +141,23 @@ pub static CONFIG: Lazy<Config> = Lazy::new(|| match get_config_file_content_str
                 }
                 None => DEFAULT_CONFIG.max_render_threads,
             },
+            log_files_dir: parsed_config.log_files_dir,
             loaded_from_file: true,
         },
         Err(error) => {
-            eprintln!("failed parse config json5: {}", error);
+            eprintln!("failed parse config json: {}", error);
             println!("using default config");
 
             DEFAULT_CONFIG.clone()
         }
-    },
-    Err(error) => {
-        eprintln!("failed to find or open config file. {}", error);
-
-        if let Err(create_file_error) = create_config_file() {
-            eprintln!("failed to create config file. {}", create_file_error);
-        };
-
-        println!("using default config");
-
-        DEFAULT_CONFIG.clone()
     }
-});
-
-static DEFAULT_CONFIG: Lazy<Config> = Lazy::new(|| Config {
-    log_level: Level::Info,
-    log_message_cache_overflow_limit: 500_000,
-    max_render_threads: num_cpus::get_physical(),
-    loaded_from_file: false,
-});
+}
 
 fn get_config_dir() -> Result<PathBuf, String> {
+    if let Some(custom_config_dir) = CONFIG_DIR_OVERRIDE.get() {
+        return Ok(custom_config_dir.clone());
+    }
+
     match dirs_next::config_dir() {
         Some(mut config_dir) => {
             let package_name = env!("CARGO_PKG_NAME");
@@ -102,7 +170,7 @@ fn get_config_dir() -> Result<PathBuf, String> {
 fn get_config_file_path() -> Result<PathBuf, String> {
     match get_config_dir() {
         Ok(mut config_dir) => {
-            config_dir.push("config.json5");
+            config_dir.push("config.json");
             Ok(config_dir)
         }
         Err(err_string) => Err(err_string),
@@ -117,7 +185,34 @@ fn get_config_file_content_string() -> Result<String, String> {
     }
 }
 
-fn create_config_file() -> Result<(), String> {
+fn write_config_to_file(config: Config) -> Result<(), String> {
+    let writeable_config = ParsedConfig {
+        log_level: Some(config.log_level.to_string()),
+        log_message_cache_overflow_limit: Some(config.log_message_cache_overflow_limit),
+        log_files_dir: DEFAULT_CONFIG.log_files_dir.clone(),
+        max_render_threads: Some(config.max_render_threads),
+    };
+
+    let config_file_path = match get_config_file_path() {
+        Ok(config_file_path) => config_file_path,
+        Err(err_string) => {
+            eprintln!("cannot open config file. Error: {}", err_string);
+            return create_config_file(writeable_config);
+        }
+    };
+
+    let config_file_contents = match serde_json::to_string_pretty(&writeable_config) {
+        Ok(config_file_contents) => config_file_contents,
+        Err(error) => return Err(format!("cannot serialize config. Error: {}", error)),
+    };
+
+    match fs::write(config_file_path, config_file_contents) {
+        Ok(_) => Ok(()),
+        Err(error) => Err(format!("cannot write config to file. Error: {}", error)),
+    }
+}
+
+fn create_config_file(config: ParsedConfig) -> Result<(), String> {
     let config_dir_path: PathBuf = get_config_dir()?;
     let create_file_result = fs::create_dir_all(&config_dir_path);
     if create_file_result.is_err() {
@@ -131,15 +226,7 @@ fn create_config_file() -> Result<(), String> {
 
     match File::create_new(&config_file_path) {
         Ok(mut file) => {
-            let comment = "// this file is json5. comments are allowed, key quotes not needed\n";
-            let config = ParsedConfig {
-                log_level: Some(DEFAULT_CONFIG.log_level.to_string()),
-                log_message_cache_overflow_limit: Some(
-                    DEFAULT_CONFIG.log_message_cache_overflow_limit,
-                ),
-                max_render_threads: None, // set null
-            };
-            let config_contents_result = serde_json5::to_string(&config);
+            let config_contents_result = serde_json::to_string_pretty(&config);
             if config_contents_result.is_err() {
                 return Err(format!(
                     "cannot serialize config. Error: {}",
@@ -148,7 +235,6 @@ fn create_config_file() -> Result<(), String> {
             }
 
             let config_file_contents = config_contents_result.unwrap();
-            let _ignored = file.write_all(comment.as_bytes());
             match file.write_all(config_file_contents.as_bytes()) {
                 Ok(_) => {
                     println!("created config file {}", config_file_path.to_str().unwrap());

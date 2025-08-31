@@ -12,7 +12,7 @@ use crate::tracer::primitives::polygon::Polygon;
 use crate::tracer::rayshade4_file_parser::{
     GetNextLineClosure, NextIfClosure, NextLine, SCENE_DATA_KEYWORDS,
 };
-use crate::utils::logger::LOG;
+use crate::utils::LOG;
 
 pub fn process_polygon(
     determine_next_line_iter: &mut GetNextLineClosure,
@@ -44,7 +44,7 @@ pub fn process_polygon(
                     return Err(FailedToParseInputFile(
                         line_number,
                         format!("surface {} referenced before definition", surface_name),
-                    ))
+                    ));
                 }
             }
         }
@@ -52,7 +52,7 @@ pub fn process_polygon(
             return Err(FailedToParseInputFile(
                 starting_line_number,
                 "polygon declaration missing surface".to_string(),
-            ))
+            ));
         }
     };
 
@@ -119,7 +119,7 @@ fn iterate_and_update_single_line_vertices(
                 return Err(FailedToParseInputFile(
                     next_line.line_number,
                     format!("{}", error),
-                ))
+                ));
             }
         }
     }

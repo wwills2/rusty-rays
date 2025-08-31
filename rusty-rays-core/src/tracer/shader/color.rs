@@ -3,7 +3,7 @@ use slog::warn;
 use std::fmt;
 
 use crate::tracer::shader::color::ColorError::FailedToParseFromVec;
-use crate::utils::logger::LOG;
+use crate::utils::LOG;
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Color {

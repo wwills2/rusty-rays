@@ -9,7 +9,7 @@ use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::rayshade4_file_parser::{GetNextLineClosure, NextIfClosure, SURFACE_KEYWORDS};
 use crate::tracer::shader::color::Color;
-use crate::utils::logger::LOG;
+use crate::utils::LOG;
 
 pub fn process_surface(
     determine_next_line_iter: &mut GetNextLineClosure,
@@ -34,7 +34,7 @@ pub fn process_surface(
             return Err(FailedToParseInputFile(
                 starting_line_number,
                 "dangling \"surface\" keyword".to_string(),
-            ))
+            ));
         }
     };
 
@@ -119,7 +119,7 @@ pub fn process_surface(
                     return Err(FailedToParseInputFile(
                         next_line.line_number,
                         error.to_string(),
-                    ))
+                    ));
                 }
             }
         } else if SURFACE_KEYWORDS
@@ -143,7 +143,7 @@ pub fn process_surface(
                     return Err(FailedToParseInputFile(
                         next_line.line_number,
                         error.to_string(),
-                    ))
+                    ));
                 }
             }
         } else if SURFACE_KEYWORDS
@@ -167,7 +167,7 @@ pub fn process_surface(
                     return Err(FailedToParseInputFile(
                         next_line.line_number,
                         error.to_string(),
-                    ))
+                    ));
                 }
             }
         } else if SURFACE_KEYWORDS
@@ -181,7 +181,7 @@ pub fn process_surface(
                     return Err(FailedToParseInputFile(
                         next_line.line_number,
                         "missing specpow value".to_string(),
-                    ))
+                    ));
                 }
             };
 
@@ -191,7 +191,7 @@ pub fn process_surface(
                     return Err(FailedToParseInputFile(
                         next_line.line_number,
                         "specpow value must be valid decimal value".to_string(),
-                    ))
+                    ));
                 }
             }
         } else if SURFACE_KEYWORDS
@@ -205,7 +205,7 @@ pub fn process_surface(
                     return Err(FailedToParseInputFile(
                         next_line.line_number,
                         "missing reflect value".to_string(),
-                    ))
+                    ));
                 }
             };
 
@@ -215,7 +215,7 @@ pub fn process_surface(
                     return Err(FailedToParseInputFile(
                         next_line.line_number,
                         "reflect value must be valid decimal value".to_string(),
-                    ))
+                    ));
                 }
             }
         }
