@@ -30,7 +30,6 @@ pub struct Model {
     pub cones: HashMap<Uuid, Cone>,
     pub polygons: HashMap<Uuid, Polygon>,
     pub all_primitives: HashMap<Uuid, Box<dyn Primitive>>,
-    pub bvh: Bvh,
 }
 
 #[derive(Debug)]
@@ -138,7 +137,6 @@ impl Clone for Model {
             cones: self.cones.clone(),
             polygons: self.polygons.clone(),
             all_primitives: self.all_primitives.clone(),
-            bvh: self.bvh.clone(),
         }
     }
 }

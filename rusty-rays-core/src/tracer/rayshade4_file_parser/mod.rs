@@ -571,20 +571,6 @@ pub fn iterate_input_data<R: BufRead + 'static>(
         all_primitives_map.insert(*uuid, Box::new(triangle.clone()));
     }
 
-    // Collect all primitives into a vector for Bvh construction
-    let primitives_for_bvh: Vec<Box<dyn Primitive>> =
-        all_primitives_map.values().cloned().collect();
-
-    // Build the Bvh from the collected primitives
-    debug!(
-        LOG,
-        "Building Bvh with {} primitives",
-        primitives_for_bvh.len()
-    );
-    let mut bvh = Bvh::new();
-    bvh.build(primitives_for_bvh);
-    debug!(LOG, "Bvh construction complete");
-
     Ok(Model {
         background,
         eyep,
@@ -597,6 +583,5 @@ pub fn iterate_input_data<R: BufRead + 'static>(
         cones,
         polygons,
         all_primitives: all_primitives_map,
-        bvh,
     })
 }

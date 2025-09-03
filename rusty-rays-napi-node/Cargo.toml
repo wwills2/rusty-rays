@@ -1,5 +1,5 @@
 [package]
-name = "rusty-rays-napi"
+name = "rusty-rays-napi-node"
 version = "0.1.0"
 edition = "2024"
 authors = ['William Wills']
@@ -11,8 +11,13 @@ name = "rusty_rays_core"
 crate-type = ["cdylib"]
 
 [dependencies]
-napi = "3.2.4"
 napi-build = "2.2.3"
 napi-derive = "3.2.4"
 rusty-rays-core = { path = "../rusty-rays-core" }
+tokio = "1.47.1"
+
+[dependencies.napi]
+version = "3.2.4"
+default-features = false
+features = ['napi10', 'tokio_rt']
 

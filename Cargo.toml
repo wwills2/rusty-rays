@@ -3,6 +3,6 @@
 members = [
     "rusty-rays-core",
     "rusty-rays-cli",
-    "rusty-rays-napi"
+    "rusty-rays-napi-node"
 ]
 resolver = "2"

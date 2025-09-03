@@ -3,9 +3,11 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use std::{f64, fmt, thread};
 
+use crate::tracer::bvh::Bvh;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::Ray;
 pub use crate::tracer::model::Model;
+use crate::tracer::primitives::Primitive;
 use crate::utils::LOG;
 use crate::Config;
 pub use shader::color::Color;
@@ -22,6 +24,7 @@ mod shader;
 #[derive(Debug)]
 pub struct Tracer {
     model: Model,
+    bvh: Bvh,
     primary_rays: Vec<Ray>,
 }
 
@@ -30,6 +33,7 @@ impl Clone for Tracer {
         Tracer {
             model: self.model.clone(),
             primary_rays: self.primary_rays.clone(),
+            bvh: self.bvh.clone(),
         }
     }
 }
@@ -38,12 +42,20 @@ impl Tracer {
     pub fn new(model: Model) -> Self {
         debug!(
             LOG,
-            "initializing renderer and calculating primary ray definitions"
+            "initializing renderer. calculating primary ray definitions and bvh"
         );
         let primary_rays = Self::calculate_primary_rays(&model);
+
+        // Collect all primitives into a vector for Bvh construction
+        let primitives_for_bvh: Vec<Box<dyn Primitive>> =
+            model.all_primitives.values().cloned().collect();
+        let mut bvh = Bvh::new();
+        bvh.build(primitives_for_bvh);
+
         Self {
             model,
             primary_rays,
+            bvh,
         }
     }
 
@@ -129,7 +141,12 @@ impl Tracer {
                     }
 
                     if let Some(ray) = maybe_ray {
-                        let pixel_color = shader::process_ray(0, ray, &_self_arc_clone.model);
+                        let pixel_color = shader::process_ray(
+                            0,
+                            ray,
+                            &_self_arc_clone.model,
+                            &_self_arc_clone.bvh,
+                        );
 
                         match _image_data_arc_clone.lock() {
                             Ok(mut mutex_guard) => {

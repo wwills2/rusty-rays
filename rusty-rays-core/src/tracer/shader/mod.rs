@@ -1,3 +1,4 @@
+use crate::tracer::bvh::Bvh;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::model::Model;
@@ -14,8 +15,8 @@ static NUM_SHADOW_RAYS: u8 = 16;
 // DO NOT USE model.eyep anywhere in this file
 // !!!
 
-pub fn process_ray(trace_depth: u8, ray: &Ray, model: &Model) -> Color {
-    match model.bvh.intersect(ray) {
+pub fn process_ray(trace_depth: u8, ray: &Ray, model: &Model, bvh: &Bvh) -> Color {
+    match bvh.intersect(ray) {
         Some(intersection) => {
             // Get the primitive from the model's collections using the UUID
             let surface = match model
@@ -26,7 +27,7 @@ pub fn process_ray(trace_depth: u8, ray: &Ray, model: &Model) -> Color {
                 None => return model.background.clone(),
             };
 
-            calculate_color(trace_depth, model, surface, &intersection)
+            calculate_color(trace_depth, model, bvh, surface, &intersection)
         }
         None => model.background.clone(),
     }
@@ -35,6 +36,7 @@ pub fn process_ray(trace_depth: u8, ray: &Ray, model: &Model) -> Color {
 fn calculate_color(
     trace_depth: u8,
     model: &Model,
+    bvh: &Bvh,
     surface: &Surface,
     starting_intersection: &Intersection,
 ) -> Color {
@@ -68,7 +70,7 @@ fn calculate_color(
                 j: 0,
             };
 
-            let shadow_ray_intersection = match model.bvh.intersect(&shadow_ray) {
+            let shadow_ray_intersection = match bvh.intersect(&shadow_ray) {
                 Some(intersection) => intersection,
                 None => {
                     adjust_color_for_diffuse_and_specular(
@@ -158,7 +160,7 @@ fn calculate_color(
                 };
 
                 // Check if this ray is blocked
-                let shadow_ray_intersection = match model.bvh.intersect(&shadow_ray) {
+                let shadow_ray_intersection = match bvh.intersect(&shadow_ray) {
                     Some(intersection) => intersection,
                     None => {
                         // This ray is not blocked
@@ -214,7 +216,7 @@ fn calculate_color(
             i: 0,
             j: 0,
         };
-        let reflection_color = process_ray(trace_depth + 1, &reflection_ray, model);
+        let reflection_color = process_ray(trace_depth + 1, &reflection_ray, model, bvh);
         let reflect_attenuation = 1.0 / (1.0 + trace_depth as f64);
         let reflection_contribution = reflection_color.scale(surface.reflect * reflect_attenuation);
 
