@@ -1,0 +1,16 @@
+{
+  "name": "rusty-rays-napi-node",
+  "version": "1.0.0",
+  "description": "NAPI bindings for rusty-rays",
+  "scripts": {
+    "build": "rimraf dist && napi build --release && "
+  },
+  "author": "William Wills",
+  "devDependencies": {
+    "@napi-rs/cli": "^3.1.5",
+    "@types/node": "^24.3.1",
+    "rimraf": "^6.0.1",
+    "ts-node": "^10.9.2",
+    "typescript": "^5.9.2"
+  }
+}
