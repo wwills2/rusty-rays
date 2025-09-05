@@ -3,14 +3,19 @@
   "version": "1.0.0",
   "description": "NAPI bindings for rusty-rays",
   "scripts": {
-    "build": "rimraf dist && napi build --release && "
+    "build:napi": "napi build -o dist --release --platform --esm --js index.js",
+    "build": "rimraf dist && npm run build:napi",
+    "test": "rimraf test.js && tsc && node test.js"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=22.19"
   },
   "author": "William Wills",
   "devDependencies": {
     "@napi-rs/cli": "^3.1.5",
     "@types/node": "^24.3.1",
     "rimraf": "^6.0.1",
-    "ts-node": "^10.9.2",
     "typescript": "^5.9.2"
   }
 }
