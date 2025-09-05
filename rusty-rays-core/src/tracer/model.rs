@@ -1,14 +1,14 @@
+use crate::LOG;
 use crate::tracer::bvh::Bvh;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Fov, Screen};
+use crate::tracer::primitives::Primitive;
 use crate::tracer::primitives::cone::Cone;
 use crate::tracer::primitives::polygon::Polygon;
 use crate::tracer::primitives::sphere::Sphere;
-use crate::tracer::primitives::Primitive;
 use crate::tracer::rayshade4_file_parser;
 use crate::tracer::shader::color::Color;
 use crate::tracer::shader::light::Light;
-use crate::LOG;
 use slog::trace;
 use std::collections::HashMap;
 use std::fmt;

@@ -3,7 +3,7 @@ use bincode::config::{BigEndian, Configuration, Varint};
 use bincode::error::{DecodeError, EncodeError};
 use image::{ImageBuffer, RgbImage};
 use std::fmt;
-use std::path::Path;
+use std::path::PathBuf;
 
 mod config;
 mod logger;
@@ -33,7 +33,7 @@ pub fn deserialize_blob_to_raw_render(
 
 /// Write the rendered image to a file. clamps pixel values to [0, 255]
 pub fn write_render_to_file(
-    output_file_path: &Path,
+    output_file_path: &PathBuf,
     raw_image_data: &Vec<Vec<Color>>,
 ) -> Result<(), WriteError> {
     let image = raw_to_image_data(raw_image_data)?;

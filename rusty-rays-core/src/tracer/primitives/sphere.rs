@@ -70,11 +70,7 @@ impl Primitive for Sphere {
                 let dist_t1 = (-b - discriminant.sqrt()) / (2.0 * a);
                 let dist_t2 = (-b + discriminant.sqrt()) / (2.0 * a);
 
-                if dist_t1 < dist_t2 {
-                    dist_t1
-                } else {
-                    dist_t2
-                }
+                if dist_t1 < dist_t2 { dist_t1 } else { dist_t2 }
             }
         };
 

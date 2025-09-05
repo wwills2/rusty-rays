@@ -34,8 +34,11 @@ impl Clone for Cone {
 
 impl fmt::Display for Cone {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        write!(f, "Cone from base {} with radius {} to apex {} with radius {}", 
-               self.base, self.base_radius, self.apex, self.apex_radius)
+        write!(
+            f,
+            "Cone from base {} with radius {} to apex {} with radius {}",
+            self.base, self.base_radius, self.apex, self.apex_radius
+        )
     }
 }
 
@@ -71,14 +74,16 @@ impl Primitive for Cone {
 
         // Calculate coefficients for the quadratic equation
         // For a cone, we need to account for the varying radius
-        let a = (ray.direction.x.powi(2) + ray.direction.y.powi(2) + ray.direction.z.powi(2)) - 
-                dot_v_axis.powi(2) * (1.0 + tan_theta.powi(2));
+        let a = (ray.direction.x.powi(2) + ray.direction.y.powi(2) + ray.direction.z.powi(2))
+            - dot_v_axis.powi(2) * (1.0 + tan_theta.powi(2));
 
-        let b = 2.0 * ((ray.direction.x * oc.x + ray.direction.y * oc.y + ray.direction.z * oc.z) - 
-                dot_v_axis * dot_oc_axis * (1.0 + tan_theta.powi(2)));
+        let b = 2.0
+            * ((ray.direction.x * oc.x + ray.direction.y * oc.y + ray.direction.z * oc.z)
+                - dot_v_axis * dot_oc_axis * (1.0 + tan_theta.powi(2)));
 
-        let c = (oc.x.powi(2) + oc.y.powi(2) + oc.z.powi(2)) - 
-                dot_oc_axis.powi(2) * (1.0 + tan_theta.powi(2)) - self.base_radius.powi(2);
+        let c = (oc.x.powi(2) + oc.y.powi(2) + oc.z.powi(2))
+            - dot_oc_axis.powi(2) * (1.0 + tan_theta.powi(2))
+            - self.base_radius.powi(2);
 
         // Solve the quadratic equation
         let discriminant = b * b - 4.0 * a * c;
@@ -126,7 +131,8 @@ impl Primitive for Cone {
             x: radial_vector.x - axis.x * tan_theta * radius_at_intersection,
             y: radial_vector.y - axis.y * tan_theta * radius_at_intersection,
             z: radial_vector.z - axis.z * tan_theta * radius_at_intersection,
-        }.calc_normalized_vector();
+        }
+        .calc_normalized_vector();
 
         Some(Intersection {
             distance_along_ray: t,
@@ -212,7 +218,9 @@ impl Primitive for Cone {
             &self.base + &(&normalized_axis * (height * 0.25))
         } else {
             // Frustum: centroid is at the weighted average of the centers
-            let base_weight = self.base_radius.powi(2) + self.base_radius * self.apex_radius + self.apex_radius.powi(2);
+            let base_weight = self.base_radius.powi(2)
+                + self.base_radius * self.apex_radius
+                + self.apex_radius.powi(2);
             let apex_weight = self.apex_radius.powi(2);
             let total_weight = base_weight + apex_weight;
 

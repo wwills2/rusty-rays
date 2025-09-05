@@ -3,7 +3,7 @@ use std::sync::Mutex;
 
 use crate::utils::config::Config;
 use once_cell::sync::Lazy;
-use slog::{o, Drain, Logger};
+use slog::{Drain, Logger, o};
 use slog_async;
 use slog_async::AsyncGuard;
 use slog_term;

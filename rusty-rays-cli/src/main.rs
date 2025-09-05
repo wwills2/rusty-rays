@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use clap::{arg, Parser};
+use clap::{Parser, arg};
 
 use rusty_rays_core::{
-    error, info, shutdown_logger, warn, write_render_to_file, Model, Tracer, LOG,
+    LOG, Model, Tracer, error, info, shutdown_logger, warn, write_render_to_file,
 };
 
 #[derive(Parser, Debug)]
@@ -43,7 +43,8 @@ fn main() {
                 match maybe_raw_pixel_colors {
                     Ok(raw_pixel_colors) => {
                         info!(LOG, "tracer generated raw image data");
-                        match write_render_to_file(_output_file.as_path(), &raw_pixel_colors) {
+                        match write_render_to_file(&PathBuf::from(&_output_file), &raw_pixel_colors)
+                        {
                             Ok(_) => {
                                 info!(LOG, "wrote rendered image to {}", _output_file.display());
                             }

@@ -2,9 +2,9 @@ use std::fmt;
 
 use uuid::Uuid;
 
+use crate::tracer::bvh::Aabb;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
-use crate::tracer::bvh::Aabb;
 
 pub mod cone;
 pub mod plane;
