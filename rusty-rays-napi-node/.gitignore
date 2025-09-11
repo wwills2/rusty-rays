@@ -1,4 +1,6 @@
 node_modules
 dist
+bindings
 package-lock.json
 test.js
+render

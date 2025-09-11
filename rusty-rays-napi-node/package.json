@@ -3,9 +3,9 @@
   "version": "1.0.0",
   "description": "NAPI bindings for rusty-rays",
   "scripts": {
-    "build:napi": "napi build -o dist --release --platform --esm --js index.js",
+    "build:napi": "rimraf bindings && napi build -o bindings --release --platform --js index.cjs",
     "build": "rimraf dist && npm run build:napi",
-    "test": "rimraf test.js && tsc && node test.js"
+    "test": "npm run build && rimraf test.js && tsc && node test.js"
   },
   "type": "module",
   "engines": {

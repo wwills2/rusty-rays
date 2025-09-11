@@ -37,6 +37,14 @@ pub fn write_render_to_file(
     raw_image_data: &Vec<Vec<Color>>,
 ) -> Result<(), WriteError> {
     let image = raw_to_image_data(raw_image_data)?;
+
+    if let Some(parent_path) = output_file_path.parent()
+        && parent_path.is_dir() == false
+    {
+        if let Err(create_dir_result) = std::fs::create_dir(parent_path) {
+            return Err(WriteError(create_dir_result.to_string()));
+        }
+    }
     match image.save(output_file_path) {
         Ok(_) => Ok(()),
         Err(error) => Err(WriteError(format!(
