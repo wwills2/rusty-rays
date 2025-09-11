@@ -2,8 +2,8 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::tracer::coords::Coords;
-use crate::tracer::shader::color::Color;
+use crate::tracer::Color;
+use crate::tracer::Coords;
 
 // fov type and methods
 #[derive(Debug)]

@@ -1,12 +1,12 @@
-use crate::tracer::bvh::Bvh;
-use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
-use crate::tracer::model::Model;
-use crate::tracer::shader::color::Color;
 use crate::tracer::shader::light::Light;
-
-pub mod color;
+use crate::tracer::Bvh;
+use crate::tracer::Coords;
+use crate::tracer::Model;
+mod color;
 pub mod light;
+
+pub use color::Color;
 
 static MAX_REFLECTIONS: u8 = 5;
 static NUM_SHADOW_RAYS: u8 = 16;

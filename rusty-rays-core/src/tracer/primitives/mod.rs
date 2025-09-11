@@ -3,14 +3,20 @@ use std::fmt;
 use uuid::Uuid;
 
 use crate::tracer::bvh::Aabb;
-use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::Coords;
 
-pub mod cone;
-pub mod plane;
-pub mod polygon;
-pub mod sphere;
-pub mod triangle;
+mod cone;
+mod plane;
+mod polygon;
+mod sphere;
+mod triangle;
+
+pub use cone::Cone;
+pub use plane::Plane;
+pub use polygon::Polygon;
+pub use sphere::Sphere;
+pub use triangle::Triangle;
 
 // primitive trait and methods
 pub trait Primitive: Send + Sync {

@@ -4,14 +4,14 @@ use std::str::SplitWhitespace;
 
 use slog::debug;
 
-use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
-use crate::tracer::primitives::triangle::Triangle;
+use crate::tracer::primitives::Triangle;
 use crate::tracer::rayshade4_file_parser::{
     GetNextLineClosure, NextIfClosure, NextLine, SCENE_DATA_KEYWORDS,
 };
+use crate::tracer::Coords;
 use crate::utils::LOG;
 
 pub fn process_triangle(

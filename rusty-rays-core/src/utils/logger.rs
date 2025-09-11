@@ -1,9 +1,9 @@
 use std::fs::{self, File};
 use std::sync::Mutex;
 
-use crate::utils::config::Config;
+use crate::utils::Config;
 use once_cell::sync::Lazy;
-use slog::{Drain, Logger, o};
+use slog::{o, Drain, Logger};
 use slog_async;
 use slog_async::AsyncGuard;
 use slog_term;

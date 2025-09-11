@@ -2,9 +2,9 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::sync::Arc;
 
-use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray};
 use crate::tracer::primitives::Primitive;
+use crate::tracer::Coords;
 use crate::utils::LOG;
 use slog::debug;
 

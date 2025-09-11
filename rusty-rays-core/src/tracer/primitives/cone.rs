@@ -3,9 +3,9 @@ use std::fmt;
 use uuid::Uuid;
 
 use crate::tracer::bvh::Aabb;
-use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::primitives::Primitive;
+use crate::tracer::Coords;
 
 pub static TYPE_NAME: &str = "cone";
 

@@ -1,7 +1,7 @@
 use std::fmt;
 use std::str::FromStr;
 
-use crate::tracer::coords::Coords;
+use crate::tracer::Coords;
 
 #[derive(Debug)]
 pub struct Light {

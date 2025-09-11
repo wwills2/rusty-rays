@@ -5,11 +5,11 @@ use std::str::SplitWhitespace;
 use slog::debug;
 use uuid::Uuid;
 
-use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
-use crate::tracer::primitives::cone::Cone;
+use crate::tracer::primitives::Cone;
+use crate::tracer::Coords;
 use crate::utils::LOG;
 
 pub fn process_cylinder_to_cone(

@@ -7,18 +7,17 @@ use once_cell::sync::Lazy;
 use slog::{debug, warn};
 use uuid::Uuid;
 
-use crate::tracer::bvh::Bvh;
-use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::{Fov, Screen, Surface};
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::model::{Model, ModelError};
+use crate::tracer::primitives::Cone;
+use crate::tracer::primitives::Polygon;
 use crate::tracer::primitives::Primitive;
-use crate::tracer::primitives::cone::Cone;
-use crate::tracer::primitives::polygon::Polygon;
-use crate::tracer::primitives::sphere::Sphere;
-use crate::tracer::primitives::triangle::Triangle;
-use crate::tracer::shader::color::Color;
+use crate::tracer::primitives::Sphere;
+use crate::tracer::primitives::Triangle;
 use crate::tracer::shader::light::{Light, LightSourceType};
+use crate::tracer::shader::Color;
+use crate::tracer::Coords;
 use crate::utils::LOG;
 
 mod parse_cone;

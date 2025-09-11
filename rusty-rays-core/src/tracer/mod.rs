@@ -3,14 +3,14 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use std::{f64, fmt, thread};
 
-use crate::Config;
 use crate::tracer::bvh::Bvh;
 use crate::tracer::coords::Coords;
 use crate::tracer::misc_types::Ray;
 pub use crate::tracer::model::Model;
 use crate::tracer::primitives::Primitive;
 use crate::utils::LOG;
-pub use shader::color::Color;
+use crate::Config;
+pub use shader::Color;
 
 mod bvh;
 mod coords;

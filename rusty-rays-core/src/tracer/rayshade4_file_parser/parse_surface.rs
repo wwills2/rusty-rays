@@ -8,7 +8,7 @@ use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::rayshade4_file_parser::{GetNextLineClosure, NextIfClosure, SURFACE_KEYWORDS};
-use crate::tracer::shader::color::Color;
+use crate::tracer::shader::Color;
 use crate::utils::LOG;
 
 pub fn process_surface(
