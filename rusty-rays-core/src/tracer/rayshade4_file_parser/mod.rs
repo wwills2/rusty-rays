@@ -4,7 +4,6 @@ use std::iter::Peekable;
 use std::str::FromStr;
 
 use once_cell::sync::Lazy;
-use slog::{debug, warn};
 use uuid::Uuid;
 
 use crate::tracer::misc_types::{Fov, Screen, Surface};
@@ -18,7 +17,7 @@ use crate::tracer::primitives::Triangle;
 use crate::tracer::shader::light::{Light, LightSourceType};
 use crate::tracer::shader::Color;
 use crate::tracer::Coords;
-use crate::utils::LOG;
+use crate::utils::logger::{debug, warn, LOG};
 
 mod parse_cone;
 mod parse_cylinder_to_cone;

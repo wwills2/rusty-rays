@@ -1,9 +1,8 @@
 use serde::{Deserialize, Serialize};
-use slog::warn;
 use std::fmt;
 
 use crate::tracer::shader::color::ColorError::FailedToParseFromVec;
-use crate::utils::LOG;
+use crate::utils::logger::{warn, LOG};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Color {

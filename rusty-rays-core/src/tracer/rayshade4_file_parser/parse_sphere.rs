@@ -1,8 +1,6 @@
 use std::collections::HashMap;
 use std::iter::Peekable;
 use std::str::SplitWhitespace;
-
-use slog::debug;
 use uuid::Uuid;
 
 use crate::tracer::misc_types::Surface;
@@ -10,7 +8,7 @@ use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::primitives::Sphere;
 use crate::tracer::Coords;
-use crate::utils::LOG;
+use crate::utils::logger::{debug, LOG};
 
 pub fn process_sphere(
     keyword_line_iter: &mut Peekable<SplitWhitespace>,

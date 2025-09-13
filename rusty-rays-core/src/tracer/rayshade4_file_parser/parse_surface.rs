@@ -2,14 +2,12 @@ use std::collections::HashMap;
 use std::iter::Peekable;
 use std::str::SplitWhitespace;
 
-use slog::debug;
-
 use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::rayshade4_file_parser::{GetNextLineClosure, NextIfClosure, SURFACE_KEYWORDS};
 use crate::tracer::shader::Color;
-use crate::utils::LOG;
+use crate::utils::logger::{debug, LOG};
 
 pub fn process_surface(
     determine_next_line_iter: &mut GetNextLineClosure,

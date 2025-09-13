@@ -1,11 +1,8 @@
 use std::fmt;
 use std::ops::{Add, Div, Mul, Sub};
 
-use slog::warn;
-
+use crate::utils::logger::{warn, LOG};
 use CoordsError::FailedToParseFromVec;
-
-use crate::utils::LOG;
 
 #[derive(PartialEq, Debug)]
 pub struct Coords {

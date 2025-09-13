@@ -6,10 +6,9 @@ use std::fmt;
 use std::path::PathBuf;
 
 mod config;
-mod logger;
+pub mod logger;
 
 pub use config::Config;
-pub use logger::{ASYNC_LOGGER, LOG};
 
 /// Serializes the 2D vector of pixel Colors into a blob of u8 for lossless binary storage.
 /// Deserialize with deserialize_raw_to_blob

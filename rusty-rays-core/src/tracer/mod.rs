@@ -1,15 +1,15 @@
-use slog::{debug, error, info, trace, warn};
 use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use std::{f64, fmt, thread};
 
-use crate::tracer::bvh::Bvh;
-use crate::tracer::coords::Coords;
-use crate::tracer::misc_types::Ray;
-pub use crate::tracer::model::Model;
-use crate::tracer::primitives::Primitive;
-use crate::utils::LOG;
-use crate::Config;
+use crate::utils::logger::{debug, error, info, trace, warn, LOG};
+use crate::utils::Config;
+use bvh::Bvh;
+use coords::Coords;
+use misc_types::Ray;
+use primitives::Primitive;
+
+pub use model::Model;
 pub use shader::Color;
 
 mod bvh;

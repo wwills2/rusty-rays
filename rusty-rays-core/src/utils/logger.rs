@@ -8,14 +8,16 @@ use slog_async;
 use slog_async::AsyncGuard;
 use slog_term;
 
-pub struct AsyncLoggerWithGuard {
+pub use slog::{debug, error, info, trace, warn, Level};
+
+struct AsyncLoggerWithGuard {
     pub logger: Logger,
     pub async_guard: Mutex<Option<AsyncGuard>>,
 }
 
 pub static LOG: Lazy<&Logger> = Lazy::new(|| &ASYNC_LOGGER.logger);
 
-pub static ASYNC_LOGGER: Lazy<AsyncLoggerWithGuard> = Lazy::new(|| {
+static ASYNC_LOGGER: Lazy<AsyncLoggerWithGuard> = Lazy::new(|| {
     let log_level = Config::get().log_level;
     let log_channel_size = Config::get().log_message_cache_overflow_limit;
     let decorator = slog_term::TermDecorator::new().build();
@@ -76,3 +78,13 @@ pub static ASYNC_LOGGER: Lazy<AsyncLoggerWithGuard> = Lazy::new(|| {
         async_guard: Mutex::new(Some(async_guard)),
     }
 });
+
+/// It is important to call this function when exiting the program
+pub fn shutdown_logger() {
+    // flush the async logger - important that this runs
+    if let Ok(mut guard) = ASYNC_LOGGER.async_guard.lock() {
+        if let Some(guard) = guard.take() {
+            drop(guard);
+        }
+    }
+}

@@ -6,6 +6,43 @@ use std::sync::Arc;
 #[napi]
 mod bindings {
     use super::*;
+
+    #[napi]
+    pub fn log_error(message: String) -> napi::Result<()> {
+        rusty_rays_core::logger::error!(rusty_rays_core::logger::LOG, "{}", message);
+        Ok(())
+    }
+
+    #[napi]
+    pub fn log_warn(message: String) -> napi::Result<()> {
+        rusty_rays_core::logger::warn!(rusty_rays_core::logger::LOG, "{}", message);
+        Ok(())
+    }
+
+    #[napi]
+    pub fn log_info(message: String) -> napi::Result<()> {
+        rusty_rays_core::logger::info!(rusty_rays_core::logger::LOG, "{}", message);
+        Ok(())
+    }
+
+    #[napi]
+    pub fn log_debug(message: String) -> napi::Result<()> {
+        rusty_rays_core::logger::debug!(rusty_rays_core::logger::LOG, "{}", message);
+        Ok(())
+    }
+
+    #[napi]
+    pub fn log_trace(message: String) -> napi::Result<()> {
+        rusty_rays_core::logger::trace!(rusty_rays_core::logger::LOG, "{}", message);
+        Ok(())
+    }
+
+    #[napi]
+    pub fn shutdown_logger() -> napi::Result<()> {
+        rusty_rays_core::logger::shutdown_logger();
+        Ok(())
+    }
+
     #[napi]
     pub struct Model {
         inner: Arc<rusty_rays_core::Model>,
