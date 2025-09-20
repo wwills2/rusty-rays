@@ -43,55 +43,10 @@ mod bindings {
         Ok(())
     }
 
-    #[derive(Debug)]
-    #[napi]
-    pub enum LogLevel {
-        Trace,
-        Debug,
-        Info,
-        Warn,
-        Error,
-    }
-
-    impl FromStr for LogLevel {
-        type Err = String;
-
-        fn from_str(s: &str) -> Result<Self, Self::Err> {
-            match s.to_lowercase().as_str() {
-                "trace" => Ok(LogLevel::Trace),
-                "debug" => Ok(LogLevel::Debug),
-                "info" => Ok(LogLevel::Info),
-                "warn" => Ok(LogLevel::Warn),
-                "error" => Ok(LogLevel::Error),
-                _ => Err("Invalid log level".to_string()),
-            }
-        }
-    }
-
-    impl Into<LogLevel> for rusty_rays_core::logger::Level {
-        fn into(self) -> LogLevel {
-            LogLevel::from_str(self.to_string().as_str()).unwrap_or_else(|error| {
-                eprintln!("{}. defaulting to INFO log level", error);
-                LogLevel::Info
-            })
-        }
-    }
-
-    impl From<LogLevel> for &'static str {
-        fn from(value: LogLevel) -> Self {
-            match value {
-                LogLevel::Trace => "trace",
-                LogLevel::Debug => "debug",
-                LogLevel::Info => "info",
-                LogLevel::Warn => "warn",
-                LogLevel::Error => "error",
-            }
-        }
-    }
-
     #[napi(object)]
     pub struct Config {
-        pub log_level: LogLevel,
+        #[napi(ts_type = "\"trace\" | \"debug\" | \"info\" | \"warn\" | \"error\"")]
+        pub log_level: String,
         pub log_files_dir: Option<String>,
         pub log_message_cache_overflow_limit: u32,
         pub max_render_threads: u32,
@@ -101,7 +56,7 @@ mod bindings {
     /// Non-NAPI utility function
     fn core_config_to_js_config(config: rusty_rays_core::Config) -> Config {
         Config {
-            log_level: config.log_level.into(),
+            log_level: config.log_level.to_string(),
             log_files_dir: config
                 .log_files_dir
                 .and_then(|p| p.to_str().map(|s| s.to_string())),
@@ -126,7 +81,7 @@ mod bindings {
     pub async fn set_config(new_config: Config) -> napi::Result<()> {
         // run blocking set on a background thread as requested
         tokio::task::spawn_blocking(move || {
-            let lower = new_config.log_level.into();
+            let lower = new_config.log_level.as_str();
             if lower == "critical" {
                 return Err("invalid log level: critical".to_string());
             }

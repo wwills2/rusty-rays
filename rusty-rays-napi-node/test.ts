@@ -26,7 +26,7 @@ async function main() {
     console.log('setting log files dir to: ', `${testArtifactDir}`);
     config.logFilesDir = `${testArtifactDir}`;
     console.log('setting log level to debug');
-    config.logLevel = 'trace';
+    config.logLevel = "debug";
     await setConfig(config);
     console.log('adjusted config: ', getConfig());
 

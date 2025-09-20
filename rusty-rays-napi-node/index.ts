@@ -3,7 +3,6 @@ import type {bindings} from "./bindings/index.d.ts";
 
 // type exports
 export type Config = bindings.Config;
-export type LogLevel = bindings.LogLevel;
 export type Tracer = bindings.Tracer;
 export type Model = bindings.Model;
 
@@ -21,7 +20,6 @@ export const {
     logTrace,
     logDebug,
     shutdownLogger,
-    LogLevel,
     getConfig,
     setConfig,
     getDefaultConfig
