@@ -54,6 +54,12 @@ static DEFAULT_CONFIG: Lazy<Config> = Lazy::new(|| {
     }
 });
 
+impl Default for Config {
+    fn default() -> Self {
+        DEFAULT_CONFIG.clone()
+    }
+}
+
 impl Config {
     pub fn get() -> Config {
         let config_read_result = CONFIG.read();

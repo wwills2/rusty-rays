@@ -1,11 +1,11 @@
 mod build;
 
 use napi_derive::napi;
-use std::sync::Arc;
 
 #[napi]
 mod bindings {
-    use super::*;
+    use std::str::FromStr;
+    use std::sync::Arc;
 
     #[napi]
     pub fn log_error(message: String) -> napi::Result<()> {
@@ -40,6 +40,115 @@ mod bindings {
     #[napi]
     pub fn shutdown_logger() -> napi::Result<()> {
         rusty_rays_core::logger::shutdown_logger();
+        Ok(())
+    }
+
+    #[derive(Debug)]
+    #[napi]
+    pub enum LogLevel {
+        Trace,
+        Debug,
+        Info,
+        Warn,
+        Error,
+    }
+
+    impl FromStr for LogLevel {
+        type Err = String;
+
+        fn from_str(s: &str) -> Result<Self, Self::Err> {
+            match s.to_lowercase().as_str() {
+                "trace" => Ok(LogLevel::Trace),
+                "debug" => Ok(LogLevel::Debug),
+                "info" => Ok(LogLevel::Info),
+                "warn" => Ok(LogLevel::Warn),
+                "error" => Ok(LogLevel::Error),
+                _ => Err("Invalid log level".to_string()),
+            }
+        }
+    }
+
+    impl Into<LogLevel> for rusty_rays_core::logger::Level {
+        fn into(self) -> LogLevel {
+            LogLevel::from_str(self.to_string().as_str()).unwrap_or_else(|error| {
+                eprintln!("{}. defaulting to INFO log level", error);
+                LogLevel::Info
+            })
+        }
+    }
+
+    impl From<LogLevel> for &'static str {
+        fn from(value: LogLevel) -> Self {
+            match value {
+                LogLevel::Trace => "trace",
+                LogLevel::Debug => "debug",
+                LogLevel::Info => "info",
+                LogLevel::Warn => "warn",
+                LogLevel::Error => "error",
+            }
+        }
+    }
+
+    #[napi(object)]
+    pub struct Config {
+        pub log_level: LogLevel,
+        pub log_files_dir: Option<String>,
+        pub log_message_cache_overflow_limit: u32,
+        pub max_render_threads: u32,
+        pub loaded_from_file: bool,
+    }
+
+    /// Non-NAPI utility function
+    fn core_config_to_js_config(config: rusty_rays_core::Config) -> Config {
+        Config {
+            log_level: config.log_level.into(),
+            log_files_dir: config
+                .log_files_dir
+                .and_then(|p| p.to_str().map(|s| s.to_string())),
+            log_message_cache_overflow_limit: config.log_message_cache_overflow_limit as u32,
+            max_render_threads: config.max_render_threads as u32,
+            loaded_from_file: config.loaded_from_file,
+        }
+    }
+
+    #[napi]
+    pub fn get_default_config() -> Config {
+        core_config_to_js_config(rusty_rays_core::Config::default())
+    }
+
+    #[napi]
+    pub fn get_config() -> napi::Result<Config> {
+        let config = rusty_rays_core::Config::get();
+        Ok(core_config_to_js_config(config))
+    }
+
+    #[napi]
+    pub async fn set_config(new_config: Config) -> napi::Result<()> {
+        // run blocking set on a background thread as requested
+        tokio::task::spawn_blocking(move || {
+            let lower = new_config.log_level.into();
+            if lower == "critical" {
+                return Err("invalid log level: critical".to_string());
+            }
+            let level = rusty_rays_core::logger::Level::from_str(lower)
+                .map_err(|_| format!("invalid log level: {}", lower))?;
+            let log_files_dir = new_config
+                .log_files_dir
+                .map(|s| std::path::PathBuf::from(s));
+
+            let config = rusty_rays_core::Config {
+                log_level: level,
+                log_files_dir,
+                log_message_cache_overflow_limit: new_config.log_message_cache_overflow_limit
+                    as usize,
+                max_render_threads: new_config.max_render_threads as usize,
+                loaded_from_file: new_config.loaded_from_file,
+            };
+            rusty_rays_core::Config::set(config)
+        })
+        .await
+        .map_err(|e| napi::Error::from_reason(format!("task panicked: {e}")))?
+        .map_err(|e| napi::Error::from_reason(e))?;
         Ok(())
     }
 
