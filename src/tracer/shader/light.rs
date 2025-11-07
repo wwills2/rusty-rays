@@ -8,6 +8,7 @@ pub struct Light {
     pub position: Coords,
     pub intensity: f64,
     pub source_type: LightSourceType,
+    pub radius: f64, // Radius for area lights (used for soft shadows)
 }
 
 impl Clone for Light {
@@ -16,6 +17,7 @@ impl Clone for Light {
             position: self.position.clone(),
             intensity: self.intensity,
             source_type: self.source_type.clone(),
+            radius: self.radius,
         }
     }
 }
@@ -24,6 +26,8 @@ impl Clone for Light {
 pub enum LightSourceType {
     Point,
     Directional,
+    Ambient,
+    Extended,
 }
 
 impl Clone for LightSourceType {
@@ -31,6 +35,8 @@ impl Clone for LightSourceType {
         match self {
             LightSourceType::Point => LightSourceType::Point,
             LightSourceType::Directional => LightSourceType::Directional,
+            LightSourceType::Ambient => LightSourceType::Ambient,
+            LightSourceType::Extended => LightSourceType::Extended,
         }
     }
 }
@@ -42,7 +48,9 @@ impl FromStr for LightSourceType {
         match str {
             "point" => Ok(LightSourceType::Point),
             "directional" => Ok(LightSourceType::Directional),
-            _ => Err(format!("'{}' is not a valid LightSourceType", str)),
+            "ambient" => Ok(LightSourceType::Ambient),
+            "extended" => Ok(LightSourceType::Extended),
+            _ => Err(format!("'{}' is not a valid light source type", str)),
         }
     }
 }
@@ -52,6 +60,8 @@ impl fmt::Display for LightSourceType {
         match self {
             LightSourceType::Point => write!(f, "point"),
             LightSourceType::Directional => write!(f, "directional"),
+            LightSourceType::Ambient => write!(f, "ambient"),
+            LightSourceType::Extended => write!(f, "extended"),
         }
     }
 }

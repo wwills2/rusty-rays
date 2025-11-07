@@ -5,11 +5,11 @@ up 0 0 1
 fov 45 45
 screen 1512 1512
 sample 1 nojitter
-light 0.447214 point 2 4 4
-light 0.447214 point -2 4 3
-light 0.447214 point 2 -2.5 2.5
-light 0.447214 point -1 -4 2
-light 0.447214 point -1.111 -2.121 2.626
+light 0.447214 extended 0.5 2 4 4
+light 0.447214 extended 0.5 -2 4 3
+light 0.447214 extended 0.5 2 -2.5 2.5
+light 0.447214 extended 0.5 -1 -4 2
+light 0.447214 extended 0.5 -1.111 -2.121 2.626
 surface txt001
     ambient 0 0 0
     diffuse 0.3 0.255 0.21
