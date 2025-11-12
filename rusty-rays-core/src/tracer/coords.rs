@@ -1,7 +1,7 @@
 use std::fmt;
 use std::ops::{Add, Div, Mul, Sub};
 
-use crate::utils::logger::{warn, LOG};
+use crate::utils::logger::{LOG, warn};
 use CoordsError::FailedToParseFromVec;
 
 #[derive(PartialEq, Debug)]

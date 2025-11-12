@@ -2,13 +2,13 @@ use std::fmt;
 
 use uuid::Uuid;
 
+use crate::tracer::Coords;
 use crate::tracer::bvh::Aabb;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::plane_coords_2d::PlaneCoords2D;
-use crate::tracer::primitives::polygon::PolygonError::FailedToInitializePolygon;
 use crate::tracer::primitives::Plane;
 use crate::tracer::primitives::Primitive;
-use crate::tracer::Coords;
+use crate::tracer::primitives::polygon::PolygonError::FailedToInitializePolygon;
 
 pub static TYPE_NAME: &str = "polygon";
 

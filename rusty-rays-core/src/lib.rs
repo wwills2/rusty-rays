@@ -4,10 +4,12 @@ mod utils;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-pub use tracer::{Color, Cone, Model, Plane, Polygon, Sphere, Tracer, Triangle};
+pub use tracer::{
+    Color, Cone, Coords, Fov, Model, Plane, Polygon, Screen, Sphere, Surface, Tracer, Triangle,
+};
 pub use utils::{
-    deserialize_blob_to_raw_render, logger, serialize_raw_render_to_blob, write_render_to_file,
-    Config,
+    Config, deserialize_blob_to_raw_render, logger, serialize_raw_render_to_blob,
+    write_render_to_file,
 };
 
 /// Override the default config directory. This the directory where the config file is stored,

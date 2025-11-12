@@ -6,6 +6,7 @@ use napi_derive::napi;
 mod bindings {
     use std::str::FromStr;
     use std::sync::Arc;
+
     #[napi]
     pub fn log_error(message: String) -> napi::Result<()> {
         rusty_rays_core::logger::error!(rusty_rays_core::logger::LOG, "{}", message);
@@ -141,8 +142,19 @@ mod bindings {
         }
 
         #[napi(getter)]
-        pub fn get_all_spheres() -> napi::Result<Vec<Sphere>> {
-            todo!()
+        pub async fn get_all_spheres(&self) -> napi::Result<Vec<Sphere>> {
+            let _acquired_permit = self
+                .semaphore
+                .clone()
+                .acquire_owned()
+                .await
+                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+            Ok((*self.inner)
+                .get_all_spheres()
+                .values()
+                .map(|sphere| sphere.into())
+                .collect())
         }
     }
 
@@ -167,7 +179,12 @@ mod bindings {
 
         #[napi]
         pub async fn render_to_serialized(&self) -> napi::Result<Vec<u8>> {
-            let _acquired_permit = self.semaphore.clone().acquire_owned().await;
+            let _acquired_permit = self
+                .semaphore
+                .clone()
+                .acquire_owned()
+                .await
+                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
             let inner_tracer_clone = self.inner.clone();
             let raw_image = tokio::task::spawn_blocking(move || {
@@ -212,9 +229,79 @@ mod bindings {
         }
     }
 
-    /// TODO
     #[napi(object)]
     pub struct Sphere {
         pub uuid: String,
+        pub surface: Surface,
+        pub radius: f64,
+        pub position: Coords,
+    }
+
+    impl Into<Sphere> for &rusty_rays_core::Sphere {
+        fn into(self) -> Sphere {
+            Sphere {
+                uuid: self.uuid.to_string(),
+                surface: self.surface.clone().into(),
+                radius: self.radius,
+                position: self.position.clone().into(),
+            }
+        }
+    }
+
+    #[napi(object)]
+    pub struct Surface {
+        pub name: String,
+        pub ambient: Color,
+        pub diffuse: Color,
+        pub specular: Color,
+        pub specpow: f64,
+        pub reflect: f64,
+    }
+
+    impl Into<Surface> for rusty_rays_core::Surface {
+        fn into(self) -> Surface {
+            Surface {
+                name: self.name,
+                ambient: self.ambient.into(),
+                diffuse: self.diffuse.into(),
+                specular: self.specular.into(),
+                specpow: self.specpow,
+                reflect: self.reflect,
+            }
+        }
+    }
+
+    #[napi(object)]
+    pub struct Coords {
+        pub x: f64,
+        pub y: f64,
+        pub z: f64,
+    }
+
+    impl Into<Coords> for rusty_rays_core::Coords {
+        fn into(self) -> Coords {
+            Coords {
+                x: self.x,
+                y: self.y,
+                z: self.z,
+            }
+        }
+    }
+
+    #[napi(object)]
+    pub struct Color {
+        pub r: f64,
+        pub g: f64,
+        pub b: f64,
+    }
+
+    impl Into<Color> for rusty_rays_core::Color {
+        fn into(self) -> Color {
+            Color {
+                r: self.r,
+                g: self.g,
+                b: self.b,
+            }
+        }
     }
 }

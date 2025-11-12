@@ -2,13 +2,14 @@ use std::sync::{Arc, Mutex};
 use std::time::SystemTime;
 use std::{f64, fmt, thread};
 
-use crate::utils::logger::{debug, error, info, trace, warn, LOG};
 use crate::utils::Config;
+use crate::utils::logger::{LOG, debug, error, info, trace, warn};
 use bvh::Bvh;
-use coords::Coords;
 use misc_types::Ray;
 use primitives::Primitive;
 
+pub use coords::Coords;
+pub use misc_types::{Fov, Screen, Surface};
 pub use model::Model;
 pub use primitives::Cone;
 pub use primitives::Plane;

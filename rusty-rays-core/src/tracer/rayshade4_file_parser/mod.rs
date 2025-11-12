@@ -6,6 +6,7 @@ use std::str::FromStr;
 use once_cell::sync::Lazy;
 use uuid::Uuid;
 
+use crate::tracer::Coords;
 use crate::tracer::misc_types::{Fov, Screen, Surface};
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::model::{Model, ModelError};
@@ -14,10 +15,9 @@ use crate::tracer::primitives::Polygon;
 use crate::tracer::primitives::Primitive;
 use crate::tracer::primitives::Sphere;
 use crate::tracer::primitives::Triangle;
-use crate::tracer::shader::light::{Light, LightSourceType};
 use crate::tracer::shader::Color;
-use crate::tracer::Coords;
-use crate::utils::logger::{debug, warn, LOG};
+use crate::tracer::shader::light::{Light, LightSourceType};
+use crate::utils::logger::{LOG, debug, warn};
 
 mod parse_cone;
 mod parse_cylinder_to_cone;

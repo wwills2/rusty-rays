@@ -1,8 +1,8 @@
-use crate::tracer::misc_types::{Intersection, Ray, Surface};
-use crate::tracer::shader::light::Light;
 use crate::tracer::Bvh;
 use crate::tracer::Coords;
 use crate::tracer::Model;
+use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::shader::light::Light;
 mod color;
 pub mod light;
 

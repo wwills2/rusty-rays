@@ -2,10 +2,10 @@ use std::cmp::Ordering;
 use std::fmt;
 use std::sync::Arc;
 
+use crate::tracer::Coords;
 use crate::tracer::misc_types::{Intersection, Ray};
 use crate::tracer::primitives::Primitive;
-use crate::tracer::Coords;
-use crate::utils::logger::{debug, LOG};
+use crate::utils::logger::{LOG, debug};
 
 // Axis-aligned bounding box
 #[derive(Debug, Clone)]

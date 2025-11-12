@@ -3,12 +3,12 @@ use std::sync::Mutex;
 
 use crate::utils::Config;
 use once_cell::sync::Lazy;
-use slog::{o, Drain, Logger};
+use slog::{Drain, Logger, o};
 use slog_async;
 use slog_async::AsyncGuard;
 use slog_term;
 
-pub use slog::{debug, error, info, trace, warn, Level};
+pub use slog::{Level, debug, error, info, trace, warn};
 
 struct AsyncLoggerWithGuard {
     pub logger: Logger,

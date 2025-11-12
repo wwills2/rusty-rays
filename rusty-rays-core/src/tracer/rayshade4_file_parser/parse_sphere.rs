@@ -3,12 +3,12 @@ use std::iter::Peekable;
 use std::str::SplitWhitespace;
 use uuid::Uuid;
 
+use crate::tracer::Coords;
 use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::primitives::Sphere;
-use crate::tracer::Coords;
-use crate::utils::logger::{debug, LOG};
+use crate::utils::logger::{LOG, debug};
 
 pub fn process_sphere(
     keyword_line_iter: &mut Peekable<SplitWhitespace>,

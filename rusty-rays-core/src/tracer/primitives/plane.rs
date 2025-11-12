@@ -2,16 +2,17 @@ use std::fmt;
 
 use uuid::Uuid;
 
+use crate::tracer::Coords;
 use crate::tracer::bvh::Aabb;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::plane_coords_2d::PlaneCoords2D;
-use crate::tracer::primitives::plane::PlaneError::FailedToInitializePlane;
 use crate::tracer::primitives::Primitive;
+use crate::tracer::primitives::plane::PlaneError::FailedToInitializePlane;
 use crate::tracer::shader::Color;
-use crate::tracer::Coords;
 
 pub static TYPE_NAME: &str = "plane";
 
+/// Internal utility primitive. A planes are treated as polygons for rendering.
 #[derive(Debug)]
 pub struct Plane {
     pub uuid: Uuid,
@@ -180,7 +181,8 @@ fn calculate_plane_normal_vector(vertices: &[Coords]) -> Result<Coords, PlaneErr
 
     if is_collinear {
         return Err(FailedToInitializePlane(
-            "failed to find two non-collinear edges on the polygon plane".to_string(),
+            "failed to find two non-collinear edges on the polygon plane. invalid plane"
+                .to_string(),
         ));
     }
 
@@ -216,7 +218,7 @@ fn calculate_basis_vectors(
 
     if vertex_1 == vertex_2 {
         return Err(FailedToInitializePlane(
-            "all vertices of the plane are the same. invalid plane".to_string(),
+            "two or more vertices are the same. invalid plane".to_string(),
         ));
     }
 
