@@ -548,38 +548,31 @@ pub fn iterate_input_data<R: BufRead + 'static>(
         }
     }
 
-    // Create a HashMap for all primitives
-    let mut all_primitives_map: HashMap<Uuid, Box<dyn Primitive>> = HashMap::new();
+    let mut model = Model::default();
+    model.background = background;
+    model.eyep = eyep;
+    model.lookp = lookp;
+    model.up = up;
+    model.fov = fov;
+    model.screen = screen;
+    model.light_sources = light_sources;
 
-    for (uuid, sphere) in &spheres {
-        all_primitives_map.insert(*uuid, Box::new(sphere.clone()));
+    for (_, sphere) in spheres {
+        model.upsert_sphere(sphere);
     }
 
-    // Cylinders are now converted to cones, so we don't add any cylinders to all_primitives
-
-    for (uuid, cone) in &cones {
-        all_primitives_map.insert(*uuid, Box::new(cone.clone()));
+    // Cylinders are converted to cones, so we don't add any cylinders to all_primitives
+    for (_, cone) in cones {
+        model.upsert_cone(cone);
     }
 
-    for (uuid, polygon) in &polygons {
-        all_primitives_map.insert(*uuid, Box::new(polygon.clone()));
+    for (_, polygon) in polygons {
+        model.upsert_polygon(polygon);
     }
 
-    for (uuid, triangle) in &triangles {
-        all_primitives_map.insert(*uuid, Box::new(triangle.clone()));
+    for (_, triangle) in triangles {
+        model.upsert_triangle(triangle);
     }
 
-    Ok(Model {
-        background,
-        eyep,
-        lookp,
-        up,
-        fov,
-        screen,
-        light_sources,
-        spheres,
-        cones,
-        polygons,
-        all_primitives: all_primitives_map,
-    })
+    Ok(model)
 }

@@ -20,7 +20,7 @@ pub fn process_ray(trace_depth: u8, ray: &Ray, model: &Model, bvh: &Bvh) -> Colo
         Some(intersection) => {
             // Get the primitive from the model's collections using the UUID
             let surface = match model
-                .all_primitives
+                .get_all_primitives()
                 .get(&intersection.intersected_primitive_uuid)
             {
                 Some(intersected_primitive) => intersected_primitive.get_surface(),

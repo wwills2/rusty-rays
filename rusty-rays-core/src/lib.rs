@@ -4,7 +4,7 @@ mod utils;
 use std::path::PathBuf;
 use std::sync::OnceLock;
 
-pub use tracer::{Color, Model, Tracer};
+pub use tracer::{Color, Cone, Model, Plane, Polygon, Sphere, Tracer, Triangle};
 pub use utils::{
     deserialize_blob_to_raw_render, logger, serialize_raw_render_to_blob, write_render_to_file,
     Config,

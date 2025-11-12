@@ -12,21 +12,24 @@ mod polygon;
 mod sphere;
 mod triangle;
 
-pub use cone::Cone;
-pub use plane::Plane;
-pub use polygon::Polygon;
-pub use sphere::Sphere;
-pub use triangle::Triangle;
+pub use cone::{Cone, TYPE_NAME as CONE_TYPE_NAME};
+pub use plane::{Plane, TYPE_NAME as PLANE_TYPE_NAME};
+pub use polygon::{Polygon, TYPE_NAME as POLYGON_TYPE_NAME};
+pub use sphere::{Sphere, TYPE_NAME as SPHERE_TYPE_NAME};
+pub use triangle::{Triangle, TYPE_NAME as TRIANGLE_TYPE_NAME};
 
 // primitive trait and methods
 pub trait Primitive: Send + Sync {
+    /// inline
     fn get_uuid(&self) -> Uuid;
+
+    /// inline
     fn get_type(&self) -> String;
+
+    /// inline
     fn get_surface(&self) -> &Surface;
     fn calculate_intersection(&self, ray: &Ray) -> Option<Intersection>;
     fn primitive_clone(&self) -> Box<dyn Primitive>;
-
-    // New methods for bounding box and centroid calculation
     fn compute_bounding_box(&self) -> Aabb;
     fn compute_centroid(&self) -> Coords;
 }

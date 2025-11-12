@@ -6,7 +6,6 @@ use napi_derive::napi;
 mod bindings {
     use std::str::FromStr;
     use std::sync::Arc;
-
     #[napi]
     pub fn log_error(message: String) -> napi::Result<()> {
         rusty_rays_core::logger::error!(rusty_rays_core::logger::LOG, "{}", message);
@@ -113,7 +112,6 @@ mod bindings {
         semaphore: Arc<tokio::sync::Semaphore>,
     }
 
-    //todo add setters and getters for fields
     #[napi]
     impl Model {
         #[napi(factory)]
@@ -140,6 +138,11 @@ mod bindings {
                 inner: Arc::new(model),
                 semaphore: Arc::new(tokio::sync::Semaphore::new(1)),
             })
+        }
+
+        #[napi(getter)]
+        pub fn get_all_spheres() -> napi::Result<Vec<Sphere>> {
+            todo!()
         }
     }
 
@@ -207,5 +210,11 @@ mod bindings {
 
             Ok(())
         }
+    }
+
+    /// TODO
+    #[napi(object)]
+    pub struct Sphere {
+        pub uuid: String,
     }
 }

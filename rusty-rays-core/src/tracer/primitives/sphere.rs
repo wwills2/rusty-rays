@@ -35,14 +35,17 @@ impl fmt::Display for Sphere {
 }
 
 impl Primitive for Sphere {
+    #[inline]
     fn get_uuid(&self) -> Uuid {
         self.uuid
     }
 
+    #[inline]
     fn get_type(&self) -> String {
         TYPE_NAME.to_string()
     }
 
+    #[inline]
     fn get_surface(&self) -> &Surface {
         &self.surface
     }

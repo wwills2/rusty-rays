@@ -43,14 +43,17 @@ impl fmt::Display for Cone {
 }
 
 impl Primitive for Cone {
+    #[inline]
     fn get_uuid(&self) -> Uuid {
         self.uuid
     }
 
+    #[inline]
     fn get_type(&self) -> String {
         TYPE_NAME.to_string()
     }
 
+    #[inline]
     fn get_surface(&self) -> &Surface {
         &self.surface
     }

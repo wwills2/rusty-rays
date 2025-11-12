@@ -10,6 +10,11 @@ use misc_types::Ray;
 use primitives::Primitive;
 
 pub use model::Model;
+pub use primitives::Cone;
+pub use primitives::Plane;
+pub use primitives::Polygon;
+pub use primitives::Sphere;
+pub use primitives::Triangle;
 pub use shader::Color;
 
 mod bvh;
@@ -48,7 +53,7 @@ impl Tracer {
 
         // Collect all primitives into a vector for Bvh construction
         let primitives_for_bvh: Vec<Box<dyn Primitive>> =
-            model.all_primitives.values().cloned().collect();
+            model.get_all_primitives().values().cloned().collect();
         let mut bvh = Bvh::new();
         bvh.build(primitives_for_bvh);
 

@@ -12,6 +12,15 @@ pub struct Fov {
     pub vert: f64,
 }
 
+impl Default for Fov {
+    fn default() -> Self {
+        Self {
+            horz: 45.0,
+            vert: 45.0,
+        }
+    }
+}
+
 impl fmt::Display for Fov {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
         write!(
@@ -27,6 +36,15 @@ impl fmt::Display for Fov {
 pub struct Screen {
     pub width: usize,
     pub height: usize,
+}
+
+impl Default for Screen {
+    fn default() -> Self {
+        Self {
+            width: 500,
+            height: 500,
+        }
+    }
 }
 
 impl fmt::Display for Screen {

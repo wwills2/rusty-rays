@@ -1,14 +1,14 @@
 use crate::tracer::misc_types::{Fov, Screen};
-use crate::tracer::primitives::Cone;
-use crate::tracer::primitives::Polygon;
-use crate::tracer::primitives::Primitive;
 use crate::tracer::primitives::Sphere;
+use crate::tracer::primitives::{Cone, Polygon};
+use crate::tracer::primitives::{Plane, Primitive, Triangle};
 use crate::tracer::rayshade4_file_parser;
 use crate::tracer::shader::light::Light;
 use crate::tracer::shader::Color;
 use crate::tracer::Coords;
 use crate::utils::logger::{trace, LOG};
 use std::collections::HashMap;
+use std::convert::Into;
 use std::fmt;
 use std::fs::File;
 use std::io::{BufRead, BufReader, Cursor};
@@ -24,10 +24,11 @@ pub struct Model {
     pub fov: Fov,
     pub screen: Screen,
     pub light_sources: Vec<Light>,
-    pub spheres: HashMap<Uuid, Sphere>,
-    pub cones: HashMap<Uuid, Cone>,
-    pub polygons: HashMap<Uuid, Polygon>,
-    pub all_primitives: HashMap<Uuid, Box<dyn Primitive>>,
+    spheres: HashMap<Uuid, Sphere>,
+    cones: HashMap<Uuid, Cone>,
+    polygons: HashMap<Uuid, Polygon>,
+    triangles: HashMap<Uuid, Triangle>,
+    all_primitives: HashMap<Uuid, Box<dyn Primitive>>,
 }
 
 #[derive(Debug)]
@@ -77,6 +78,106 @@ impl Model {
         trace!(LOG, "parsed model from input string:\n{}", model);
         Ok(model)
     }
+
+    #[inline]
+    pub fn get_all_primitives(&self) -> &HashMap<Uuid, Box<dyn Primitive>> {
+        &self.all_primitives
+    }
+
+    #[inline]
+    pub fn get_all_spheres(&self) -> &HashMap<Uuid, Sphere> {
+        &self.spheres
+    }
+
+    #[inline]
+    pub fn get_all_polygons(&self) -> &HashMap<Uuid, Polygon> {
+        &self.polygons
+    }
+
+    #[inline]
+    pub fn get_all_triangles(&self) -> &HashMap<Uuid, Triangle> {
+        &self.triangles
+    }
+
+    #[inline]
+    pub fn get_all_cones(&self) -> &HashMap<Uuid, Cone> {
+        &self.cones
+    }
+
+    #[inline]
+    pub fn upsert_sphere(&mut self, sphere: Sphere) -> Option<Sphere> {
+        let uuid = sphere.uuid;
+        let sphere_clone = sphere.clone();
+        self.all_primitives.insert(uuid, Box::new(sphere));
+        self.spheres.insert(uuid, sphere_clone)
+    }
+
+    #[inline]
+    pub fn delete_sphere(&mut self, uuid: Uuid) -> Option<Sphere> {
+        self.all_primitives.remove(&uuid);
+        self.spheres.remove(&uuid)
+    }
+
+    #[inline]
+    pub fn upsert_cone(&mut self, cone: Cone) -> Option<Cone> {
+        let uuid = cone.uuid;
+        let cone_clone = cone.clone();
+        self.all_primitives.insert(uuid, Box::new(cone));
+        self.cones.insert(uuid, cone_clone)
+    }
+
+    #[inline]
+    pub fn delete_cone(&mut self, uuid: Uuid) -> Option<Cone> {
+        self.all_primitives.remove(&uuid);
+        self.cones.remove(&uuid)
+    }
+
+    #[inline]
+    pub fn upsert_polygon(&mut self, polygon: Polygon) -> Option<Polygon> {
+        let uuid = polygon.uuid;
+        let polygon_clone = polygon.clone();
+        self.all_primitives.insert(uuid, Box::new(polygon));
+        self.polygons.insert(uuid, polygon_clone)
+    }
+
+    #[inline]
+    pub fn delete_polygon(&mut self, uuid: Uuid) -> Option<Polygon> {
+        self.all_primitives.remove(&uuid);
+        self.polygons.remove(&uuid)
+    }
+
+    #[inline]
+    pub fn upsert_triangle(&mut self, triangle: Triangle) -> Option<Triangle> {
+        let uuid = triangle.uuid;
+        let triangle_clone = triangle.clone();
+        self.all_primitives.insert(uuid, Box::new(triangle));
+        self.triangles.insert(uuid, triangle_clone)
+    }
+
+    #[inline]
+    pub fn delete_triangle(&mut self, uuid: Uuid) -> Option<Triangle> {
+        self.all_primitives.remove(&uuid);
+        self.triangles.remove(&uuid)
+    }
+}
+
+impl Default for Model {
+    fn default() -> Self {
+        Self {
+            background: Color::default(),
+            eyep: Coords::default(),
+            lookp: Coords::default(),
+            up: Coords::default(),
+            fov: Fov::default(),
+            screen: Screen::default(),
+            light_sources: vec![],
+            spheres: HashMap::default(),
+            cones: HashMap::default(),
+            polygons: HashMap::default(),
+            triangles: HashMap::default(),
+            all_primitives: HashMap::default(),
+        }
+    }
 }
 
 impl fmt::Display for Model {
@@ -94,9 +195,6 @@ impl fmt::Display for Model {
               }},
               "fov": {},
               "screen": {},
-              "spheres": [
-            {}
-              ]
             }}"#,
             self.background,
             self.eyep,
@@ -106,11 +204,6 @@ impl fmt::Display for Model {
             self.up.z,
             self.fov,
             self.screen,
-            self.spheres
-                .values()
-                .map(|sphere| format!("    {}", sphere))
-                .collect::<Vec<String>>()
-                .join(",\n")
         )
     }
 }
@@ -134,6 +227,7 @@ impl Clone for Model {
             spheres: self.spheres.clone(),
             cones: self.cones.clone(),
             polygons: self.polygons.clone(),
+            triangles: self.triangles.clone(),
             all_primitives: self.all_primitives.clone(),
         }
     }
