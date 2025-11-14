@@ -1,3 +1,4 @@
+/// The logger is dependent on this file
 use crate::CONFIG_DIR_OVERRIDE;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
@@ -8,8 +9,6 @@ use std::io::Write;
 use std::path::PathBuf;
 use std::str::FromStr;
 use std::sync::RwLock;
-
-/// the logger is dependent on this file
 
 static CONFIG: Lazy<RwLock<Config>> = Lazy::new(|| RwLock::new(init_config()));
 

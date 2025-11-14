@@ -38,12 +38,12 @@ pub fn write_render_to_file(
     let image = raw_to_image_data(raw_image_data)?;
 
     if let Some(parent_path) = output_file_path.parent()
-        && parent_path.is_dir() == false
+        && !parent_path.is_dir()
+        && let Err(create_dir_result) = std::fs::create_dir(parent_path)
     {
-        if let Err(create_dir_result) = std::fs::create_dir(parent_path) {
-            return Err(WriteError(create_dir_result.to_string()));
-        }
+        return Err(WriteError(create_dir_result.to_string()));
     }
+
     match image.save(output_file_path) {
         Ok(_) => Ok(()),
         Err(error) => Err(WriteError(format!(

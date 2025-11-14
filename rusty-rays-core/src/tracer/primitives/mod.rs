@@ -2,9 +2,9 @@ use std::fmt;
 
 use uuid::Uuid;
 
+use crate::tracer::Coords;
 use crate::tracer::bvh::Aabb;
 use crate::tracer::misc_types::{Intersection, Ray};
-use crate::tracer::Coords;
 
 mod cone;
 mod plane;
@@ -12,11 +12,22 @@ mod polygon;
 mod sphere;
 mod triangle;
 
-pub use cone::{Cone, TYPE_NAME as CONE_TYPE_NAME};
-pub use plane::{Plane, TYPE_NAME as PLANE_TYPE_NAME};
-pub use polygon::{Polygon, TYPE_NAME as POLYGON_TYPE_NAME};
-pub use sphere::{Sphere, TYPE_NAME as SPHERE_TYPE_NAME};
-pub use triangle::{Triangle, TYPE_NAME as TRIANGLE_TYPE_NAME};
+pub use cone::Cone;
+pub use plane::Plane;
+pub use polygon::Polygon;
+pub use sphere::Sphere;
+pub use triangle::Triangle;
+
+#[allow(unused)]
+pub use cone::TYPE_NAME as CONE_TYPE_NAME;
+#[allow(unused)]
+pub use plane::TYPE_NAME as PLANE_TYPE_NAME;
+#[allow(unused)]
+pub use polygon::TYPE_NAME as POLYGON_TYPE_NAME;
+#[allow(unused)]
+pub use sphere::TYPE_NAME as SPHERE_TYPE_NAME;
+#[allow(unused)]
+pub use triangle::TYPE_NAME as TRIANGLE_TYPE_NAME;
 
 // primitive trait and methods
 pub trait Primitive: Send + Sync {

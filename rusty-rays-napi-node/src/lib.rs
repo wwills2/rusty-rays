@@ -87,9 +87,7 @@ mod bindings {
             }
             let level = rusty_rays_core::logger::Level::from_str(lower)
                 .map_err(|_| format!("invalid log level: {}", lower))?;
-            let log_files_dir = new_config
-                .log_files_dir
-                .map(|s| std::path::PathBuf::from(s));
+            let log_files_dir = new_config.log_files_dir.map(std::path::PathBuf::from);
 
             let config = rusty_rays_core::Config {
                 log_level: level,
@@ -103,7 +101,7 @@ mod bindings {
         })
         .await
         .map_err(|e| napi::Error::from_reason(format!("task panicked: {e}")))?
-        .map_err(|e| napi::Error::from_reason(e))?;
+        .map_err(napi::Error::from_reason)?;
         Ok(())
     }
 
@@ -144,12 +142,12 @@ mod bindings {
 
                 match rusty_rays_core::serialize_raw_render_to_blob(&raw_render) {
                     Ok(serialized_render) => Ok(serialized_render),
-                    Err(error) => return Err(error.to_string()),
+                    Err(error) => Err(error.to_string()),
                 }
             })
             .await
             .map_err(|e| napi::Error::from_reason(format!("task panicked: {e}")))?
-            .map_err(|e| napi::Error::from_reason(e))?;
+            .map_err(napi::Error::from_reason)?;
 
             Ok(raw_image)
         }
@@ -167,12 +165,12 @@ mod bindings {
 
                 match rusty_rays_core::write_render_to_file(&output_file_path.into(), &raw_render) {
                     Ok(serialized_render) => Ok(serialized_render),
-                    Err(error) => return Err(error.to_string()),
+                    Err(error) => Err(error.to_string()),
                 }
             })
             .await
             .map_err(|e| napi::Error::from_reason(format!("task panicked: {e}")))?
-            .map_err(|e| napi::Error::from_reason(e))?;
+            .map_err(napi::Error::from_reason)?;
 
             Ok(())
         }
@@ -221,7 +219,8 @@ mod bindings {
                 .await
                 .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-            Ok((*self.inner)
+            Ok(self
+                .inner
                 .get_all_spheres()
                 .values()
                 .map(|sphere| sphere.into())
@@ -237,7 +236,8 @@ mod bindings {
                 .await
                 .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-            Ok((*self.inner)
+            Ok(self
+                .inner
                 .surfaces
                 .values()
                 .map(|surface| surface.clone().into())

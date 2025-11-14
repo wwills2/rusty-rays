@@ -2,12 +2,12 @@ use std::fmt;
 
 use uuid::Uuid;
 
+use crate::tracer::Coords;
 use crate::tracer::bvh::Aabb;
 use crate::tracer::misc_types::{Intersection, Ray};
-use crate::tracer::primitives::triangle::TriangleError::FailedToInitializeTriangle;
 use crate::tracer::primitives::Plane;
 use crate::tracer::primitives::Primitive;
-use crate::tracer::Coords;
+use crate::tracer::primitives::triangle::TriangleError::FailedToInitializeTriangle;
 
 pub static TYPE_NAME: &str = "triangle";
 

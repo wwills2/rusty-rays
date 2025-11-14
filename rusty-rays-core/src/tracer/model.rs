@@ -1,10 +1,10 @@
+use crate::Surface;
+use crate::tracer::Coords;
 use crate::tracer::misc_types::{Fov, Screen};
 use crate::tracer::primitives::{Cone, Polygon, Primitive, Sphere, Triangle};
 use crate::tracer::rayshade4_file_parser;
-use crate::tracer::shader::{light::Light, Color};
-use crate::tracer::Coords;
-use crate::utils::logger::{trace, LOG};
-use crate::Surface;
+use crate::tracer::shader::{Color, light::Light};
+use crate::utils::logger::{LOG, trace};
 use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
@@ -12,7 +12,7 @@ use std::io::{BufRead, BufReader, Cursor};
 use std::path::PathBuf;
 use uuid::Uuid;
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Model {
     pub background: Color,
     pub eyep: Coords,
@@ -156,26 +156,6 @@ impl Model {
     pub fn delete_triangle(&mut self, uuid: Uuid) -> Option<Triangle> {
         self.all_primitives.remove(&uuid);
         self.triangles.remove(&uuid)
-    }
-}
-
-impl Default for Model {
-    fn default() -> Self {
-        Self {
-            background: Color::default(),
-            eyep: Coords::default(),
-            lookp: Coords::default(),
-            up: Coords::default(),
-            fov: Fov::default(),
-            screen: Screen::default(),
-            light_sources: vec![],
-            surfaces: HashMap::default(),
-            spheres: HashMap::default(),
-            cones: HashMap::default(),
-            polygons: HashMap::default(),
-            triangles: HashMap::default(),
-            all_primitives: HashMap::default(),
-        }
     }
 }
 

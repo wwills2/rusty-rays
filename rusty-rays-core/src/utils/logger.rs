@@ -82,9 +82,9 @@ static ASYNC_LOGGER: Lazy<AsyncLoggerWithGuard> = Lazy::new(|| {
 /// It is important to call this function when exiting the program
 pub fn shutdown_logger() {
     // flush the async logger - important that this runs
-    if let Ok(mut guard) = ASYNC_LOGGER.async_guard.lock() {
-        if let Some(guard) = guard.take() {
-            drop(guard);
-        }
+    if let Ok(mut guard) = ASYNC_LOGGER.async_guard.lock()
+        && let Some(guard) = guard.take()
+    {
+        drop(guard);
     }
 }

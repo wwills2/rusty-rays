@@ -2,10 +2,10 @@ use std::fmt;
 
 use uuid::Uuid;
 
+use crate::tracer::Coords;
 use crate::tracer::bvh::Aabb;
 use crate::tracer::misc_types::{Intersection, Ray};
 use crate::tracer::primitives::Primitive;
-use crate::tracer::Coords;
 
 pub static TYPE_NAME: &str = "sphere";
 
