@@ -1,0 +1,14 @@
+{
+  "name": "rusty-rays-desktop",
+  "author": "William Wills",
+  "version": "1.0.0",
+  "description": "Electron application implementing a desktop GUI for the Rusty Rays ray tracer",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "devDependencies": {
+    "electron": "^39.2.0"
+  }
+}
