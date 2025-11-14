@@ -16,11 +16,11 @@ surface mirror-border
     diffuse 0.5 0.115 0.115
 surface mirror
     ambient 0.0 0.0 0.0
-    diffuse 0.0 0.0 0.0
-    reflect .9
+    diffuse 0.8 0.8 0.8
+    reflect .7
 polygon txt001 
-5 5 -0.5 -5 5 -0.5 -5 -5 -0.5
-5 -5 -0.5
+3 3 -0.5 -3 3 -0.5 -3 -3 -0.5
+3 -3 -0.5
 polygon mirror
 -1.999999 1.9 1.4
 -1.999999 -1.9 1.4

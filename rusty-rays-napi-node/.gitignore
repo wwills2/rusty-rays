@@ -1,0 +1,7 @@
+node_modules/
+dist/
+bindings/
+test-artifacts/
+package-lock.json
+test.js
+index.js
