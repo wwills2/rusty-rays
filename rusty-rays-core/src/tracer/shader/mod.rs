@@ -1,8 +1,8 @@
+use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::shader::light::Light;
 use crate::tracer::Bvh;
 use crate::tracer::Coords;
 use crate::tracer::Model;
-use crate::tracer::misc_types::{Intersection, Ray, Surface};
-use crate::tracer::shader::light::Light;
 mod color;
 pub mod light;
 
@@ -16,20 +16,21 @@ static NUM_SHADOW_RAYS: u8 = 16;
 // !!!
 
 pub fn process_ray(trace_depth: u8, ray: &Ray, model: &Model, bvh: &Bvh) -> Color {
-    match bvh.intersect(ray) {
-        Some(intersection) => {
-            // Get the primitive from the model's collections using the UUID
-            let surface = match model
-                .get_all_primitives()
-                .get(&intersection.intersected_primitive_uuid)
-            {
-                Some(intersected_primitive) => intersected_primitive.get_surface(),
-                None => return model.background.clone(),
-            };
+    if let Some(intersection) = bvh.intersect(ray) {
+        // Get the primitive from the model's collections using the UUID
+        let maybe_intersected_primitive = model
+            .get_all_primitives()
+            .get(&intersection.intersected_primitive_uuid);
 
-            calculate_color(trace_depth, model, bvh, surface, &intersection)
+        if let Some(primitive) = maybe_intersected_primitive {
+            if let Some(surface) = model.surfaces.get(primitive.get_surface()) {
+                return calculate_color(trace_depth, model, bvh, surface, &intersection);
+            }
         }
-        None => model.background.clone(),
+
+        model.background.clone()
+    } else {
+        model.background.clone()
     }
 }
 

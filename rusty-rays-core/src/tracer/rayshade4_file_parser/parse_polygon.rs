@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::iter::Peekable;
 use std::str::SplitWhitespace;
 
-use crate::tracer::Coords;
 use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
@@ -10,7 +9,8 @@ use crate::tracer::primitives::Polygon;
 use crate::tracer::rayshade4_file_parser::{
     GetNextLineClosure, NextIfClosure, NextLine, SCENE_DATA_KEYWORDS,
 };
-use crate::utils::logger::{LOG, debug};
+use crate::tracer::Coords;
+use crate::utils::logger::{debug, LOG};
 
 pub fn process_polygon(
     determine_next_line_iter: &mut GetNextLineClosure,
@@ -78,7 +78,7 @@ pub fn process_polygon(
                 "process_polygon() received None for next line. instantiating polygon"
             );
 
-            let polygon = match Polygon::new(vertices, surface.clone()) {
+            let polygon = match Polygon::new(vertices, surface.name.clone()) {
                 Ok(polygon) => polygon,
                 Err(error) => return Err(FailedToParseInputFile(line_number, error.to_string())),
             };

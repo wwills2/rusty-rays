@@ -7,7 +7,7 @@ use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::rayshade4_file_parser::{GetNextLineClosure, NextIfClosure, SURFACE_KEYWORDS};
 use crate::tracer::shader::Color;
-use crate::utils::logger::{LOG, debug};
+use crate::utils::logger::{debug, LOG};
 
 pub fn process_surface(
     determine_next_line_iter: &mut GetNextLineClosure,
@@ -45,7 +45,7 @@ pub fn process_surface(
     }
 
     let mut surface = Surface {
-        name: "name".to_string(),
+        name: name.clone(),
         ambient: Color {
             r: 0.0,
             g: 0.0,

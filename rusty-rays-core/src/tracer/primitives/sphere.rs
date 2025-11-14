@@ -2,17 +2,17 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::tracer::Coords;
 use crate::tracer::bvh::Aabb;
-use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::misc_types::{Intersection, Ray};
 use crate::tracer::primitives::Primitive;
+use crate::tracer::Coords;
 
 pub static TYPE_NAME: &str = "sphere";
 
 #[derive(Debug)]
 pub struct Sphere {
     pub uuid: Uuid,
-    pub surface: Surface,
+    pub surface: String,
     pub radius: f64,
     pub position: Coords,
 }
@@ -46,7 +46,7 @@ impl Primitive for Sphere {
     }
 
     #[inline]
-    fn get_surface(&self) -> &Surface {
+    fn get_surface(&self) -> &String {
         &self.surface
     }
 

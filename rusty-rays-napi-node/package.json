@@ -1,5 +1,6 @@
 {
   "name": "rusty-rays-napi-node",
+  "author": "William Wills <wwills2@protonmail.com>",
   "version": "1.0.0",
   "description": "NAPI bindings for rusty-rays",
   "scripts": {
@@ -11,7 +12,6 @@
   "engines": {
     "node": ">=22.19"
   },
-  "author": "William Wills",
   "devDependencies": {
     "@napi-rs/cli": "^3.1.5",
     "@types/node": "^24.3.1",

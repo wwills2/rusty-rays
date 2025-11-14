@@ -2,13 +2,13 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::tracer::Coords;
 use crate::tracer::bvh::Aabb;
 use crate::tracer::misc_types::{Intersection, Ray, Surface};
 use crate::tracer::plane_coords_2d::PlaneCoords2D;
-use crate::tracer::primitives::Primitive;
 use crate::tracer::primitives::plane::PlaneError::FailedToInitializePlane;
+use crate::tracer::primitives::Primitive;
 use crate::tracer::shader::Color;
+use crate::tracer::Coords;
 
 pub static TYPE_NAME: &str = "plane";
 
@@ -19,7 +19,7 @@ pub struct Plane {
     pub basis_vectors: (Coords, Coords),
     pub sample_point: Coords,
     pub normal: Coords,
-    pub surface: Surface,
+    pub surface: String,
 }
 
 impl Plane {
@@ -42,7 +42,7 @@ impl Plane {
             sample_point: points_on_plane[0].clone(),
             normal,
             basis_vectors,
-            surface: placeholder_surface,
+            surface: placeholder_surface.name,
         })
     }
 
@@ -86,7 +86,7 @@ impl Primitive for Plane {
     }
 
     #[inline]
-    fn get_surface(&self) -> &Surface {
+    fn get_surface(&self) -> &String {
         &self.surface
     }
 

@@ -108,57 +108,6 @@ mod bindings {
     }
 
     #[napi]
-    pub struct Model {
-        inner: Arc<rusty_rays_core::Model>,
-        semaphore: Arc<tokio::sync::Semaphore>,
-    }
-
-    #[napi]
-    impl Model {
-        #[napi(factory)]
-        pub async fn from_file_path(path: String) -> napi::Result<Self> {
-            // put fs read on task thread
-            let model = tokio::task::spawn_blocking(move || {
-                rusty_rays_core::Model::from_file_path(path.into())
-            })
-            .await
-            .map_err(|e| napi::Error::from_reason(format!("task panicked: {e}")))?
-            .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            Ok(Self {
-                inner: Arc::new(model),
-                semaphore: Arc::new(tokio::sync::Semaphore::new(1)),
-            })
-        }
-
-        #[napi(factory)]
-        pub fn from_string(input_string: String) -> napi::Result<Self> {
-            let model = rusty_rays_core::Model::from_string(input_string)
-                .map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))?;
-            Ok(Self {
-                inner: Arc::new(model),
-                semaphore: Arc::new(tokio::sync::Semaphore::new(1)),
-            })
-        }
-
-        #[napi(getter)]
-        pub async fn get_all_spheres(&self) -> napi::Result<Vec<Sphere>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            Ok((*self.inner)
-                .get_all_spheres()
-                .values()
-                .map(|sphere| sphere.into())
-                .collect())
-        }
-    }
-
-    #[napi]
     pub struct Tracer {
         inner: Arc<rusty_rays_core::Tracer>,
         semaphore: Arc<tokio::sync::Semaphore>,
@@ -229,21 +178,88 @@ mod bindings {
         }
     }
 
+    #[napi]
+    pub struct Model {
+        inner: Arc<rusty_rays_core::Model>,
+        semaphore: Arc<tokio::sync::Semaphore>,
+    }
+
+    #[napi]
+    impl Model {
+        #[napi(factory)]
+        pub async fn from_file_path(path: String) -> napi::Result<Self> {
+            // put fs read on task thread
+            let model = tokio::task::spawn_blocking(move || {
+                rusty_rays_core::Model::from_file_path(path.into())
+            })
+            .await
+            .map_err(|e| napi::Error::from_reason(format!("task panicked: {e}")))?
+            .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+            Ok(Self {
+                inner: Arc::new(model),
+                semaphore: Arc::new(tokio::sync::Semaphore::new(1)),
+            })
+        }
+
+        #[napi(factory)]
+        pub fn from_string(input_string: String) -> napi::Result<Self> {
+            let model = rusty_rays_core::Model::from_string(input_string)
+                .map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))?;
+            Ok(Self {
+                inner: Arc::new(model),
+                semaphore: Arc::new(tokio::sync::Semaphore::new(1)),
+            })
+        }
+
+        #[napi(getter)]
+        pub async fn get_all_spheres(&self) -> napi::Result<Vec<Sphere>> {
+            let _acquired_permit = self
+                .semaphore
+                .clone()
+                .acquire_owned()
+                .await
+                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+            Ok((*self.inner)
+                .get_all_spheres()
+                .values()
+                .map(|sphere| sphere.into())
+                .collect())
+        }
+
+        #[napi(getter)]
+        pub async fn get_all_surfaces(&self) -> napi::Result<Vec<Surface>> {
+            let _acquired_permit = self
+                .semaphore
+                .clone()
+                .acquire_owned()
+                .await
+                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+            Ok((*self.inner)
+                .surfaces
+                .values()
+                .map(|surface| surface.clone().into())
+                .collect())
+        }
+    }
+
     #[napi(object)]
     pub struct Sphere {
         pub uuid: String,
-        pub surface: Surface,
+        pub surface: String,
         pub radius: f64,
         pub position: Coords,
     }
 
-    impl Into<Sphere> for &rusty_rays_core::Sphere {
-        fn into(self) -> Sphere {
+    impl From<&rusty_rays_core::Sphere> for Sphere {
+        fn from(sphere: &rusty_rays_core::Sphere) -> Sphere {
             Sphere {
-                uuid: self.uuid.to_string(),
-                surface: self.surface.clone().into(),
-                radius: self.radius,
-                position: self.position.clone().into(),
+                uuid: sphere.uuid.to_string(),
+                surface: sphere.surface.clone(),
+                radius: sphere.radius,
+                position: sphere.position.clone().into(),
             }
         }
     }
@@ -258,15 +274,15 @@ mod bindings {
         pub reflect: f64,
     }
 
-    impl Into<Surface> for rusty_rays_core::Surface {
-        fn into(self) -> Surface {
+    impl From<rusty_rays_core::Surface> for Surface {
+        fn from(surface: rusty_rays_core::Surface) -> Surface {
             Surface {
-                name: self.name,
-                ambient: self.ambient.into(),
-                diffuse: self.diffuse.into(),
-                specular: self.specular.into(),
-                specpow: self.specpow,
-                reflect: self.reflect,
+                name: surface.name,
+                ambient: surface.ambient.into(),
+                diffuse: surface.diffuse.into(),
+                specular: surface.specular.into(),
+                specpow: surface.specpow,
+                reflect: surface.reflect,
             }
         }
     }
@@ -278,12 +294,12 @@ mod bindings {
         pub z: f64,
     }
 
-    impl Into<Coords> for rusty_rays_core::Coords {
-        fn into(self) -> Coords {
+    impl From<rusty_rays_core::Coords> for Coords {
+        fn from(coords: rusty_rays_core::Coords) -> Coords {
             Coords {
-                x: self.x,
-                y: self.y,
-                z: self.z,
+                x: coords.x,
+                y: coords.y,
+                z: coords.z,
             }
         }
     }
@@ -295,12 +311,12 @@ mod bindings {
         pub b: f64,
     }
 
-    impl Into<Color> for rusty_rays_core::Color {
-        fn into(self) -> Color {
+    impl From<rusty_rays_core::Color> for Color {
+        fn from(color: rusty_rays_core::Color) -> Color {
             Color {
-                r: self.r,
-                g: self.g,
-                b: self.b,
+                r: color.r,
+                g: color.g,
+                b: color.b,
             }
         }
     }

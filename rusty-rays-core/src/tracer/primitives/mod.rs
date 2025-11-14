@@ -2,9 +2,9 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::tracer::Coords;
 use crate::tracer::bvh::Aabb;
-use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::misc_types::{Intersection, Ray};
+use crate::tracer::Coords;
 
 mod cone;
 mod plane;
@@ -16,7 +16,7 @@ pub use cone::{Cone, TYPE_NAME as CONE_TYPE_NAME};
 pub use plane::{Plane, TYPE_NAME as PLANE_TYPE_NAME};
 pub use polygon::{Polygon, TYPE_NAME as POLYGON_TYPE_NAME};
 pub use sphere::{Sphere, TYPE_NAME as SPHERE_TYPE_NAME};
-pub use triangle::{TYPE_NAME as TRIANGLE_TYPE_NAME, Triangle};
+pub use triangle::{Triangle, TYPE_NAME as TRIANGLE_TYPE_NAME};
 
 // primitive trait and methods
 pub trait Primitive: Send + Sync {
@@ -27,7 +27,7 @@ pub trait Primitive: Send + Sync {
     fn get_type(&self) -> String;
 
     /// inline
-    fn get_surface(&self) -> &Surface;
+    fn get_surface(&self) -> &String;
     fn calculate_intersection(&self, ray: &Ray) -> Option<Intersection>;
     fn primitive_clone(&self) -> Box<dyn Primitive>;
     fn compute_bounding_box(&self) -> Aabb;

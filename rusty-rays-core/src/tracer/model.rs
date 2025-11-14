@@ -1,9 +1,10 @@
-use crate::tracer::Coords;
 use crate::tracer::misc_types::{Fov, Screen};
 use crate::tracer::primitives::{Cone, Polygon, Primitive, Sphere, Triangle};
 use crate::tracer::rayshade4_file_parser;
-use crate::tracer::shader::{Color, light::Light};
-use crate::utils::logger::{LOG, trace};
+use crate::tracer::shader::{light::Light, Color};
+use crate::tracer::Coords;
+use crate::utils::logger::{trace, LOG};
+use crate::Surface;
 use std::collections::HashMap;
 use std::fmt;
 use std::fs::File;
@@ -20,6 +21,7 @@ pub struct Model {
     pub fov: Fov,
     pub screen: Screen,
     pub light_sources: Vec<Light>,
+    pub surfaces: HashMap<String, Surface>,
     spheres: HashMap<Uuid, Sphere>,
     cones: HashMap<Uuid, Cone>,
     polygons: HashMap<Uuid, Polygon>,
@@ -167,6 +169,7 @@ impl Default for Model {
             fov: Fov::default(),
             screen: Screen::default(),
             light_sources: vec![],
+            surfaces: HashMap::default(),
             spheres: HashMap::default(),
             cones: HashMap::default(),
             polygons: HashMap::default(),
@@ -220,6 +223,7 @@ impl Clone for Model {
                 height: self.screen.height,
             },
             light_sources: self.light_sources.clone(),
+            surfaces: self.surfaces.clone(),
             spheres: self.spheres.clone(),
             cones: self.cones.clone(),
             polygons: self.polygons.clone(),

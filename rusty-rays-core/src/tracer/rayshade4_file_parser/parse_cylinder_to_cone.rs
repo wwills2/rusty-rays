@@ -3,12 +3,12 @@ use std::iter::Peekable;
 use std::str::SplitWhitespace;
 use uuid::Uuid;
 
-use crate::tracer::Coords;
 use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::primitives::Cone;
-use crate::utils::logger::{LOG, debug};
+use crate::tracer::Coords;
+use crate::utils::logger::{debug, LOG};
 
 pub fn process_cylinder_to_cone(
     keyword_line_iter: &mut Peekable<SplitWhitespace>,
@@ -125,7 +125,7 @@ pub fn process_cylinder_to_cone(
 
     Ok(Cone {
         uuid: Uuid::new_v4(),
-        surface: surface.clone(),
+        surface: surface.name.clone(),
         base_radius,
         base,
         apex_radius,

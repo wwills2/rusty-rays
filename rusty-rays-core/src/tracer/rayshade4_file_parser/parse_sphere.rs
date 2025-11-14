@@ -3,12 +3,12 @@ use std::iter::Peekable;
 use std::str::SplitWhitespace;
 use uuid::Uuid;
 
-use crate::tracer::Coords;
 use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::primitives::Sphere;
-use crate::utils::logger::{LOG, debug};
+use crate::tracer::Coords;
+use crate::utils::logger::{debug, LOG};
 
 pub fn process_sphere(
     keyword_line_iter: &mut Peekable<SplitWhitespace>,
@@ -78,7 +78,7 @@ pub fn process_sphere(
 
     Ok(Sphere {
         uuid: Uuid::new_v4(),
-        surface: surface.clone(),
+        surface: surface.name.clone(),
         radius,
         position,
     })

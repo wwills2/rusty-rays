@@ -6,18 +6,17 @@ use std::str::FromStr;
 use once_cell::sync::Lazy;
 use uuid::Uuid;
 
-use crate::tracer::Coords;
 use crate::tracer::misc_types::{Fov, Screen, Surface};
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::model::{Model, ModelError};
 use crate::tracer::primitives::Cone;
 use crate::tracer::primitives::Polygon;
-use crate::tracer::primitives::Primitive;
 use crate::tracer::primitives::Sphere;
 use crate::tracer::primitives::Triangle;
-use crate::tracer::shader::Color;
 use crate::tracer::shader::light::{Light, LightSourceType};
-use crate::utils::logger::{LOG, debug, warn};
+use crate::tracer::shader::Color;
+use crate::tracer::Coords;
+use crate::utils::logger::{debug, warn, LOG};
 
 mod parse_cone;
 mod parse_cylinder_to_cone;
@@ -556,6 +555,7 @@ pub fn iterate_input_data<R: BufRead + 'static>(
     model.fov = fov;
     model.screen = screen;
     model.light_sources = light_sources;
+    model.surfaces = surfaces;
 
     for (_, sphere) in spheres {
         model.upsert_sphere(sphere);

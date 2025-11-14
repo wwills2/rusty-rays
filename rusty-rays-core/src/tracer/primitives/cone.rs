@@ -2,17 +2,17 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::tracer::Coords;
 use crate::tracer::bvh::Aabb;
-use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::misc_types::{Intersection, Ray};
 use crate::tracer::primitives::Primitive;
+use crate::tracer::Coords;
 
 pub static TYPE_NAME: &str = "cone";
 
 #[derive(Debug)]
 pub struct Cone {
     pub uuid: Uuid,
-    pub surface: Surface,
+    pub surface: String,
     pub base_radius: f64,
     pub base: Coords,
     pub apex_radius: f64,
@@ -54,7 +54,7 @@ impl Primitive for Cone {
     }
 
     #[inline]
-    fn get_surface(&self) -> &Surface {
+    fn get_surface(&self) -> &String {
         &self.surface
     }
 

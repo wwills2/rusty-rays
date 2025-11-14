@@ -2,20 +2,20 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::tracer::Coords;
 use crate::tracer::bvh::Aabb;
-use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::misc_types::{Intersection, Ray};
 use crate::tracer::plane_coords_2d::PlaneCoords2D;
+use crate::tracer::primitives::polygon::PolygonError::FailedToInitializePolygon;
 use crate::tracer::primitives::Plane;
 use crate::tracer::primitives::Primitive;
-use crate::tracer::primitives::polygon::PolygonError::FailedToInitializePolygon;
+use crate::tracer::Coords;
 
 pub static TYPE_NAME: &str = "polygon";
 
 #[derive(Debug)]
 pub struct Polygon {
     pub uuid: Uuid,
-    pub surface: Surface,
+    pub surface: String,
     pub plane: Plane,
     pub plane_projected_vertices: Vec<PlaneCoords2D>,
     pub point_in_polygon_inf_test_vector: PlaneCoords2D,
@@ -24,7 +24,7 @@ pub struct Polygon {
 }
 
 impl Polygon {
-    pub fn new(vertices: Vec<Coords>, surface: Surface) -> Result<Self, PolygonError> {
+    pub fn new(vertices: Vec<Coords>, surface: String) -> Result<Self, PolygonError> {
         let plane = match Plane::new(&vertices) {
             Ok(plane) => plane,
             Err(error) => return Err(FailedToInitializePolygon(error.to_string())),
@@ -91,7 +91,7 @@ impl Primitive for Polygon {
     }
 
     #[inline]
-    fn get_surface(&self) -> &Surface {
+    fn get_surface(&self) -> &String {
         &self.surface
     }
 

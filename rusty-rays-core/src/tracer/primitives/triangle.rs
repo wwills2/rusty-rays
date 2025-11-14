@@ -2,19 +2,19 @@ use std::fmt;
 
 use uuid::Uuid;
 
-use crate::tracer::Coords;
 use crate::tracer::bvh::Aabb;
-use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::misc_types::{Intersection, Ray};
+use crate::tracer::primitives::triangle::TriangleError::FailedToInitializeTriangle;
 use crate::tracer::primitives::Plane;
 use crate::tracer::primitives::Primitive;
-use crate::tracer::primitives::triangle::TriangleError::FailedToInitializeTriangle;
+use crate::tracer::Coords;
 
 pub static TYPE_NAME: &str = "triangle";
 
 #[derive(Debug)]
 pub struct Triangle {
     pub uuid: Uuid,
-    pub surface: Surface,
+    pub surface: String,
     pub plane: Plane,
     pub vertex_1: Coords,
     pub vertex_2: Coords,
@@ -37,7 +37,7 @@ impl Triangle {
         maybe_v1_normal: Option<Coords>,
         maybe_v2_normal: Option<Coords>,
         maybe_v3_normal: Option<Coords>,
-        surface: Surface,
+        surface: String,
     ) -> Result<Self, TriangleError> {
         let edge_1 = &vertex_2 - &vertex_1;
         let edge_2 = &vertex_3 - &vertex_2;
@@ -130,7 +130,7 @@ impl Primitive for Triangle {
     }
 
     #[inline]
-    fn get_surface(&self) -> &Surface {
+    fn get_surface(&self) -> &String {
         &self.surface
     }
 
