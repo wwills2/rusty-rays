@@ -22,10 +22,10 @@ export default defineConfig([
     ],
     languageOptions: {
       parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
+        project: ['./tsconfig.vite.node.json', './tsconfig.vite.app.json', './tsconfig.electron-main.json'],
         tsconfigRootDir: import.meta.dirname,
       },
-      ecmaVersion: 2020,
+      ecmaVersion: 2023,
       globals: globals.browser,
     },
   },
