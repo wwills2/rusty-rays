@@ -5,10 +5,13 @@
   "type": "module",
   "main": "build/main.js",
   "scripts": {
-    "dev": "tsc -b && concurrently \"vite\" \"electron .\"",
-    "build": "tsc -b && vite build",
+    "dev": "npm run build:main && concurrently \"vite\" \"npm run electron:dev\"",
+    "build": "npm run build:main && vite build",
+    "build:main": "tsc -b",
+    "electron:dev": "npm run build:main && cross-env SPA_SRC=vite electron .",
+    "electron": "npm run build && electron .",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "clean": "rimraf ./dist && rimraf ./build"
   },
   "dependencies": {
     "react": "^19.2.0",
@@ -21,12 +24,17 @@
     "@types/react-dom": "^19.2.2",
     "@vitejs/plugin-react": "^5.1.0",
     "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
     "electron": "^39.2.0",
     "eslint": "^9.39.1",
+    "eslint-plugin-react-dom": "^2.3.5",
     "eslint-plugin-react-hooks": "^7.0.1",
     "eslint-plugin-react-refresh": "^0.4.24",
+    "eslint-plugin-react-x": "^2.3.5",
     "globals": "^16.5.0",
+    "prettier": "^3.6.2",
+    "rimraf": "^6.1.0",
     "typescript": "~5.9.3",
     "typescript-eslint": "^8.46.3",
     "vite": "^7.2.2"
