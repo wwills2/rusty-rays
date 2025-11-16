@@ -1,23 +1,53 @@
 {
   "name": "rusty-rays-desktop",
+  "homepage": "https://github.com/wwills2/rusty-rays",
+  "description": "Rust based Rayshade4 ray tracer",
+  "author": "William Wills <wwills2@protonmail.com>",
   "private": true,
-  "version": "0.0.0",
+  "version": "0.0.1",
   "type": "module",
   "main": "build/main.js",
   "scripts": {
-    "dev": "npm run build:main && concurrently \"vite\" \"npm run electron:dev\"",
-    "build": "npm run build:main && vite build",
+    "dev": "npm run build:main && concurrently \"npx vite -c vite.renderer.config.ts\" \"npm run electron:dev\"",
+    "build": "npm run build:main && npx vite -c vite.renderer.config.ts build",
     "build:main": "tsc -b",
-    "electron:dev": "npm run build:main && cross-env SPA_SRC=vite electron .",
-    "electron": "npm run build && electron .",
-    "lint": "eslint .",
-    "clean": "rimraf ./dist && rimraf ./build"
+    "dist": "npm run clean && npm run build && npx electron-builder --linux deb",
+    "electron:dev": "npm run build:main && npx cross-env SPA_SRC=vite npx electron .",
+    "electron": "npm run build && npx electron .",
+    "lint": "npx eslint . --fix && npx prettier . --write",
+    "clean": "npx rimraf ./dist && npx rimraf ./build"
+  },
+  "build": {
+    "appId": "com.wwills2.rusty-rays",
+    "productName": "Rusty Rays",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "build/**/*"
+    ],
+    "extraMetadata": {
+      "main": "build/main.js"
+    },
+    "win": {
+      "target": "nsis"
+    },
+    "mac": {
+      "target": "dmg"
+    },
+    "linux": {
+      "target": [
+        "deb"
+      ],
+      "category": "Utility"
+    }
   },
   "dependencies": {
     "react": "^19.2.0",
     "react-dom": "^19.2.0"
   },
   "devDependencies": {
+    "@electron/fuses": "^1.8.0",
     "@eslint/js": "^9.39.1",
     "@types/node": "^24.10.0",
     "@types/react": "^19.2.2",
@@ -27,6 +57,7 @@
     "cross-env": "^10.1.0",
     "dotenv": "^17.2.3",
     "electron": "^39.2.0",
+    "electron-builder": "^26.0.12",
     "eslint": "^9.39.1",
     "eslint-plugin-react-dom": "^2.3.5",
     "eslint-plugin-react-hooks": "^7.0.1",

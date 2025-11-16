@@ -27,8 +27,8 @@ export default defineConfig([
     languageOptions: {
       parserOptions: {
         project: [
-          "./tsconfig.vite.node.json",
-          "./tsconfig.vite.app.json",
+          "./tsconfig.node.json",
+          "./tsconfig.vite.renderer.json",
           "./tsconfig.electron.main.json",
         ],
         tsconfigRootDir: import.meta.dirname,

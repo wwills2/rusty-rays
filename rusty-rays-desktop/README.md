@@ -34,7 +34,7 @@ export default defineConfig([
     ],
     languageOptions: {
       parserOptions: {
-        project: ["./tsconfig.vite.node.json", "./tsconfig.vite.app.json"],
+        project: ["./tsconfig.node.json", "./tsconfig.vite.renderer.json"],
         tsconfigRootDir: import.meta.dirname,
       },
       // other options...
@@ -63,7 +63,7 @@ export default defineConfig([
     ],
     languageOptions: {
       parserOptions: {
-        project: ["./tsconfig.vite.node.json", "./tsconfig.vite.app.json"],
+        project: ["./tsconfig.node.json", "./tsconfig.vite.renderer.json"],
         tsconfigRootDir: import.meta.dirname,
       },
       // other options...

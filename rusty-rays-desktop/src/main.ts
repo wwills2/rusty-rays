@@ -1,4 +1,3 @@
-import "dotenv/config";
 import { app, BrowserWindow } from "electron";
 import * as path from "path";
 import { fileURLToPath } from "url";

@@ -8,7 +8,7 @@ export default defineConfig({
   base: "", // important for Electron so paths are relative in prod
   plugins: [react()],
   build: {
-    outDir: resolve(__dirname, "build/renderer"),
+    outDir: resolve(__dirname, "build", "renderer"),
     emptyOutDir: true,
   },
 });

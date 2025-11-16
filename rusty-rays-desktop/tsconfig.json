@@ -1,8 +1,8 @@
 {
   "files": [],
   "references": [
-    { "path": "./tsconfig.vite.app.json" },
-    { "path": "./tsconfig.vite.node.json" },
+    { "path": "./tsconfig.vite.renderer.json" },
+    { "path": "./tsconfig.node.json" },
     { "path": "./tsconfig.electron.main.json" }
   ]
 }
