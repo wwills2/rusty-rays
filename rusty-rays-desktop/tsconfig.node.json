@@ -22,9 +22,5 @@
     "noFallthroughCasesInSwitch": true,
     "noUncheckedSideEffectImports": true
   },
-  "include": [
-    "vite.renderer.config.ts",
-    "vite.preload.config.ts",
-    "vite.main.config.ts"
-  ]
+  "include": ["vite.renderer.config.ts"]
 }

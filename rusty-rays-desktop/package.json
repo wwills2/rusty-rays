@@ -6,11 +6,11 @@
   "private": true,
   "version": "0.0.1",
   "type": "module",
-  "main": "build/main.js",
+  "main": "build/index.js",
   "scripts": {
     "dev": "npm run build:main && concurrently \"npx vite -c vite.renderer.config.ts\" \"npm run electron:dev\"",
     "build": "npm run build:main && npx vite -c vite.renderer.config.ts build",
-    "build:main": "tsc -b",
+    "build:main": "node esbuild.run.js",
     "dist": "npm run clean && npm run build && npx electron-builder --linux deb",
     "electron:dev": "npm run build:main && npx cross-env SPA_SRC=vite npx electron .",
     "electron": "npm run build && npx electron .",
@@ -24,11 +24,9 @@
       "output": "dist"
     },
     "files": [
-      "build/**/*"
+      "build/**/*",
+      "!build/**/*.map"
     ],
-    "extraMetadata": {
-      "main": "build/main.js"
-    },
     "win": {
       "target": "nsis"
     },
@@ -58,6 +56,7 @@
     "dotenv": "^17.2.3",
     "electron": "^39.2.0",
     "electron-builder": "^26.0.12",
+    "esbuild": "^0.27.0",
     "eslint": "^9.39.1",
     "eslint-plugin-react-dom": "^2.3.5",
     "eslint-plugin-react-hooks": "^7.0.1",
