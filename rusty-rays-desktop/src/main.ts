@@ -3,10 +3,10 @@ import * as path from "path";
 import { fileURLToPath } from "url";
 
 // ESM -> manually define __filename and __dirname
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+export const __filename = fileURLToPath(import.meta.url);
+export const __dirname = path.dirname(__filename);
 
-function createWindow() {
+function createMainWindow() {
   const window = new BrowserWindow({
     width: 1200,
     height: 675,
@@ -44,4 +44,23 @@ function createWindow() {
   }
 }
 
-void app.whenReady().then(createWindow);
+app
+  .whenReady()
+  .then(() => {
+    createMainWindow();
+    app.on("activate", () => {
+      if (BrowserWindow.getAllWindows().length === 0) {
+        createMainWindow();
+      }
+    });
+  })
+  .catch((err: unknown) => {
+    console.error("failed to create main window", err);
+    process.exit(1);
+  });
+
+app.on("window-all-closed", () => {
+  if (process.platform !== "darwin") {
+    app.quit();
+  }
+});
