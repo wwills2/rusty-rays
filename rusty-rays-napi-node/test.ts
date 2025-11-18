@@ -9,8 +9,8 @@ import {
     Model,
     setConfig,
     shutdownLogger,
-    Tracer
-} from './index.js';
+    Tracer,
+} from './dist/index.js';
 
 const testArtifactDir = './test-artifacts';
 
@@ -36,7 +36,7 @@ async function main() {
     logDebug('THIS DEBUG MESSAGE SHOULD NOT BE SEEN');
     logTrace('THIS TRACE MESSAGE SHOULD NOT BE SEEN');
 
-    const model = await Model.fromFilePath('../sample-files/jacks.ray');
+    const model = await Model.fromFilePath('../sample-files/single-sphere-test-extended.ray');
     const tracer = new Tracer(model);
     await tracer.renderToFile(`${testArtifactDir}/jsRender.png`);
 

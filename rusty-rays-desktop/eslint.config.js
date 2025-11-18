@@ -12,6 +12,7 @@ export default defineConfig([
   {
     rules: {
       semi: ["error", "always"],
+      quotes: ["error", "single", {avoidEscape: true}],
     },
     files: ["src/**/*.{ts,tsx}"],
     extends: [

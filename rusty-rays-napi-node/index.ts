@@ -5,6 +5,10 @@ import type {bindings} from "./bindings/index.d.ts";
 export type Config = bindings.Config;
 export type Tracer = bindings.Tracer;
 export type Model = bindings.Model;
+export type Sphere = bindings.Sphere;
+export type Surface = bindings.Surface;
+export type Color = bindings.Color;
+export type Coords = bindings.Coords;
 
 // code exports
 const require = createRequire(import.meta.url);

@@ -1,9 +1,11 @@
-import { useState } from "react";
-import reactLogo from "./assets/react.svg";
-import viteLogo from "./assets/vite.svg";
+import { useState } from 'react';
+import reactLogo from './assets/react.svg';
+import viteLogo from './assets/vite.svg';
+import { useGetAllSpheresQuery } from '@/redux/ipc/model.ipc.ts';
 
 function App() {
   const [count, setCount] = useState(0);
+  const { data } = useGetAllSpheresQuery(null);
 
   return (
     <>
@@ -14,6 +16,16 @@ function App() {
         <a href="https://react.dev" target="_blank">
           <img src={reactLogo} className="logo react" alt="React logo" />
         </a>
+      </div>
+      <div className="card card-border">
+        <div className="card-body">
+          <h2 className="card-title">Spheres</h2>
+          <ul>
+            {data?.map((sphere) => (
+              <li key={sphere.uuid}>{JSON.stringify(sphere)}</li>
+            ))}
+          </ul>
+        </div>
       </div>
       <h1>Vite + React</h1>
       <div className="card-body">

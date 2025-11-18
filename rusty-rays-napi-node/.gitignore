@@ -4,4 +4,4 @@ bindings/
 test-artifacts/
 package-lock.json
 test.js
-index.js
+rusty-rays-napi-node-*.tgz
