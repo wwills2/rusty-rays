@@ -9,6 +9,7 @@ import {
     Model,
     setConfig,
     shutdownLogger,
+    type Sphere,
     Tracer,
 } from './dist/index.js';
 
@@ -37,6 +38,7 @@ async function main() {
     logTrace('THIS TRACE MESSAGE SHOULD NOT BE SEEN');
 
     const model = await Model.fromFilePath('../sample-files/single-sphere-test-extended.ray');
+    const spheres: Sphere[] = await model.allSpheres;
     const tracer = new Tracer(model);
     await tracer.renderToFile(`${testArtifactDir}/jsRender.png`);
 

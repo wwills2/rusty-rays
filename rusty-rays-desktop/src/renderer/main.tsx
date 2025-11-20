@@ -10,6 +10,8 @@ const root = document.getElementById('root');
 if (root) {
   createRoot(root).render(
     <StrictMode>
+      {/* TODO figure out the store typing and remove this suppression */}
+      {/* eslint-disable-next-line*/}
       <ReduxStoreProvider store={store}>
         <App />
       </ReduxStoreProvider>

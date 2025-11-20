@@ -26,6 +26,6 @@ export const {
     shutdownLogger,
     getConfig,
     setConfig,
-    getDefaultConfig
+    getDefaultConfig,
 } = cjs.bindings;
 export default cjs.bindings;
