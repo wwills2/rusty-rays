@@ -1,6 +1,7 @@
 import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
+import { initIpcChannels } from '#/ipc/handles';
 
 // ESM -> manually define __filename and __dirname
 export const __filename = fileURLToPath(import.meta.url);
@@ -11,6 +12,7 @@ function createMainWindow() {
     width: 1200,
     height: 675,
     webPreferences: {
+      preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: true,
       webviewTag: true,
     },
@@ -47,7 +49,9 @@ function createMainWindow() {
 app
   .whenReady()
   .then(() => {
+    initIpcChannels();
     createMainWindow();
+
     app.on('activate', () => {
       if (BrowserWindow.getAllWindows().length === 0) {
         createMainWindow();

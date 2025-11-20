@@ -1,6 +1,7 @@
-import { handle, toIpcError } from './index';
-import { Model } from 'rusty-rays-napi-node';
+import { handle } from './index';
 import { setModel, getModel } from '#/model-manager';
+import { Model } from 'rusty-rays-napi-node';
+import { toIpcError } from '#/ipc/shared';
 
 function initModelChannels() {
   handle('model:InitFromFile', async (_, args) => {

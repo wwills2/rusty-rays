@@ -2,6 +2,12 @@ import esbuild from 'esbuild';
 import { mkdir } from 'node:fs/promises';
 import { builtinModules } from 'node:module';
 import { resolve } from 'path';
+import { fileURLToPath } from 'url';
+import path from 'path';
+import copy from 'esbuild-plugin-copy';
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 async function main() {
   // Ensure dist directory exists
@@ -11,6 +17,9 @@ async function main() {
 
   // Shared config for both main and preload builds
   const sharedConfig = {
+    alias: {
+      '#': resolve(__dirname, 'src'),
+    },
     platform: 'node',
     format: 'esm', // Change to "cjs" if you prefer CJS output
     target: 'es2023',
@@ -29,6 +38,24 @@ async function main() {
     ...sharedConfig,
     entryPoints: ['src/main.ts'],
     outfile: 'build/index.js',
+    plugins: [
+      copy({
+        assets: {
+          from: [
+            resolve(
+              __dirname,
+              'node_modules',
+              'rusty-rays-napi-node',
+              'dist',
+              'bindings',
+              '*',
+            ),
+          ],
+          to: [resolve(__dirname, 'build/bindings')],
+        },
+        verbose: true,
+      }),
+    ],
   });
 
   // Build preload script

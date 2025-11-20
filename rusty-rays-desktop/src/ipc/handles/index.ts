@@ -1,6 +1,11 @@
-import { ipcMain } from 'electron';
+import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { initModelChannels } from './model';
-import type { ChannelNames, ChannelListener, Result } from '../shared-types';
+import type { Args, ChannelNames, Result } from '#/ipc/shared';
+
+type ChannelListener<CN extends ChannelNames> = (
+  event: IpcMainInvokeEvent,
+  ...args: Args<CN>
+) => Result<CN> | Promise<Result<CN>>;
 
 function handle<CN extends ChannelNames>(
   channel: CN,
@@ -9,16 +14,8 @@ function handle<CN extends ChannelNames>(
   ipcMain.handle(channel, listener);
 }
 
-function toIpcError<D>(error: unknown, altMsg: string): Result<D> {
-  if (error instanceof Error) {
-    return { error };
-  } else {
-    return { error: new Error(altMsg) };
-  }
-}
-
 function initIpcChannels() {
   initModelChannels();
 }
 
-export { handle, initIpcChannels, toIpcError };
+export { handle, initIpcChannels };

@@ -13,6 +13,12 @@ export default defineConfig([
     rules: {
       semi: ['error', 'always'],
       quotes: ['error', 'single', { avoidEscape: true }],
+      'restrict-template-expressions': [
+        'error',
+        {
+          allowNumber: true
+        }
+      ]
     },
     files: ['src/**/*.{ts,tsx}'],
     extends: [
