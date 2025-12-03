@@ -1,9 +1,8 @@
 import esbuild from 'esbuild';
 import { mkdir } from 'node:fs/promises';
 import { builtinModules } from 'node:module';
-import { resolve } from 'path';
+import path, { resolve } from 'path';
 import { fileURLToPath } from 'url';
-import path from 'path';
 import copy from 'esbuild-plugin-copy';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -40,17 +39,12 @@ async function main() {
     outfile: 'build/index.js',
     plugins: [
       copy({
+        globbyOptions: {
+          expandDirectories: true,
+          gitignore: false,
+        },
         assets: {
-          from: [
-            resolve(
-              __dirname,
-              'node_modules',
-              'rusty-rays-napi-node',
-              'dist',
-              'bindings',
-              '*',
-            ),
-          ],
+          from: ['./node_modules/rusty-rays-napi-node/dist/bindings/**/*'],
           to: [resolve(__dirname, 'build/bindings')],
         },
         verbose: true,

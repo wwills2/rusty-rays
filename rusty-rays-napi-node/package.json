@@ -7,10 +7,10 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build:napi": "rimraf bindings && napi build -o bindings --release --platform --js index.cjs",
-    "build": "npm run clean && rimraf dist && npm run build:napi && tsup && cp -r bindings dist/",
+    "build": "npm run clean && rimraf dist && npm run build:napi && tsup && shx cp -r bindings dist/",
     "test": "npm run build && tsc --module nodenext test.ts && node test.js",
     "prepare": "npm run test",
-    "clean": "rimraf bindings dist test.js rusty-rays-napi-node-*.tgz"
+    "clean": "rimraf --glob bindings dist test.js rusty-rays-napi-node-*.tgz"
   },
   "type": "module",
   "engines": {
@@ -25,6 +25,7 @@
     "@napi-rs/cli": "^3.1.5",
     "@types/node": "^24.3.1",
     "rimraf": "^6.0.1",
+    "shx": "^0.4.0",
     "tsup": "^8.5.1",
     "typescript": "^5.9.2"
   }
