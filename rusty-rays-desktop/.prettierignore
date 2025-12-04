@@ -14,6 +14,7 @@ dist-ssr/
 *.local
 .env
 .env.*
+src/renderer/retro-ui-lib/
 
 # Editor directories and files
 .vscode/*

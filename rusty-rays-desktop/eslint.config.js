@@ -13,14 +13,15 @@ export default defineConfig([
     rules: {
       semi: ['error', 'always'],
       quotes: ['error', 'single', { avoidEscape: true }],
-      'restrict-template-expressions': [
+      '@typescript-eslint/restrict-template-expressions': [
         'error',
         {
-          allowNumber: true
-        }
-      ]
+          allowNumber: true,
+        },
+      ],
     },
     files: ['src/**/*.{ts,tsx}'],
+    ignores: ['src/renderer/retro-ui-lib/**/*'],
     extends: [
       js.configs.recommended,
       tseslint.configs.strictTypeChecked,

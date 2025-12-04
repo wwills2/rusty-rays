@@ -9,10 +9,9 @@ contextBridge.exposeInMainWorld('electronAPI', {
       throw new Error(`channel ${channel} is not in set of allowed channels`);
     }
 
-    try {
-      return await ipcRenderer.invoke(channel, args);
-    } catch (error) {
-      throw error;
-    }
+    // this in the in the preload context so typing doesnt matter any way
+    // allow any here
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-return
+    return await ipcRenderer.invoke(channel, args);
   },
 });

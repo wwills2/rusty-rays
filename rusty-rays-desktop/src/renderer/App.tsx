@@ -28,7 +28,9 @@ function App() {
       }
     };
 
-    trigger().catch((error) => console.error(error));
+    trigger().catch((error: unknown) => {
+      console.error(error);
+    });
   }, [refetchSpheres, triggerLoadModel]);
 
   return (
