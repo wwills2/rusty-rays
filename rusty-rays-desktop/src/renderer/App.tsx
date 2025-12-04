@@ -5,6 +5,7 @@ import {
   useGetAllSpheresQuery,
   useLoadModelFromFileMutation,
 } from '@/redux/ipc/model.ipc.ts';
+import { Button } from '@/retro-ui-lib/Button.tsx';
 
 function App() {
   const { data: spheres, refetch: refetchSpheres } =
@@ -52,10 +53,10 @@ function App() {
       </div>
       <h1>Vite + React</h1>
       <div className="card-body">
-        <button className="btn btn-secondary" onClick={loadModel}>
+        <Button onClick={loadModel}>
           {modelIsLoading && <span className="loading loading-spinner" />}
           load model
-        </button>
+        </Button>
         <p>
           Edit <code>src/App.tsx</code> and save to test HMR
         </p>
