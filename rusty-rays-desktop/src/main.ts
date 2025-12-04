@@ -2,6 +2,7 @@ import { app, BrowserWindow } from 'electron';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { initIpcChannels } from '#/ipc/handles';
+import { session } from 'electron';
 
 // ESM -> manually define __filename and __dirname
 export const __filename = fileURLToPath(import.meta.url);
@@ -49,6 +50,19 @@ function createMainWindow() {
 app
   .whenReady()
   .then(() => {
+    if (process.env.SPA_SRC !== 'vite') {
+      session.defaultSession.webRequest.onHeadersReceived(
+        (details, callback) => {
+          callback({
+            responseHeaders: {
+              ...details.responseHeaders,
+              'Content-Security-Policy': ["default-src 'none'"],
+            },
+          });
+        },
+      );
+    }
+
     initIpcChannels();
     createMainWindow();
 
