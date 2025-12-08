@@ -6,6 +6,7 @@ const allChannelDefinitions = {
 const allowedChannelNames = new Set(Object.keys(allChannelDefinitions));
 
 type ChannelDefinitionsType = typeof ModelChannels;
+
 type ChannelNames = keyof ChannelDefinitionsType;
 type Args<CN extends ChannelNames> = ChannelDefinitionsType[CN]['args'];
 type DataType<CN extends ChannelNames> = ChannelDefinitionsType[CN]['dataType'];
@@ -24,4 +25,4 @@ function toIpcError(error: unknown, altMsg: string) {
 }
 
 export { ModelChannels, toIpcError, allowedChannelNames };
-export type { Result, Args, DataType, ChannelNames };
+export type { Result, Args, DataType, ChannelNames, ChannelDefinitionsType };

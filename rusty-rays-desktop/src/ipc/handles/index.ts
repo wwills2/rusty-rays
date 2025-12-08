@@ -4,7 +4,7 @@ import type { Args, ChannelNames, Result } from '#/ipc/shared';
 
 type ChannelListener<CN extends ChannelNames> = (
   event: IpcMainInvokeEvent,
-  ...args: Args<CN>
+  args: Args<CN>,
 ) => Result<CN> | Promise<Result<CN>>;
 
 function handle<CN extends ChannelNames>(

@@ -59,8 +59,8 @@ async function main() {
     outfile: 'build/preload.js',
   });
 
-  console.log('Built main → build/index.js');
-  console.log('Built preload → build/preload.js');
+  console.log('Built main -> build/index.js');
+  console.log('Built preload -> build/preload.js');
 }
 
 main().catch((err) => {

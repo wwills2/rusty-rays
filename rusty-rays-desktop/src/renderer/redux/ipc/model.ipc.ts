@@ -14,9 +14,19 @@ export const modelsIpcApi = ipcApi.injectEndpoints({
         }
       },
     }),
-    loadModelFromFile: builder.mutation<boolean, string>({
+    loadModelFromFilePath: builder.mutation<boolean, string>({
       queryFn: async (inputFilePath) => {
-        const result = await invoke('model:InitFromFile', inputFilePath);
+        const result = await invoke('model:InitFromFilePath', inputFilePath);
+        if (result.data) {
+          return { data: true };
+        } else {
+          throw new Error(JSON.stringify(result.error));
+        }
+      },
+    }),
+    loadModelFromFile: builder.mutation<boolean, string>({
+      queryFn: async (fileText) => {
+        const result = await invoke('model:InitFromFileTextString', fileText);
         if (result.data) {
           return { data: true };
         } else {
@@ -28,5 +38,8 @@ export const modelsIpcApi = ipcApi.injectEndpoints({
   overrideExisting: false,
 });
 
-export const { useGetAllSpheresQuery, useLoadModelFromFileMutation } =
-  modelsIpcApi;
+export const {
+  useGetAllSpheresQuery,
+  useLoadModelFromFilePathMutation,
+  useLoadModelFromFileMutation,
+} = modelsIpcApi;

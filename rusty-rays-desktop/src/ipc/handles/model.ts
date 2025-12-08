@@ -4,7 +4,7 @@ import { Model } from 'rusty-rays-napi-node';
 import { toIpcError } from '#/ipc/shared';
 
 function initModelChannels() {
-  handle('model:InitFromFile', async (_, args) => {
+  handle('model:InitFromFilePath', async (_, args) => {
     try {
       const [path] = args;
       const model = await Model.fromFilePath(path);
@@ -12,6 +12,17 @@ function initModelChannels() {
       return { data: true };
     } catch (error) {
       return toIpcError(error, 'failed to initialize model from file');
+    }
+  });
+
+  handle('model:InitFromFileTextString', (_, args) => {
+    try {
+      const [fileText] = args;
+      const model = Model.fromString(fileText);
+      setModel(model);
+      return { data: true };
+    } catch (error) {
+      return toIpcError(error, 'failed to initialize model from file text');
     }
   });
 

@@ -25,7 +25,7 @@ async function invoke<CN extends ChannelNames>(
       args,
     )) as unknown as Result<CN>;
 
-    console.log('*****', channel, result);
+    console.debug('ipc channel and returned data', channel, result);
     return result;
   } catch (error) {
     return toIpcError(error, 'an error occurred during ipc invocation');
