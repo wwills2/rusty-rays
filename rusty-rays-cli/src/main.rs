@@ -1,9 +1,9 @@
 use std::path::PathBuf;
 
-use clap::{Parser, arg};
+use clap::{arg, Parser};
 
-use rusty_rays_core::logger::{LOG, error, info, shutdown_logger, warn};
-use rusty_rays_core::{Model, Tracer, write_render_to_file};
+use rusty_rays_core::logger::{error, info, shutdown_logger, warn, LOG};
+use rusty_rays_core::{write_render_to_file, Model, Tracer};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

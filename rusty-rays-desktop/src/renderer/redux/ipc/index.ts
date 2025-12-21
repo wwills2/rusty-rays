@@ -1,12 +1,31 @@
 import { createApi } from '@reduxjs/toolkit/query/react';
 import { fakeBaseQuery } from '@reduxjs/toolkit/query';
+/**
+ * Importing a renderer <-> main process shared resource. Need relative path
+ */
 import {
   allowedChannelNames,
-  toIpcError,
   type Args,
   type ChannelNames,
+  type DataType,
   type Result,
+  toIpcError,
 } from '../../../ipc/shared';
+
+function processIpcResult<CN extends ChannelNames, R>(
+  result: Result<CN>,
+  operation: (data: DataType<CN>) => R,
+) {
+  if (result.data) {
+    return { data: operation(result.data) };
+  } else {
+    if (result.error instanceof Error) {
+      throw result.error;
+    } else {
+      throw new Error(`Unknow IPC error: ${JSON.stringify(result.error)}`);
+    }
+  }
+}
 
 async function invoke<CN extends ChannelNames>(
   channel: CN,
@@ -38,4 +57,4 @@ const ipcApi = createApi({
   baseQuery: fakeBaseQuery(),
 });
 
-export { ipcApi, invoke };
+export { ipcApi, invoke, processIpcResult };

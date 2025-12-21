@@ -4,10 +4,11 @@ use napi_derive::napi;
 
 #[napi]
 mod bindings {
+    use napi::bindgen_prelude::Buffer;
     use std::str::FromStr;
     use std::sync::Arc;
-
     #[napi]
+
     pub fn log_error(message: String) -> napi::Result<()> {
         rusty_rays_core::logger::error!(rusty_rays_core::logger::LOG, "{}", message);
         Ok(())
@@ -125,7 +126,7 @@ mod bindings {
         }
 
         #[napi]
-        pub async fn render_to_serialized(&self) -> napi::Result<Vec<u8>> {
+        pub async fn render_to_image_buffer(&self, image_format: String) -> napi::Result<Buffer> {
             let _acquired_permit = self
                 .semaphore
                 .clone()
@@ -140,8 +141,8 @@ mod bindings {
                     Err(error) => return Err(error.to_string()),
                 };
 
-                match rusty_rays_core::serialize_raw_render_to_blob(&raw_render) {
-                    Ok(serialized_render) => Ok(serialized_render),
+                match rusty_rays_core::write_render_to_image_buffer(image_format, &raw_render) {
+                    Ok(serialized_render) => Ok(Buffer::from(serialized_render)),
                     Err(error) => Err(error.to_string()),
                 }
             })

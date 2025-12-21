@@ -15,3 +15,7 @@ contextBridge.exposeInMainWorld('electronAPI', {
     return await ipcRenderer.invoke(channel, args);
   },
 });
+
+contextBridge.exposeInMainWorld('env', {
+  isVite: process.env.SPA_SRC === 'vite',
+});

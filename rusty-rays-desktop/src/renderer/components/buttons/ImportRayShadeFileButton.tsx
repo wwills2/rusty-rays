@@ -3,12 +3,15 @@ import React, { useCallback, useEffect, useRef } from 'react';
 import { useLoadModelFromFileMutation } from '@/redux/ipc/model.ipc.ts';
 import { useGetFileText } from '@/hooks';
 import _ from 'lodash';
+import { useNavigate } from 'react-router';
+import ROUTES from '@/routes/route-constants.ts';
 
 interface Props {
   label: string;
 }
 
 const ImportRayShadeFileButton: React.FC<Props> = ({ label }) => {
+  const navigate = useNavigate();
   const [
     triggerLoadModel,
     { isLoading: modelIsLoading, error: loadModelError },
@@ -19,12 +22,22 @@ const ImportRayShadeFileButton: React.FC<Props> = ({ label }) => {
     useGetFileText();
 
   useEffect(() => {
-    if (fileText && !fileTextLoading && !fileTextError) {
-      triggerLoadModel(fileText).catch((error: unknown) => {
-        console.error('failed to load model', error);
-      });
-    }
-  }, [fileText, fileTextError, fileTextLoading, triggerLoadModel]);
+    const load = async () => {
+      if (fileText && !fileTextLoading && !fileTextError) {
+        const loadResult = await triggerLoadModel(fileText);
+        if (loadResult.data) {
+          void navigate(ROUTES.EDITOR);
+        }
+      }
+    };
+
+    load().catch((error: unknown) => {
+      console.error(
+        'An error occurred loading model from file',
+        JSON.stringify(error),
+      );
+    });
+  }, [fileText, fileTextError, fileTextLoading, navigate, triggerLoadModel]);
 
   const handleFileChange = useCallback<
     React.ChangeEventHandler<HTMLInputElement>

@@ -1,11 +1,13 @@
 import { ModelChannels } from './model-channels';
+import { TracerChannels } from './tracer-channels';
 
 const allChannelDefinitions = {
   ...ModelChannels,
+  ...TracerChannels,
 };
 const allowedChannelNames = new Set(Object.keys(allChannelDefinitions));
 
-type ChannelDefinitionsType = typeof ModelChannels;
+type ChannelDefinitionsType = typeof allChannelDefinitions;
 
 type ChannelNames = keyof ChannelDefinitionsType;
 type Args<CN extends ChannelNames> = ChannelDefinitionsType[CN]['args'];

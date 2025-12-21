@@ -14,7 +14,7 @@
     "build:main": "tsc -p tsconfig.json && node esbuild.run.js",
     "dist:linux:deb": "npm run clean && npm run build && npx electron-builder --linux deb",
     "dist:windows": "npm run clean && npm run build && npx electron-builder --windows",
-    "electron:dev": "npm run build:main && npx cross-env SPA_SRC=vite npx electron .",
+    "electron:dev": "npm run build && npx cross-env SPA_SRC=vite npx electron .",
     "electron": "npm run build && npx electron .",
     "lint": "npx eslint . --fix && npx prettier . --write",
     "clean": "npx rimraf ./dist && npx rimraf ./build",
