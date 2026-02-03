@@ -111,7 +111,8 @@ const EditorPage: React.FC = () => {
     );
     drawRectRef.current = rect;
 
-    ctx.imageSmoothingEnabled = false; // optional: crisp pixels when zoomed
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = 'high';
     ctx.drawImage(img, rect.dx, rect.dy, rect.dw, rect.dh);
   };
 
@@ -183,11 +184,11 @@ const EditorPage: React.FC = () => {
       {isLoading ? (
         <Loader />
       ) : (
-        <>
+        <div className="w-full h-full">
           {error ? (
             <Alert>An error occurred</Alert>
           ) : (
-            <>
+            <div className="w-full h-full">
               <canvas
                 ref={canvasRef}
                 onMouseMove={onMouseMove}
@@ -214,9 +215,9 @@ const EditorPage: React.FC = () => {
               >
                 {hover ? `x=${hover.x}, y=${hover.y}` : '—'}
               </div>
-            </>
+            </div>
           )}
-        </>
+        </div>
       )}
     </div>
   );
