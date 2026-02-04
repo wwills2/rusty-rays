@@ -1,6 +1,10 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
-import { Alert, Loader } from '@/retro-ui-lib';
-import { useRenderQuery } from '@/redux/ipc/tracer.ipc.ts';
+import { Alert, Dialog, Loader } from '@/retro-ui-lib';
+import {
+  useGetIntersectedUuidByPixelPosMutation,
+  useRenderQuery,
+} from '@/redux/ipc/tracer.ipc.ts';
+import { useGetAllSpheresQuery } from '@/redux/ipc/model.ipc.ts';
 
 type DrawRect = { dx: number; dy: number; dw: number; dh: number };
 
@@ -74,19 +78,30 @@ function hoveredPixelFromMouse(
 }
 
 const EditorPage: React.FC = () => {
-  const { data, isLoading, error } = useRenderQuery(null);
+  const {
+    data: imageData,
+    isLoading: isRendering,
+    error: renderError,
+  } = useRenderQuery(null);
+  const { data: spheresMap } = useGetAllSpheresQuery(null);
+
+  const [getIntersectedUuidByPixelPos] =
+    useGetIntersectedUuidByPixelPosMutation();
+
+  const dialogTriggerRef = useRef<HTMLButtonElement | null>(null);
 
   const [hover, setHover] = useState<{ x: number; y: number } | null>(null);
   const imageUrl = useMemo(() => {
-    if (data) {
-      const png_data_blob = new Blob([data], { type: 'image/png' });
+    if (imageData) {
+      const png_data_blob = new Blob([imageData], { type: 'image/png' });
       return URL.createObjectURL(png_data_blob);
     }
-  }, [data]);
+  }, [imageData]);
 
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const imgRef = useRef<HTMLImageElement | null>(null);
   const drawRectRef = useRef<DrawRect | null>(null);
+  const [dialogBody, setDialogBody] = useState<string | null>(null);
 
   const draw = () => {
     const canvas = canvasRef.current;
@@ -179,41 +194,93 @@ const EditorPage: React.FC = () => {
     setHover(null);
   };
 
+  const onClick = async () => {
+    if (!hover) return; // not over the canvas / image area
+    try {
+      const uuid = await getIntersectedUuidByPixelPos({
+        i: hover.x,
+        j: hover.y,
+      }).unwrap();
+
+      if (!uuid) {
+        // no intersection — do not open dialog
+        return;
+      }
+
+      const sphere = spheresMap ? spheresMap[uuid] : undefined;
+      if (sphere) {
+        setDialogBody(JSON.stringify(sphere, null, 2));
+      } else {
+        setDialogBody('The object information could not be retrieved.');
+      }
+
+      // open dialog
+      dialogTriggerRef.current?.click();
+    } catch {
+      // on IPC error, show retrieval message
+      setDialogBody('The object information could not be retrieved.');
+      dialogTriggerRef.current?.click();
+    }
+  };
+
   return (
     <div className="w-full h-full items-center justify-center">
-      {isLoading ? (
+      {isRendering ? (
         <Loader />
       ) : (
         <div className="w-full h-full">
-          {error ? (
+          {renderError ? (
             <Alert>An error occurred</Alert>
           ) : (
-            <div className="w-full h-full">
-              <canvas
-                ref={canvasRef}
-                onMouseMove={onMouseMove}
-                onMouseLeave={onMouseLeave}
-                style={{
-                  width: '100%',
-                  height: '100%',
-                  display: 'block',
-                }}
-              />
-              <div
-                style={{
-                  position: 'absolute',
-                  left: 8,
-                  top: 8,
-                  padding: '4px 8px',
-                  background: 'rgba(0,0,0,0.6)',
-                  color: 'white',
-                  fontFamily: 'monospace',
-                  fontSize: 12,
-                  borderRadius: 6,
-                  pointerEvents: 'none',
-                }}
-              >
-                {hover ? `x=${hover.x}, y=${hover.y}` : '—'}
+            <div className="h-full w-full">
+              <div className="w-full h-full">
+                <canvas
+                  ref={canvasRef}
+                  onMouseMove={onMouseMove}
+                  onMouseLeave={onMouseLeave}
+                  onClick={onClick}
+                  style={{
+                    width: '100%',
+                    height: '100%',
+                    display: 'block',
+                  }}
+                />
+                <div
+                  style={{
+                    position: 'absolute',
+                    left: 8,
+                    top: 8,
+                    padding: '4px 8px',
+                    background: 'rgba(0,0,0,0.6)',
+                    color: 'white',
+                    fontFamily: 'monospace',
+                    fontSize: 12,
+                    borderRadius: 6,
+                    pointerEvents: 'none',
+                  }}
+                >
+                  {hover ? `x=${hover.x}, y=${hover.y}` : '—'}
+                </div>
+                <Dialog>
+                  <Dialog.Trigger>
+                    <button className="hidden" ref={dialogTriggerRef} />
+                  </Dialog.Trigger>
+                  <Dialog.Content>
+                    <Dialog.Header>Sphere info</Dialog.Header>
+                    {dialogBody ? (
+                      <pre
+                        style={{
+                          whiteSpace: 'pre-wrap',
+                          fontSize: 12,
+                          lineHeight: 1.4,
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        {dialogBody}
+                      </pre>
+                    ) : null}
+                  </Dialog.Content>
+                </Dialog>
               </div>
             </div>
           )}

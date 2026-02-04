@@ -5,8 +5,11 @@ use napi_derive::napi;
 #[napi]
 mod bindings {
     use napi::bindgen_prelude::Buffer;
+    use std::collections::HashMap;
     use std::str::FromStr;
     use std::sync::Arc;
+    use uuid::Uuid;
+
     #[napi]
 
     pub fn log_error(message: String) -> napi::Result<()> {
@@ -175,6 +178,34 @@ mod bindings {
 
             Ok(())
         }
+
+        #[napi]
+        pub async fn get_intersected_uuid_by_pixel_pos(
+            &self,
+            i: u32,
+            j: u32,
+        ) -> napi::Result<Option<String>> {
+            let _acquired_permit = self
+                .semaphore
+                .clone()
+                .acquire_owned()
+                .await
+                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+            let inner_tracer_clone = self.inner.clone();
+            let result = tokio::task::spawn_blocking(move || {
+                Ok::<Option<String>, String>(
+                    inner_tracer_clone
+                        .get_intersected_uuid_by_pixel_pos(i as usize, j as usize)
+                        .map(|u| u.to_string()),
+                )
+            })
+            .await
+            .map_err(|e| napi::Error::from_reason(format!("task panicked: {e}")))?
+            .map_err(napi::Error::from_reason)?;
+
+            Ok(result)
+        }
     }
 
     #[napi]
@@ -212,7 +243,7 @@ mod bindings {
         }
 
         #[napi(getter)]
-        pub async fn get_all_spheres(&self) -> napi::Result<Vec<Sphere>> {
+        pub async fn get_all_spheres(&self) -> napi::Result<HashMap<String, Sphere>> {
             let _acquired_permit = self
                 .semaphore
                 .clone()
@@ -220,11 +251,13 @@ mod bindings {
                 .await
                 .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
+            let foo = self.inner.get_all_spheres();
+
             Ok(self
                 .inner
                 .get_all_spheres()
-                .values()
-                .map(|sphere| sphere.into())
+                .into_iter()
+                .map(|(k, v)| (k.to_string(), v.into()))
                 .collect())
         }
 

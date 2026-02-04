@@ -38,7 +38,9 @@ async function main() {
     logTrace('THIS TRACE MESSAGE SHOULD NOT BE SEEN');
 
     const model = await Model.fromFilePath('../sample-files/single-sphere-test-extended.ray');
-    const spheres: Sphere[] = await model.allSpheres;
+    const spheres: Record<string, Sphere> = await model.allSpheres;
+    console.log(`loaded ${Object.keys(spheres).length} spheres from model
+    `);
     const tracer = new Tracer(model);
     await tracer.renderToFile(`${testArtifactDir}/jsRender.png`);
 

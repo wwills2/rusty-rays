@@ -1,22 +1,22 @@
+use crate::tracer::camera::Camera;
 use crate::utils::logger::{debug, error, info, trace, warn, LOG};
 use crate::utils::Config;
 use bvh::Bvh;
-use misc_types::Ray;
-use primitives::Primitive;
-use std::sync::{atomic, Arc, Mutex};
-use std::time::SystemTime;
-use std::{f64, fmt, thread};
-
-use crate::tracer::camera::Camera;
 pub use coords::Coords;
+use misc_types::Ray;
 pub use misc_types::{Fov, Screen, Surface};
 pub use model::Model;
 pub use primitives::Cone;
 pub use primitives::Plane;
 pub use primitives::Polygon;
+use primitives::Primitive;
 pub use primitives::Sphere;
 pub use primitives::Triangle;
 pub use shader::Color;
+use std::collections::HashMap;
+use std::sync::{atomic, Arc, Mutex};
+use std::time::SystemTime;
+use std::{f64, fmt, thread};
 
 mod bvh;
 mod camera;
@@ -74,6 +74,16 @@ impl Tracer {
         info!(LOG, "rendering model");
         let self_arc = Arc::new(self.clone());
         Self::_render(self_arc)
+    }
+
+    pub fn get_intersected_uuid_by_pixel_pos(&self, i: usize, j: usize) -> Option<uuid::Uuid> {
+        let ray = self.camera.calc_ray_definition(i, j, &self.model);
+        let maybe_intersection = self.bvh.intersect(&ray);
+        if let Some(intersection) = maybe_intersection {
+            Some(intersection.intersected_primitive_uuid)
+        } else {
+            None
+        }
     }
 
     fn _render(self: Arc<Self>) -> Result<Vec<Vec<Color>>, RenderError> {
@@ -195,7 +205,7 @@ impl Tracer {
 
         for i in 0..model.screen.height {
             for j in 0..model.screen.width {
-                let ray = camera.calc_ray_definition(i, j);
+                let ray = camera.calc_ray_definition(i, j, model);
                 rays.push(ray);
             }
         }

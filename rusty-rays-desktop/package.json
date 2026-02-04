@@ -10,8 +10,8 @@
   "scripts": {
     "dev": "npm run build:main && concurrently \"npm run vite\" \"npm run electron:dev\"",
     "vite": "npx vite -c vite.renderer.config.ts",
-    "build": "npm run build:main && npx vite -c vite.renderer.config.ts build",
-    "build:main": "tsc -p tsconfig.json && node esbuild.run.js",
+    "build": "npm run build:main && tsc -p tsconfig.vite.renderer.json && npx vite -c vite.renderer.config.ts build",
+    "build:main": "tsc -p tsconfig.electron.main.json && node esbuild.run.js",
     "dist:linux:deb": "npm run clean && npm run build && npx electron-builder --linux deb",
     "dist:windows": "npm run clean && npm run build && npx electron-builder --windows",
     "electron:dev": "npm run build && npx cross-env SPA_SRC=vite npx electron .",
@@ -44,8 +44,10 @@
     }
   },
   "dependencies": {
+    "@radix-ui/react-dialog": "^1.1.15",
     "@radix-ui/react-dropdown-menu": "^2.1.16",
     "@radix-ui/react-slot": "^1.2.4",
+    "@radix-ui/react-visually-hidden": "^1.2.4",
     "@reduxjs/toolkit": "^2.10.1",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",

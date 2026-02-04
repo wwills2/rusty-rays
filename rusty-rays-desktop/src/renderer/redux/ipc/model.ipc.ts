@@ -3,7 +3,7 @@ import type { Sphere } from 'rusty-rays-napi-node';
 
 export const modelsIpcApi = ipcApi.injectEndpoints({
   endpoints: (builder) => ({
-    getAllSpheres: builder.query<Sphere[], null>({
+    getAllSpheres: builder.query<Record<string, Sphere>, null>({
       queryFn: async () => {
         const result = await invoke('model:getAllSpheres');
         return processIpcResult(result, (data) => data);

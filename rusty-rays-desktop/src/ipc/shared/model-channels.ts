@@ -11,7 +11,7 @@ const ModelChannels = {
   },
   'model:getAllSpheres': {
     args: [],
-    dataType: [] as Sphere[],
+    dataType: {} as Record<string, Sphere>,
   },
 };
 

@@ -12,7 +12,6 @@ pub struct Camera {
     focal_len: f64,
     viewing_plane_width: f64,
     viewing_plane_height: f64,
-    model: Model,
 }
 
 #[allow(dead_code)]
@@ -55,15 +54,14 @@ viewing plane height: {}",
             focal_len,
             viewing_plane_width,
             viewing_plane_height,
-            model: model.clone(),
         }
     }
 
-    pub fn calc_ray_definition(&self, i: usize, j: usize) -> Ray {
-        let horz_pos = ((j as f64 + 0.5) / self.model.screen.width as f64) - 0.5;
-        let vert_pos = 0.5 - ((i as f64 + 0.5) / self.model.screen.height as f64);
+    pub fn calc_ray_definition(&self, i: usize, j: usize, model: &Model) -> Ray {
+        let horz_pos = ((j as f64 + 0.5) / model.screen.width as f64) - 0.5;
+        let vert_pos = 0.5 - ((i as f64 + 0.5) / model.screen.height as f64);
 
-        let pixel_pos = &self.model.lookp
+        let pixel_pos = &model.lookp
             + &(&self.right * (self.viewing_plane_width * horz_pos))
             + (&self.true_up * (vert_pos * self.viewing_plane_height));
         trace!(
@@ -71,7 +69,7 @@ viewing plane height: {}",
             "position of image plane pixel (i: {}, j: {}); {}", i, j, pixel_pos
         );
 
-        let direction = (pixel_pos - &self.model.eyep).calc_normalized_vector();
+        let direction = (pixel_pos - &model.eyep).calc_normalized_vector();
         trace!(
             LOG,
             "calculated direction of ray through image plane pixel position (i: {}, j:{}) to be {} ",
@@ -84,7 +82,7 @@ viewing plane height: {}",
             i,
             j,
             direction,
-            origin: self.model.eyep.clone(),
+            origin: model.eyep.clone(),
         }
     }
 
