@@ -7,6 +7,7 @@ use std::sync::{atomic, Arc, Mutex};
 use std::time::SystemTime;
 use std::{f64, fmt, thread};
 
+use crate::tracer::camera::Camera;
 pub use coords::Coords;
 pub use misc_types::{Fov, Screen, Surface};
 pub use model::Model;
@@ -18,6 +19,7 @@ pub use primitives::Triangle;
 pub use shader::Color;
 
 mod bvh;
+mod camera;
 mod coords;
 mod misc_types;
 mod model;
@@ -31,6 +33,7 @@ pub struct Tracer {
     model: Model,
     bvh: Bvh,
     primary_rays: Vec<Ray>,
+    camera: Camera,
 }
 
 impl Clone for Tracer {
@@ -39,6 +42,7 @@ impl Clone for Tracer {
             model: self.model.clone(),
             primary_rays: self.primary_rays.clone(),
             bvh: self.bvh.clone(),
+            camera: self.camera.clone(),
         }
     }
 }
@@ -49,7 +53,8 @@ impl Tracer {
             LOG,
             "initializing renderer. calculating primary ray definitions and bvh"
         );
-        let primary_rays = Self::calculate_primary_rays(&model);
+        let camera = Camera::new(&model);
+        let primary_rays = Self::calculate_primary_rays(&model, &camera);
 
         // Collect all primitives into a vector for Bvh construction
         let primitives_for_bvh: Vec<Box<dyn Primitive>> =
@@ -61,6 +66,7 @@ impl Tracer {
             model,
             primary_rays,
             bvh,
+            camera,
         }
     }
 
@@ -184,70 +190,13 @@ impl Tracer {
         }
     }
 
-    fn calculate_primary_rays(model: &Model) -> Vec<Ray> {
-        let direction = &model.lookp - &model.eyep;
-        let forward = direction.calc_normalized_vector();
-        let right = forward.cross(&model.up).calc_normalized_vector();
-        let true_up = right.cross(&forward);
-
-        let focal_len = direction.calc_vector_length();
-        let screen_plane_width =
-            2.0 * focal_len * f64::tan((model.fov.horz / 2.0) * (f64::consts::PI / 180.0));
-        let screen_plane_height =
-            2.0 * focal_len * f64::tan((model.fov.vert / 2.0) * (f64::consts::PI / 180.0));
-
-        debug!(
-            LOG,
-            "calculating primary rays. details:
-direction vec: {}
-forward vec: {}
-right vec: {}
-true-up vec: {}
-focal len: {}
-screen plane width: {}
-screen plane height: {}",
-            direction,
-            forward,
-            right,
-            true_up,
-            focal_len,
-            screen_plane_width,
-            screen_plane_height
-        );
-
+    fn calculate_primary_rays(model: &Model, camera: &Camera) -> Vec<Ray> {
         let mut rays: Vec<Ray> = Vec::new();
-
-        let calc_ray_definition = |i, j| -> Coords {
-            let horz_pos = ((j as f64 + 0.5) / model.screen.width as f64) - 0.5;
-            let vert_pos = 0.5 - ((i as f64 + 0.5) / model.screen.height as f64);
-
-            let pixel_pos = &model.lookp
-                + &(&right * (screen_plane_width * horz_pos))
-                + (&true_up * (vert_pos * screen_plane_height));
-            trace!(
-                LOG,
-                "position of image plane pixel (i: {}, j: {}); {}", i, j, pixel_pos
-            );
-
-            (pixel_pos - &model.eyep).calc_normalized_vector()
-        };
 
         for i in 0..model.screen.height {
             for j in 0..model.screen.width {
-                let coords = calc_ray_definition(i, j);
-                trace!(
-                    LOG,
-                    "calculated definition of ray through image plane pixel position (i: {}, j:{}) to be {} ",
-                    i,
-                    j,
-                    coords
-                );
-                rays.push(Ray {
-                    i,
-                    j,
-                    direction: coords,
-                    origin: model.eyep.clone(),
-                });
+                let ray = camera.calc_ray_definition(i, j);
+                rays.push(ray);
             }
         }
 
