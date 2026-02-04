@@ -3,7 +3,7 @@ eyep 1.5 1.5 1.5
 lookp 0 0 0
 up 0 1 0
 fov 45 45
-screen 1500 1500
+screen 1920 1080
 light 0.97735 extended 0.5 1 3 2
 surface zero-vec
     diffuse 1.0 1.0 1.0

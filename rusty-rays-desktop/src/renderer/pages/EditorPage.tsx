@@ -261,27 +261,27 @@ const EditorPage: React.FC = () => {
                 >
                   {hover ? `x=${hover.x}, y=${hover.y}` : '—'}
                 </div>
-                <Dialog>
-                  <Dialog.Trigger>
-                    <button className="hidden" ref={dialogTriggerRef} />
-                  </Dialog.Trigger>
-                  <Dialog.Content>
-                    <Dialog.Header>Sphere info</Dialog.Header>
-                    {dialogBody ? (
-                      <pre
-                        style={{
-                          whiteSpace: 'pre-wrap',
-                          fontSize: 12,
-                          lineHeight: 1.4,
-                          fontFamily: 'monospace',
-                        }}
-                      >
-                        {dialogBody}
-                      </pre>
-                    ) : null}
-                  </Dialog.Content>
-                </Dialog>
               </div>
+              <Dialog>
+                <Dialog.Trigger>
+                  <button className="hidden" ref={dialogTriggerRef} />
+                </Dialog.Trigger>
+                <Dialog.Content>
+                  <Dialog.Header>Sphere info</Dialog.Header>
+                  {dialogBody ? (
+                    <pre
+                      style={{
+                        whiteSpace: 'pre-wrap',
+                        fontSize: 12,
+                        lineHeight: 1.4,
+                        fontFamily: 'monospace',
+                      }}
+                    >
+                      {dialogBody}
+                    </pre>
+                  ) : null}
+                </Dialog.Content>
+              </Dialog>
             </div>
           )}
         </div>
