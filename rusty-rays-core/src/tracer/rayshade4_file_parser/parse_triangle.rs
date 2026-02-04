@@ -10,7 +10,7 @@ use crate::tracer::primitives::Triangle;
 use crate::tracer::rayshade4_file_parser::{
     GetNextLineClosure, NextIfClosure, NextLine, SCENE_DATA_KEYWORDS,
 };
-use crate::utils::logger::{LOG, debug};
+use crate::utils::logger::{LOG, debug, trace};
 
 pub fn process_triangle(
     determine_next_line_iter: &mut GetNextLineClosure,
@@ -18,7 +18,7 @@ pub fn process_triangle(
     surfaces: &HashMap<String, Surface>,
     starting_line_number: usize,
 ) -> Result<Triangle, ModelError> {
-    debug!(LOG, "processing triangle");
+    trace!(LOG, "processing triangle");
 
     let line_number = starting_line_number;
 

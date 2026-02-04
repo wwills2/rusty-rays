@@ -8,14 +8,14 @@ use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::primitives::Cone;
-use crate::utils::logger::{LOG, debug};
+use crate::utils::logger::{LOG, trace};
 
 pub fn process_cylinder_to_cone(
     keyword_line_iter: &mut Peekable<SplitWhitespace>,
     surfaces: &HashMap<String, Surface>,
     line_number: usize,
 ) -> Result<Cone, ModelError> {
-    debug!(LOG, "processing cylinder as cone");
+    trace!(LOG, "processing cylinder as cone");
 
     // advance past cylinder keyword
     keyword_line_iter.next();

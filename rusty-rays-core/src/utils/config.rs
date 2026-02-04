@@ -1,8 +1,8 @@
+use crate::logger::Level;
 /// The logger is dependent on this file
 use crate::CONFIG_DIR_OVERRIDE;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use slog::Level;
 use std::fs;
 use std::fs::File;
 use std::io::Write;

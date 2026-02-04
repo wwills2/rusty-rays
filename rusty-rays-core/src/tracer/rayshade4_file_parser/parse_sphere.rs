@@ -8,14 +8,14 @@ use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::primitives::Sphere;
-use crate::utils::logger::{LOG, debug};
+use crate::utils::logger::{LOG, trace};
 
 pub fn process_sphere(
     keyword_line_iter: &mut Peekable<SplitWhitespace>,
     surfaces: &HashMap<String, Surface>,
     line_number: usize,
 ) -> Result<Sphere, ModelError> {
-    debug!(LOG, "processing sphere");
+    trace!(LOG, "processing sphere");
 
     // advance past sphere keyword
     keyword_line_iter.next();

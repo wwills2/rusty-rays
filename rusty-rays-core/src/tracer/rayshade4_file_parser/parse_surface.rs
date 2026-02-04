@@ -7,7 +7,7 @@ use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::rayshade4_file_parser::{GetNextLineClosure, NextIfClosure, SURFACE_KEYWORDS};
 use crate::tracer::shader::Color;
-use crate::utils::logger::{LOG, debug};
+use crate::utils::logger::{LOG, debug, trace};
 
 pub fn process_surface(
     determine_next_line_iter: &mut GetNextLineClosure,
@@ -15,7 +15,7 @@ pub fn process_surface(
     surfaces: &mut HashMap<String, Surface>,
     starting_line_number: usize,
 ) -> Result<(), ModelError> {
-    debug!(LOG, "processing surface");
+    trace!(LOG, "processing surface");
 
     let is_matching_line: NextIfClosure =
         Box::new(|line: &String| match line.split_whitespace().next() {
