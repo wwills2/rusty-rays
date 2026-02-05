@@ -185,10 +185,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             }
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
         } else if SCENE_DATA_KEYWORDS
@@ -293,10 +293,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             };
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
 
@@ -321,10 +321,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             }
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
         } else if SCENE_DATA_KEYWORDS
@@ -342,10 +342,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             }
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
         } else if SCENE_DATA_KEYWORDS.get("up").unwrap().eq(peeked_line_word) {
@@ -359,10 +359,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             }
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
         } else if SCENE_DATA_KEYWORDS.get("fov").unwrap().eq(peeked_line_word) {
@@ -411,10 +411,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             };
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
         } else if SCENE_DATA_KEYWORDS
@@ -467,10 +467,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             };
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
         } else if SCENE_DATA_KEYWORDS

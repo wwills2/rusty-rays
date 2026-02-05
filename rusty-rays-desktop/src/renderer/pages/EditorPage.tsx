@@ -273,7 +273,7 @@ const EditorPage: React.FC = () => {
                 </div>
               </div>
               <Dialog>
-                <Dialog.Trigger>
+                <Dialog.Trigger asChild>
                   <button className="hidden" ref={dialogTriggerRef} />
                 </Dialog.Trigger>
                 <Dialog.Content>

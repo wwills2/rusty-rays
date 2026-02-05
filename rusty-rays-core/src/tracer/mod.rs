@@ -13,7 +13,6 @@ use primitives::Primitive;
 pub use primitives::Sphere;
 pub use primitives::Triangle;
 pub use shader::Color;
-use std::collections::HashMap;
 use std::sync::{atomic, Arc, Mutex};
 use std::time::SystemTime;
 use std::{f64, fmt, thread};
@@ -120,7 +119,7 @@ impl Tracer {
                     let ray_index = _ray_counter_arc_clone.fetch_add(1, atomic::Ordering::Relaxed);
                     trace!(LOG, "thread {} rendering ray #{}", thread_num, ray_index);
 
-                    if ray_index != 0 && ray_index % *_ten_percent_arc_clone == 0 {
+                    if ray_index != 0 && ray_index.is_multiple_of(*_ten_percent_arc_clone) {
                         let progress_block = _progress_block_counter_arc_clone
                             .fetch_add(1, atomic::Ordering::Relaxed)
                             + 1; // fetch_add() returns the previous value, not the new sum

@@ -37,10 +37,10 @@ pub fn process_surface(
     };
 
     let invalid_value = keyword_line_iter.next();
-    if invalid_value.is_some() {
+    if let Some(value) = invalid_value {
         return Err(FailedToParseInputFile(
             starting_line_number,
-            format!("value {} should be on a new line", invalid_value.unwrap()),
+            format!("value {} should be on a new line", value),
         ));
     }
 
@@ -70,10 +70,6 @@ pub fn process_surface(
 
     loop {
         let line_read_result = determine_next_line_iter(Some(&is_matching_line));
-        if line_read_result.is_err() {
-            return Err(line_read_result.err().unwrap());
-        }
-
         let maybe_next_line = line_read_result?;
         if maybe_next_line.is_none() {
             debug!(

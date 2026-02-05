@@ -2,13 +2,14 @@ mod build;
 
 use napi_derive::napi;
 
+#[allow(unused)]
 #[napi]
 mod bindings {
+    #![allow(dead_code)]
     use napi::bindgen_prelude::Buffer;
     use std::collections::HashMap;
     use std::str::FromStr;
     use std::sync::Arc;
-    use uuid::Uuid;
 
     #[napi]
 
@@ -251,12 +252,10 @@ mod bindings {
                 .await
                 .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-            let foo = self.inner.get_all_spheres();
-
             Ok(self
                 .inner
                 .get_all_spheres()
-                .into_iter()
+                .iter()
                 .map(|(k, v)| (k.to_string(), v.into()))
                 .collect())
         }

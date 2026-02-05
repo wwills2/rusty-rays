@@ -108,10 +108,10 @@ pub fn process_cylinder_to_cone(
     };
 
     let invalid_value = keyword_line_iter.next();
-    if invalid_value.is_some() {
+    if let Some(value) = invalid_value {
         return Err(FailedToParseInputFile(
             line_number,
-            format!("value {} should be on a new line", invalid_value.unwrap()),
+            format!("value {} should be on a new line", value),
         ));
     }
 
