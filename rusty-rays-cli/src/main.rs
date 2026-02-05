@@ -1,8 +1,8 @@
 use clap::Parser;
 use std::path::PathBuf;
 
-use rusty_rays_core::logger::{LOG, error, info, shutdown_logger, warn};
-use rusty_rays_core::{Model, Tracer, write_render_to_file};
+use rusty_rays_core::logger::{error, info, shutdown_logger, warn, LOG};
+use rusty_rays_core::{write_render_to_file, Model, Tracer};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]
@@ -22,17 +22,17 @@ fn main() {
     info!(LOG, "welcome to rusty rays");
 
     if args.input_file.is_some() {
-        let _input_file: PathBuf = args.input_file.unwrap();
-        let _output_file: PathBuf = args.output_file.unwrap();
+        let a_input_file: PathBuf = args.input_file.unwrap();
+        let a_output_file: PathBuf = args.output_file.unwrap();
 
         info!(
             LOG,
             "reading input file from {} and writing output file to {}",
-            _input_file.display(),
-            _output_file.display()
+            a_input_file.display(),
+            a_output_file.display()
         );
 
-        match Model::from_file_path(_input_file) {
+        match Model::from_file_path(a_input_file) {
             Ok(model) => {
                 info!(LOG, "initialized model from input file");
                 let tracer = Tracer::new(model);
@@ -41,10 +41,12 @@ fn main() {
                 match maybe_raw_pixel_colors {
                     Ok(raw_pixel_colors) => {
                         info!(LOG, "tracer generated raw image data");
-                        match write_render_to_file(&PathBuf::from(&_output_file), &raw_pixel_colors)
-                        {
+                        match write_render_to_file(
+                            &PathBuf::from(&a_output_file),
+                            &raw_pixel_colors,
+                        ) {
                             Ok(_) => {
-                                info!(LOG, "wrote rendered image to {}", _output_file.display());
+                                info!(LOG, "wrote rendered image to {}", a_output_file.display());
                             }
                             Err(error) => {
                                 error!(LOG, "{}", error);

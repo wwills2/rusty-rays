@@ -1,4 +1,10 @@
-import React, { useEffect, useMemo, useRef, useState } from 'react';
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from 'react';
 import { Alert, Dialog, Loader } from '@/retro-ui-lib';
 import {
   useGetIntersectedUuidByPixelPosMutation,
@@ -194,34 +200,38 @@ const EditorPage: React.FC = () => {
     setHover(null);
   };
 
-  const onClick = async () => {
-    if (!hover) return; // not over the canvas / image area
-    try {
-      const uuid = await getIntersectedUuidByPixelPos({
-        i: hover.x,
-        j: hover.y,
-      }).unwrap();
+  const onClickPixel = useCallback(() => {
+    const execute = async () => {
+      if (!hover) return; // not over the canvas / image area
+      try {
+        const uuid = await getIntersectedUuidByPixelPos({
+          x: hover.x,
+          y: hover.y,
+        }).unwrap();
 
-      if (!uuid) {
-        // no intersection — do not open dialog
-        return;
-      }
+        if (!uuid) {
+          // no intersection — do not open dialog
+          return;
+        }
 
-      const sphere = spheresMap ? spheresMap[uuid] : undefined;
-      if (sphere) {
-        setDialogBody(JSON.stringify(sphere, null, 2));
-      } else {
+        const sphere = spheresMap ? spheresMap[uuid] : undefined;
+        if (sphere) {
+          setDialogBody(JSON.stringify(sphere, null, 2));
+        } else {
+          setDialogBody('The object information could not be retrieved.');
+        }
+
+        // open dialog
+        dialogTriggerRef.current?.click();
+      } catch {
+        // on IPC error, show retrieval message
         setDialogBody('The object information could not be retrieved.');
+        dialogTriggerRef.current?.click();
       }
+    };
 
-      // open dialog
-      dialogTriggerRef.current?.click();
-    } catch {
-      // on IPC error, show retrieval message
-      setDialogBody('The object information could not be retrieved.');
-      dialogTriggerRef.current?.click();
-    }
-  };
+    execute().catch(console.error);
+  }, [getIntersectedUuidByPixelPos, hover, spheresMap]);
 
   return (
     <div className="w-full h-full items-center justify-center">
@@ -238,7 +248,7 @@ const EditorPage: React.FC = () => {
                   ref={canvasRef}
                   onMouseMove={onMouseMove}
                   onMouseLeave={onMouseLeave}
-                  onClick={onClick}
+                  onClick={onClickPixel}
                   style={{
                     width: '100%',
                     height: '100%',

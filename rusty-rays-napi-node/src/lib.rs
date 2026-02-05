@@ -182,8 +182,8 @@ mod bindings {
         #[napi]
         pub async fn get_intersected_uuid_by_pixel_pos(
             &self,
-            i: u32,
-            j: u32,
+            x: u32,
+            y: u32,
         ) -> napi::Result<Option<String>> {
             let _acquired_permit = self
                 .semaphore
@@ -196,7 +196,7 @@ mod bindings {
             let result = tokio::task::spawn_blocking(move || {
                 Ok::<Option<String>, String>(
                     inner_tracer_clone
-                        .get_intersected_uuid_by_pixel_pos(i as usize, j as usize)
+                        .get_intersected_uuid_by_pixel_pos(x as usize, y as usize)
                         .map(|u| u.to_string()),
                 )
             })

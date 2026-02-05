@@ -10,9 +10,16 @@ export const modelsIpcApi = ipcApi.injectEndpoints({
         });
       },
     }),
-    getIntersectedUuidByPixelPos: builder.mutation<string | null, { i: number; j: number }>({
-      queryFn: async ({ i, j }) => {
-        const result = await invoke('tracer:GetIntersectedUuidByPixelPos', i, j);
+    getIntersectedUuidByPixelPos: builder.mutation<
+      string | null,
+      { x: number; y: number }
+    >({
+      queryFn: async ({ x, y }) => {
+        const result = await invoke(
+          'tracer:GetIntersectedUuidByPixelPos',
+          x,
+          y,
+        );
         return processIpcResult(result, (data) => data);
       },
     }),
@@ -20,4 +27,5 @@ export const modelsIpcApi = ipcApi.injectEndpoints({
   overrideExisting: false,
 });
 
-export const { useRenderQuery, useGetIntersectedUuidByPixelPosMutation } = modelsIpcApi;
+export const { useRenderQuery, useGetIntersectedUuidByPixelPosMutation } =
+  modelsIpcApi;

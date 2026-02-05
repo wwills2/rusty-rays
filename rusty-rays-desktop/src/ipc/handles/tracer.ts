@@ -26,14 +26,16 @@ function initTracerChannels() {
     const model = getModel();
     if (model === undefined) {
       return {
-        error: new Error('No model loaded. A model must be loaded to query intersections'),
+        error: new Error(
+          'No model loaded. A model must be loaded to query intersections',
+        ),
       };
     }
 
     try {
-      const [i, j] = args;
+      const [x, y] = args;
       const tracer = new Tracer(model);
-      const maybeUuid = await tracer.getIntersectedUuidByPixelPos(i, j);
+      const maybeUuid = await tracer.getIntersectedUuidByPixelPos(x, y);
       return { data: maybeUuid ?? null };
     } catch (error: unknown) {
       return toIpcError(
