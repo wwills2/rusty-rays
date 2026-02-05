@@ -1,0 +1,24 @@
+{
+  "$schema": "https://ui.shadcn.com/schema.json",
+  "style": "new-york",
+  "rsc": false,
+  "tsx": true,
+  "tailwind": {
+    "config": "",
+    "css": "src/renderer/index.css",
+    "baseColor": "neutral",
+    "cssVariables": true,
+    "prefix": ""
+  },
+  "iconLibrary": "lucide",
+  "aliases": {
+    "components": "@/retro-ui-lib",
+    "utils": "@/retro-ui-lib/utils",
+    "ui": "@/retro-ui-lib/shadecn-components",
+    "lib": "@/retro-ui-lib",
+    "hooks": "@/retro-ui-lib/hooks"
+  },
+  "registries": {
+    "@retroui": "https://retroui.dev/r/{name}.json"
+  }
+}

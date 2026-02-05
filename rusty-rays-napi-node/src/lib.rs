@@ -2,12 +2,17 @@ mod build;
 
 use napi_derive::napi;
 
+#[allow(unused)]
 #[napi]
 mod bindings {
+    #![allow(dead_code)]
+    use napi::bindgen_prelude::Buffer;
+    use std::collections::HashMap;
     use std::str::FromStr;
     use std::sync::Arc;
 
     #[napi]
+
     pub fn log_error(message: String) -> napi::Result<()> {
         rusty_rays_core::logger::error!(rusty_rays_core::logger::LOG, "{}", message);
         Ok(())
@@ -125,7 +130,7 @@ mod bindings {
         }
 
         #[napi]
-        pub async fn render_to_serialized(&self) -> napi::Result<Vec<u8>> {
+        pub async fn render_to_image_buffer(&self, image_format: String) -> napi::Result<Buffer> {
             let _acquired_permit = self
                 .semaphore
                 .clone()
@@ -140,8 +145,8 @@ mod bindings {
                     Err(error) => return Err(error.to_string()),
                 };
 
-                match rusty_rays_core::serialize_raw_render_to_blob(&raw_render) {
-                    Ok(serialized_render) => Ok(serialized_render),
+                match rusty_rays_core::write_render_to_image_buffer(image_format, &raw_render) {
+                    Ok(serialized_render) => Ok(Buffer::from(serialized_render)),
                     Err(error) => Err(error.to_string()),
                 }
             })
@@ -173,6 +178,34 @@ mod bindings {
             .map_err(napi::Error::from_reason)?;
 
             Ok(())
+        }
+
+        #[napi]
+        pub async fn get_intersected_uuid_by_pixel_pos(
+            &self,
+            x: u32,
+            y: u32,
+        ) -> napi::Result<Option<String>> {
+            let _acquired_permit = self
+                .semaphore
+                .clone()
+                .acquire_owned()
+                .await
+                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+            let inner_tracer_clone = self.inner.clone();
+            let result = tokio::task::spawn_blocking(move || {
+                Ok::<Option<String>, String>(
+                    inner_tracer_clone
+                        .get_intersected_uuid_by_pixel_pos(x as usize, y as usize)
+                        .map(|u| u.to_string()),
+                )
+            })
+            .await
+            .map_err(|e| napi::Error::from_reason(format!("task panicked: {e}")))?
+            .map_err(napi::Error::from_reason)?;
+
+            Ok(result)
         }
     }
 
@@ -211,7 +244,7 @@ mod bindings {
         }
 
         #[napi(getter)]
-        pub async fn get_all_spheres(&self) -> napi::Result<Vec<Sphere>> {
+        pub async fn get_all_spheres(&self) -> napi::Result<HashMap<String, Sphere>> {
             let _acquired_permit = self
                 .semaphore
                 .clone()
@@ -222,8 +255,8 @@ mod bindings {
             Ok(self
                 .inner
                 .get_all_spheres()
-                .values()
-                .map(|sphere| sphere.into())
+                .iter()
+                .map(|(k, v)| (k.to_string(), v.into()))
                 .collect())
         }
 

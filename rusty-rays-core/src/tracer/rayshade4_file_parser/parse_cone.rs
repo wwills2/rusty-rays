@@ -8,14 +8,14 @@ use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::primitives::Cone;
-use crate::utils::logger::{LOG, debug};
+use crate::utils::logger::{LOG, trace};
 
 pub fn process_cone(
     keyword_line_iter: &mut Peekable<SplitWhitespace>,
     surfaces: &HashMap<String, Surface>,
     line_number: usize,
 ) -> Result<Cone, ModelError> {
-    debug!(LOG, "processing cone");
+    trace!(LOG, "processing cone");
 
     // advance past cone keyword
     keyword_line_iter.next();
@@ -109,10 +109,10 @@ pub fn process_cone(
     };
 
     let invalid_value = keyword_line_iter.next();
-    if invalid_value.is_some() {
+    if let Some(value) = invalid_value {
         return Err(FailedToParseInputFile(
             line_number,
-            format!("value {} should be on a new line", invalid_value.unwrap()),
+            format!("value {} should be on a new line", value),
         ));
     }
 

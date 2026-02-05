@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["./src/renderer/*"],
+      "#/*": ["./src/*"]
+    }
+  },
+  "files": [],
+  "references": [
+    { "path": "./tsconfig.vite.renderer.json" },
+    { "path": "./tsconfig.node.json" },
+    { "path": "./tsconfig.electron.main.json" }
+  ]
+}

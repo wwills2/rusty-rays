@@ -16,7 +16,7 @@ use crate::tracer::primitives::Sphere;
 use crate::tracer::primitives::Triangle;
 use crate::tracer::shader::Color;
 use crate::tracer::shader::light::{Light, LightSourceType};
-use crate::utils::logger::{LOG, debug, warn};
+use crate::utils::logger::{LOG, trace, warn};
 
 mod parse_cone;
 mod parse_cylinder_to_cone;
@@ -91,7 +91,7 @@ pub fn iterate_input_data<R: BufRead + 'static>(
        returns None when there are not more lines in the file.
     */
     let mut get_next_line: GetNextLineClosure = Box::new(move |maybe_next_eq_fn| {
-        debug!(
+        trace!(
             LOG,
             "attempting to retrieve input file line number {}", line_number
         );
@@ -110,10 +110,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                 "input file is empty".to_string(),
             ));
         } else if maybe_line_read_result.is_none() && maybe_next_eq_fn.is_some() {
-            debug!(LOG, "file iterator conditionally returned none.");
+            trace!(LOG, "file iterator conditionally returned none.");
             return Ok(None);
         } else if maybe_line_read_result.is_none() {
-            debug!(LOG, "file iterator returned none. reached the end of file");
+            trace!(LOG, "file iterator returned none. reached the end of file");
             return Ok(None);
         }
 
@@ -129,7 +129,7 @@ pub fn iterate_input_data<R: BufRead + 'static>(
         }
 
         let input_file_line = line_read_result.unwrap();
-        debug!(
+        trace!(
             LOG,
             "read \"{}\" from input file line {}", input_file_line, line_number
         );
@@ -185,10 +185,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             }
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
         } else if SCENE_DATA_KEYWORDS
@@ -293,10 +293,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             };
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
 
@@ -321,10 +321,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             }
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
         } else if SCENE_DATA_KEYWORDS
@@ -342,10 +342,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             }
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
         } else if SCENE_DATA_KEYWORDS.get("up").unwrap().eq(peeked_line_word) {
@@ -359,10 +359,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             }
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
         } else if SCENE_DATA_KEYWORDS.get("fov").unwrap().eq(peeked_line_word) {
@@ -411,10 +411,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             };
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
         } else if SCENE_DATA_KEYWORDS
@@ -467,10 +467,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             };
 
             let invalid_value = line_words_iter.next();
-            if invalid_value.is_some() {
+            if let Some(value) = invalid_value {
                 return Err(FailedToParseInputFile(
                     line_number,
-                    format!("value {} should be on a new line", invalid_value.unwrap()),
+                    format!("value {} should be on a new line", value),
                 ));
             }
         } else if SCENE_DATA_KEYWORDS
@@ -491,7 +491,7 @@ pub fn iterate_input_data<R: BufRead + 'static>(
         {
             let sphere =
                 parse_sphere::process_sphere(&mut line_words_iter, &surfaces, line_number)?;
-            debug!(LOG, "processed sphere {}", sphere);
+            trace!(LOG, "processed sphere {}", sphere);
             spheres.insert(sphere.uuid, sphere);
         } else if SCENE_DATA_KEYWORDS
             .get("cylinder")
@@ -503,7 +503,7 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                 &surfaces,
                 line_number,
             )?;
-            debug!(LOG, "processed cylinder as cone {}", cone);
+            trace!(LOG, "processed cylinder as cone {}", cone);
             cones.insert(cone.uuid, cone);
         } else if SCENE_DATA_KEYWORDS
             .get("cone")
@@ -511,7 +511,7 @@ pub fn iterate_input_data<R: BufRead + 'static>(
             .eq(peeked_line_word)
         {
             let cone = parse_cone::process_cone(&mut line_words_iter, &surfaces, line_number)?;
-            debug!(LOG, "processed cone {}", cone);
+            trace!(LOG, "processed cone {}", cone);
             cones.insert(cone.uuid, cone);
         } else if SCENE_DATA_KEYWORDS
             .get("polygon")
@@ -524,7 +524,7 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                 &surfaces,
                 line_number,
             )?;
-            debug!(LOG, "processed polygon");
+            trace!(LOG, "processed polygon");
             polygons.insert(polygon.uuid, polygon);
         } else if SCENE_DATA_KEYWORDS
             .get("triangle")
@@ -537,7 +537,7 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                 &surfaces,
                 line_number,
             )?;
-            debug!(LOG, "processed polygon");
+            trace!(LOG, "processed polygon");
             triangles.insert(triangle.uuid, triangle);
         } else {
             warn!(

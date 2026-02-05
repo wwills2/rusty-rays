@@ -7,7 +7,7 @@ use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
 use crate::tracer::rayshade4_file_parser::{GetNextLineClosure, NextIfClosure, SURFACE_KEYWORDS};
 use crate::tracer::shader::Color;
-use crate::utils::logger::{LOG, debug};
+use crate::utils::logger::{LOG, debug, trace};
 
 pub fn process_surface(
     determine_next_line_iter: &mut GetNextLineClosure,
@@ -15,7 +15,7 @@ pub fn process_surface(
     surfaces: &mut HashMap<String, Surface>,
     starting_line_number: usize,
 ) -> Result<(), ModelError> {
-    debug!(LOG, "processing surface");
+    trace!(LOG, "processing surface");
 
     let is_matching_line: NextIfClosure =
         Box::new(|line: &String| match line.split_whitespace().next() {
@@ -37,10 +37,10 @@ pub fn process_surface(
     };
 
     let invalid_value = keyword_line_iter.next();
-    if invalid_value.is_some() {
+    if let Some(value) = invalid_value {
         return Err(FailedToParseInputFile(
             starting_line_number,
-            format!("value {} should be on a new line", invalid_value.unwrap()),
+            format!("value {} should be on a new line", value),
         ));
     }
 
@@ -70,10 +70,6 @@ pub fn process_surface(
 
     loop {
         let line_read_result = determine_next_line_iter(Some(&is_matching_line));
-        if line_read_result.is_err() {
-            return Err(line_read_result.err().unwrap());
-        }
-
         let maybe_next_line = line_read_result?;
         if maybe_next_line.is_none() {
             debug!(

@@ -1,34 +1,13 @@
 use crate::tracer::Color;
-use bincode::config::{BigEndian, Configuration, Varint};
-use bincode::error::{DecodeError, EncodeError};
-use image::{ImageBuffer, RgbImage};
+use image::{ImageBuffer, ImageFormat, RgbImage};
 use std::fmt;
+use std::io::Cursor;
 use std::path::PathBuf;
 
 mod config;
 pub mod logger;
 
 pub use config::Config;
-
-/// Serializes the 2D vector of pixel Colors into a blob of u8 for lossless binary storage.
-/// Deserialize with deserialize_raw_to_blob
-/// This serialization does not represent a string of pixel colors.
-pub fn serialize_raw_render_to_blob(
-    raw_image_data: &Vec<Vec<Color>>,
-) -> Result<Vec<u8>, EncodeError> {
-    let config: Configuration<BigEndian, Varint> = Configuration::default();
-    bincode::serde::encode_to_vec(raw_image_data, config)
-}
-
-/// Deserializes the result of serialize_raw_to_blob into a 2D vector of pixel Color
-pub fn deserialize_blob_to_raw_render(
-    serialized_raw_image_data: &[u8],
-) -> Result<Vec<Vec<Color>>, DecodeError> {
-    let config: Configuration<BigEndian, Varint> = Configuration::default();
-    let (raw_image_data, _) = bincode::serde::decode_from_slice(serialized_raw_image_data, config)?;
-
-    Ok(raw_image_data)
-}
 
 /// Write the rendered image to a file. clamps pixel values to [0, 255]
 pub fn write_render_to_file(
@@ -52,6 +31,37 @@ pub fn write_render_to_file(
             error
         ))),
     }
+}
+
+/// Create the rendered image bytes in-memory (no filesystem I/O).
+/// Pixel values are assumed to already be clamped/converted by `raw_to_image_data`.
+pub fn write_render_to_image_buffer(
+    image_format: String,
+    raw_image_data: &Vec<Vec<Color>>,
+) -> Result<Vec<u8>, WriteError> {
+    let valid_format = match ImageFormat::from_extension(&image_format) {
+        Some(format) => format,
+        None => {
+            return Err(WriteError(format!(
+                "unsupported image format: {}",
+                image_format
+            )));
+        }
+    };
+
+    let image = raw_to_image_data(raw_image_data)?;
+
+    let mut image_buffer = Cursor::new(Vec::new());
+    image
+        .write_to(&mut image_buffer, valid_format)
+        .map_err(|e| {
+            WriteError(format!(
+                "cannot encode image to {:?}. Error: {}",
+                image_format, e
+            ))
+        })?;
+
+    Ok(image_buffer.into_inner())
 }
 
 /// normalize raw render data to an image type. clamps pixel values to [0, 255]

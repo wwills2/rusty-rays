@@ -7,10 +7,7 @@ use std::sync::OnceLock;
 pub use tracer::{
     Color, Cone, Coords, Fov, Model, Plane, Polygon, Screen, Sphere, Surface, Tracer, Triangle,
 };
-pub use utils::{
-    Config, deserialize_blob_to_raw_render, logger, serialize_raw_render_to_blob,
-    write_render_to_file,
-};
+pub use utils::{Config, logger, write_render_to_file, write_render_to_image_buffer};
 
 /// Override the default config directory. This the directory where the config file is stored,
 /// not the full path to the config file

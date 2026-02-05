@@ -1,7 +1,3 @@
-use std::collections::HashMap;
-use std::iter::Peekable;
-use std::str::SplitWhitespace;
-
 use crate::tracer::Coords;
 use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
@@ -10,7 +6,10 @@ use crate::tracer::primitives::Polygon;
 use crate::tracer::rayshade4_file_parser::{
     GetNextLineClosure, NextIfClosure, NextLine, SCENE_DATA_KEYWORDS,
 };
-use crate::utils::logger::{LOG, debug};
+use crate::utils::logger::{LOG, debug, trace};
+use std::collections::HashMap;
+use std::iter::Peekable;
+use std::str::SplitWhitespace;
 
 pub fn process_polygon(
     determine_next_line_iter: &mut GetNextLineClosure,
@@ -18,7 +17,7 @@ pub fn process_polygon(
     surfaces: &HashMap<String, Surface>,
     starting_line_number: usize,
 ) -> Result<Polygon, ModelError> {
-    debug!(LOG, "processing polygon");
+    trace!(LOG, "processing polygon");
 
     let line_number = starting_line_number;
 

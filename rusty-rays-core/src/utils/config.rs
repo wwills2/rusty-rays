@@ -1,8 +1,8 @@
 /// The logger is dependent on this file
 use crate::CONFIG_DIR_OVERRIDE;
+use crate::logger::Level;
 use once_cell::sync::Lazy;
 use serde::{Deserialize, Serialize};
-use slog::Level;
 use std::fs;
 use std::fs::File;
 use std::io::Write;
@@ -220,11 +220,8 @@ fn write_config_to_file(config: Config) -> Result<(), String> {
 fn create_config_file(config: ParsedConfig) -> Result<(), String> {
     let config_dir_path: PathBuf = get_config_dir()?;
     let create_file_result = fs::create_dir_all(&config_dir_path);
-    if create_file_result.is_err() {
-        return Err(format!(
-            "cannot create config file. Error: {}",
-            create_file_result.unwrap_err()
-        ));
+    if let Err(err) = create_file_result {
+        return Err(format!("cannot create config file. Error: {}", err));
     }
 
     let config_file_path = get_config_file_path()?;
@@ -232,14 +229,12 @@ fn create_config_file(config: ParsedConfig) -> Result<(), String> {
     match File::create_new(&config_file_path) {
         Ok(mut file) => {
             let config_contents_result = serde_json::to_string_pretty(&config);
-            if config_contents_result.is_err() {
-                return Err(format!(
-                    "cannot serialize config. Error: {}",
-                    config_contents_result.unwrap_err()
-                ));
-            }
-
-            let config_file_contents = config_contents_result.unwrap();
+            let config_file_contents = match config_contents_result {
+                Ok(contents) => contents,
+                Err(err) => {
+                    return Err(format!("cannot serialize config. Error: {}", err));
+                }
+            };
             match file.write_all(config_file_contents.as_bytes()) {
                 Ok(_) => {
                     println!("created config file {}", config_file_path.to_str().unwrap());

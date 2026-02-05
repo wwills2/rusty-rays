@@ -14,7 +14,7 @@
     "forceConsistentCasingInFileNames": true,
     "verbatimModuleSyntax": true,
     "isolatedModules": true,
-    "noEmit": false,
+    "noEmit": true,
     "allowJs": false
   },
   "include": [
