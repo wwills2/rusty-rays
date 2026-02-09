@@ -39,8 +39,7 @@ async function main() {
 
     const model = await Model.fromFilePath('../sample-files/single-sphere-test-extended.ray');
     const spheres: Record<string, Sphere> = await model.allSpheres;
-    console.log(`loaded ${Object.keys(spheres).length} spheres from model
-    `);
+    console.log(`loaded ${Object.keys(spheres).length} spheres from model`);
     const tracer = new Tracer(model);
     await tracer.renderToFile(`${testArtifactDir}/jsRender.png`);
 
