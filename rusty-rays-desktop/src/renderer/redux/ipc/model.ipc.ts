@@ -1,21 +1,27 @@
+import type { DataType } from '@/redux/ipc/index.ts';
 import { invoke, ipcApi, processIpcResult } from '@/redux/ipc/index.ts';
-import type { Sphere } from 'rusty-rays-napi-node';
 
 export const modelsIpcApi = ipcApi.injectEndpoints({
   endpoints: (builder) => ({
-    getAllSpheres: builder.query<Record<string, Sphere>, null>({
+    getAllSpheres: builder.query<DataType<'model:getAllSpheres'>, null>({
       queryFn: async () => {
         const result = await invoke('model:getAllSpheres');
         return processIpcResult(result, (data) => data);
       },
     }),
-    loadModelFromFilePath: builder.mutation<boolean, string>({
+    loadModelFromFilePath: builder.mutation<
+      DataType<'model:InitFromFilePath'>,
+      string
+    >({
       queryFn: async (inputFilePath) => {
         const result = await invoke('model:InitFromFilePath', inputFilePath);
         return processIpcResult(result, (data) => data);
       },
     }),
-    loadModelFromFile: builder.mutation<boolean, string>({
+    loadModelFromFile: builder.mutation<
+      DataType<'model:InitFromFileTextString'>,
+      string
+    >({
       queryFn: async (fileText) => {
         const result = await invoke('model:InitFromFileTextString', fileText);
         return processIpcResult(result, (data) => data);

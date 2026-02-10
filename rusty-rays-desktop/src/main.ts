@@ -1,8 +1,7 @@
-import { app, BrowserWindow, shell } from 'electron';
+import { app, BrowserWindow, session, shell } from 'electron';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
 import { initIpcChannels } from '#/ipc/handles';
-import { session } from 'electron';
 
 // ESM -> manually define __filename and __dirname
 export const __filename = fileURLToPath(import.meta.url);

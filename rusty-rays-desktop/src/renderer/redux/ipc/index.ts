@@ -58,3 +58,4 @@ const ipcApi = createApi({
 });
 
 export { ipcApi, invoke, processIpcResult };
+export type { DataType };

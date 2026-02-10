@@ -1,5 +1,5 @@
 import { handle } from './index';
-import { setModel, getModel } from '#/model-manager';
+import { getTracerInstance, setModel } from '#/tracer-manager';
 import { Model } from 'rusty-rays-napi-node';
 import { toIpcError } from '#/ipc/shared';
 
@@ -8,8 +8,15 @@ function initModelChannels() {
     try {
       const [path] = args;
       const model = await Model.fromFilePath(path);
-      setModel(model);
-      return { data: true };
+      const instanceUuid = setModel(model);
+      if (!instanceUuid) {
+        return toIpcError(
+          new Error(`invalid tracer instance uuid. recieved ${instanceUuid}`),
+          '',
+        );
+      }
+
+      return { data: { instanceUuid } };
     } catch (error) {
       return toIpcError(error, 'failed to initialize model from file');
     }
@@ -19,8 +26,15 @@ function initModelChannels() {
     try {
       const [fileText] = args;
       const model = Model.fromString(fileText);
-      setModel(model);
-      return { data: true };
+      const instanceUuid = setModel(model);
+      if (!instanceUuid) {
+        return toIpcError(
+          new Error(`invalid tracer instance uuid. received ${instanceUuid}`),
+          '',
+        );
+      }
+
+      return { data: { instanceUuid } };
     } catch (error) {
       return toIpcError(error, 'failed to initialize model from file text');
     }
@@ -28,7 +42,17 @@ function initModelChannels() {
 
   handle('model:getAllSpheres', async () => {
     try {
-      const data = await getModel()?.allSpheres;
+      const instance = getTracerInstance();
+      if (!instance) {
+        return toIpcError(
+          new Error('failed to fetch spheres. no model loaded'),
+          '',
+        );
+      }
+
+      const { model } = instance;
+      const data = await model.allSpheres;
+
       return { data };
     } catch (error) {
       return toIpcError(error, 'failed to fetch spheres');
