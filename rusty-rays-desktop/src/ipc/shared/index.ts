@@ -26,5 +26,15 @@ function toIpcError(error: unknown, altMsg: string) {
   }
 }
 
+/**
+ * Type for the status of the render process managed by the tracer manager
+ */
+type RenderStatus = {
+  tracerInstanceUuid?: string;
+  renderInProgress: boolean;
+  renderErrorMsg?: string;
+  renderImageAvailable: boolean;
+};
+
 export { ModelChannels, toIpcError, allowedChannelNames };
-export type { Result, Args, DataType, ChannelNames, ChannelDefinitionsType };
+export type { Result, Args, DataType, ChannelNames, ChannelDefinitionsType, RenderStatus };

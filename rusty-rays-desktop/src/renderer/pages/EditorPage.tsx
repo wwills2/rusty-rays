@@ -1,8 +1,8 @@
 import React, { useCallback, useEffect, useRef, useState } from 'react';
 import { Alert, Dialog, Loader } from '@/retro-ui-lib';
 import {
+  useGetRenderStatusQuery,
   useGetTracerInstanceUuidQuery,
-  useIsRenderInProgressQuery,
   useLazyGetIntersectedUuidByPixelPosQuery,
   useLazyLoadRenderImageQuery,
   useRenderMutation,
@@ -12,14 +12,14 @@ import { RenderedImageCanvasWidget } from '@/components';
 import { loadLatestRender } from '@/indexed-db-image-cache.ts';
 
 const EditorPage: React.FC = () => {
-  const [pollRenderProgress, setPollRenderProgress] = useState(true);
-  const { data: tracerUuid, isLoading: tracerUuidLoading } =
-    useGetTracerInstanceUuidQuery(null);
-  const { data: isRendering } = useIsRenderInProgressQuery(null, {
+  const [pollRenderProgress, setPollRenderProgress] = useState(false);
+  const { data: tracerUuid } = useGetTracerInstanceUuidQuery(null);
+  const { data: renderStatus } = useGetRenderStatusQuery(null, {
     pollingInterval: pollRenderProgress ? 100 : 0,
   });
   const { data: spheresMap } = useGetAllSpheresQuery(null);
-  const [triggerLoadRenderImage] = useLazyLoadRenderImageQuery();
+  const [triggerLoadRenderImage, { error: loadRenderImageError }] =
+    useLazyLoadRenderImageQuery();
   const [triggerRender] = useRenderMutation();
   const [triggerGetIntersectedUuid] =
     useLazyGetIntersectedUuidByPixelPosQuery();
@@ -28,35 +28,32 @@ const EditorPage: React.FC = () => {
     null,
   );
 
-  // check if a cached render image is available, or trigger render if not
   useEffect(() => {
     const execute = async () => {
-      if (!tracerUuid) {
-        console.error(
-          'Tracer instance UUID is not available. Ensure a model is loaded.',
-        );
-        return;
-      }
+      if (renderStatus && tracerUuid) {
+        if (renderStatus.renderInProgress) {
+          setPollRenderProgress(true);
+        } else if (renderStatus.renderImageAvailable) {
+          try {
+            setPollRenderProgress(false);
+            await triggerLoadRenderImage(tracerUuid);
+          } catch (error) {
+            console.error('Failed to load render image:', error);
+          }
+        }
 
-      const cachedImage = await loadLatestRender(tracerUuid);
-      if (cachedImage) {
-        setImageData(cachedImage);
-      } else {
-        await triggerRender(null);
-        setPollRenderProgress(true);
+        const cachedImage = await loadLatestRender(tracerUuid);
+        if (cachedImage) {
+          setImageData(cachedImage);
+        } else {
+          setPollRenderProgress(true);
+          await triggerRender(null);
+        }
       }
     };
 
-    if (!tracerUuidLoading && !isRendering && !imageData) {
-      execute().catch(console.error);
-    }
-  }, [imageData, isRendering, tracerUuid, tracerUuidLoading, triggerRender]);
-
-  useEffect(() => {
-    if (!isRendering) {
-      setPollRenderProgress(false);
-    }
-  }, []);
+    execute().catch(console.error);
+  }, [renderStatus, tracerUuid, triggerLoadRenderImage, triggerRender]);
 
   const dialogTriggerRef = useRef<HTMLButtonElement | null>(null);
   const [dialogBody, setDialogBody] = useState<string | null>(null);
@@ -95,12 +92,12 @@ const EditorPage: React.FC = () => {
 
   return (
     <div className="w-full h-full items-center justify-center">
-      {isRendering || !imageData ? (
+      {!renderStatus || renderStatus.renderInProgress || !imageData ? (
         <Loader />
       ) : (
         <div className="w-full h-full">
-          {renderError ? (
-            <Alert>An error occurred</Alert>
+          {renderStatus.renderErrorMsg || loadRenderImageError ? (
+            <Alert>{`An error occurred: ${renderStatus.renderErrorMsg || 'Failed to load render image'}`}</Alert>
           ) : (
             <div className="h-full w-full">
               <RenderedImageCanvasWidget

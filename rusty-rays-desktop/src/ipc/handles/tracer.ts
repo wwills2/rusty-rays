@@ -1,9 +1,7 @@
 import { handle } from '#/ipc/handles/index';
 import {
+  getRenderStatus,
   getTracerInstance,
-  isRenderImageAvialable,
-  isRenderInProgress,
-  takeRenderError,
   takeRenderImageData,
   triggerRender,
 } from '#/tracer-manager';
@@ -34,23 +32,15 @@ function initTracerChannels() {
     }
   });
 
-  handle('tracer:GetRenderProgress', () => {
-    const instance = getTracerInstance();
-    if (instance === undefined) {
-      return { data: false };
-    }
-    const renderInProgress = isRenderInProgress();
-    return { data: renderInProgress };
-  });
-
-  handle('tracer:GetIsRenderAvailable', () => {
-    const renderAvailable = isRenderImageAvialable();
-    return { data: renderAvailable };
+  handle('tracer:GetRenderStatus', () => {
+    const data = getRenderStatus();
+    return { data };
   });
 
   handle('tracer:GetRenderImageData', () => {
-    const renderError = takeRenderError();
-    if (renderError) {
+    const { renderErrorMsg } = getRenderStatus();
+    if (renderErrorMsg) {
+      const renderError = new Error(renderErrorMsg);
       return toIpcError(renderError, 'Render failed');
     }
     const renderImageData = takeRenderImageData();

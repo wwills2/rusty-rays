@@ -5,6 +5,7 @@
 
 import { v4 as uuidv4 } from 'uuid';
 import { Model, Tracer } from 'rusty-rays-napi-node';
+import type { RenderStatus } from '#/ipc/shared';
 
 type TracerInstance =
   | { uuid: string; model: Model; tracer: Tracer }
@@ -12,77 +13,86 @@ type TracerInstance =
 
 let tracerInstance: TracerInstance = undefined;
 let tempRenderImageData: ArrayBuffer | undefined = undefined;
-let renderInProgress = false;
-let renderError: Error | undefined = undefined;
+let renderStatus: RenderStatus = {
+  renderInProgress: false,
+  renderImageAvailable: false,
+  renderErrorMsg: undefined,
+  tracerInstanceUuid: undefined,
+};
 
 function getTracerInstance(): TracerInstance | undefined {
   return tracerInstance;
 }
 
 function setModel(model: Model | undefined): string | undefined {
-  if (renderInProgress) {
+  if (renderStatus.renderInProgress) {
     throw new Error('Cannot set model. render in progress');
   }
 
   tempRenderImageData = undefined;
-  renderError = undefined;
 
   if (model) {
     tracerInstance = { uuid: uuidv4(), model, tracer: new Tracer(model) };
+    resetRenderStatus();
     return tracerInstance.uuid;
   } else {
     tracerInstance = undefined;
+    resetRenderStatus();
   }
 }
 
 async function triggerRender() {
-  renderError = undefined;
+  if (renderStatus.renderInProgress) {
+    throw new Error('Render already in progress');
+  }
 
-  if (!tracerInstance) {
-    renderError = new Error(
-      'No model loaded. A model must be loaded to render',
-    );
+  resetRenderStatus();
+
+  const instance = tracerInstance;
+  if (!instance) {
+    renderStatus.renderErrorMsg =
+      'No model loaded. A model must be loaded to render';
     return;
   }
 
-  if (renderInProgress) {
-    renderError = new Error('Render already in progress');
-  }
-
   try {
-    renderInProgress = true;
-    const imageData = await tracerInstance.tracer.renderToImageBuffer('png');
+    renderStatus.renderInProgress = true;
+    const imageData = await instance.tracer.renderToImageBuffer('png');
     tempRenderImageData = new Uint8Array(imageData).slice().buffer;
-    renderError = undefined;
+    renderStatus.renderImageAvailable = true;
   } catch (error) {
     if (error instanceof Error) {
-      renderError = error;
+      renderStatus.renderErrorMsg = error.message;
     } else {
-      renderError = new Error(`Unknown error: ${JSON.stringify(error)}`);
+      renderStatus.renderErrorMsg = `Unknown error: ${JSON.stringify(error)}`;
     }
   } finally {
-    renderInProgress = false;
+    renderStatus.renderInProgress = false;
   }
-}
-
-function isRenderInProgress() {
-  return renderInProgress;
-}
-
-function isRenderImageAvialable() {
-  return !!tempRenderImageData;
 }
 
 function takeRenderImageData() {
+  resetRenderStatus();
   const copy = tempRenderImageData;
   tempRenderImageData = undefined;
   return copy;
 }
 
-function takeRenderError() {
-  const copy = renderError;
-  renderError = undefined;
-  return copy;
+function getRenderStatus() {
+  return { ...renderStatus, tracerInstanceUuid: tracerInstance?.uuid };
+}
+
+function resetRenderStatus() {
+  if (renderStatus.renderInProgress) {
+    throw new Error('Cannot reset render status. Render in progress');
+  }
+
+  renderStatus = {
+    renderInProgress: false,
+    renderImageAvailable: false,
+    renderErrorMsg: undefined,
+    tracerInstanceUuid: tracerInstance?.uuid,
+  };
 }
 
 export {
@@ -90,8 +100,6 @@ export {
   setModel,
   triggerRender,
   takeRenderImageData,
-  takeRenderError,
-  isRenderInProgress,
-  isRenderImageAvialable,
+  getRenderStatus,
 };
-export type { TracerInstance };
+export type { TracerInstance};

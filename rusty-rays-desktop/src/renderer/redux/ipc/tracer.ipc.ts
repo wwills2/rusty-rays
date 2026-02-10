@@ -1,9 +1,6 @@
 import type { DataType } from '@/redux/ipc/index.ts';
 import { invoke, ipcApi, processIpcResult } from '@/redux/ipc/index.ts';
-import {
-  loadLatestRender,
-  saveLatestRender,
-} from '@/indexed-db-image-cache.ts';
+import { saveLatestRender } from '@/indexed-db-image-cache.ts';
 
 export const tracerIpcApi = ipcApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -13,24 +10,14 @@ export const tracerIpcApi = ipcApi.injectEndpoints({
         return processIpcResult(result, (data) => data);
       },
     }),
-    isRenderInProgress: builder.query<
-      DataType<'tracer:GetRenderProgress'>,
-      null
-    >({
+    getRenderStatus: builder.query<DataType<'tracer:GetRenderStatus'>, null>({
       queryFn: async () => {
-        const result = await invoke('tracer:GetRenderProgress');
+        const result = await invoke('tracer:GetRenderStatus');
         return processIpcResult(result, (data) => data);
       },
     }),
     loadRenderImage: builder.query<boolean, string>({
       queryFn: async (instanceUuid) => {
-        // If already cached, do not fetch, do not touch Redux with bytes
-        const cached = await loadLatestRender(instanceUuid);
-        if (cached?.byteLength) {
-          return { data: true };
-        }
-
-        // Fetch via IPC (if invoke or processIpcResult throws, we let it throw)
         const result = await invoke('tracer:GetRenderImageData');
         const { data: imageData } = processIpcResult(result, (data) => {
           return new Uint8Array(data);
@@ -69,7 +56,7 @@ export const tracerIpcApi = ipcApi.injectEndpoints({
 export const {
   useRenderMutation,
   useLazyGetIntersectedUuidByPixelPosQuery,
-  useIsRenderInProgressQuery,
   useGetTracerInstanceUuidQuery,
   useLazyLoadRenderImageQuery,
+  useGetRenderStatusQuery,
 } = tracerIpcApi;

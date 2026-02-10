@@ -1,11 +1,13 @@
+import type { RenderStatus } from './index';
+
 const TracerChannels = {
   'tracer:TriggerRender': {
     args: [],
     dataType: {} as true,
   },
-  'tracer:GetRenderProgress': {
+  'tracer:GetRenderStatus': {
     args: [],
-    dataType: {} as boolean,
+    dataType: {} as RenderStatus,
   },
   'tracer:GetInstanceUuid': {
     args: [],
@@ -14,10 +16,6 @@ const TracerChannels = {
   'tracer:GetRenderImageData': {
     args: [],
     dataType: {} as ArrayBuffer,
-  },
-  'tracer:GetIsRenderAvailable': {
-    args: [],
-    dataType: {} as boolean,
   },
   'tracer:GetIntersectedUuidByPixelPos': {
     args: [] as unknown as [i: number, j: number],
