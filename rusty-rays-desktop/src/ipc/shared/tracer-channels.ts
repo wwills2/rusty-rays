@@ -1,7 +1,23 @@
 const TracerChannels = {
-  'tracer:Render': {
+  'tracer:TriggerRender': {
     args: [],
-    dataType: {} as unknown as ArrayBuffer,
+    dataType: {} as true,
+  },
+  'tracer:GetRenderProgress': {
+    args: [],
+    dataType: {} as boolean,
+  },
+  'tracer:GetInstanceUuid': {
+    args: [],
+    dataType: {} as string,
+  },
+  'tracer:GetRenderImageData': {
+    args: [],
+    dataType: {} as ArrayBuffer,
+  },
+  'tracer:GetIsRenderAvailable': {
+    args: [],
+    dataType: {} as boolean,
   },
   'tracer:GetIntersectedUuidByPixelPos': {
     args: [] as unknown as [i: number, j: number],

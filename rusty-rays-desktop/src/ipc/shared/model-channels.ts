@@ -3,11 +3,11 @@ import type { Sphere } from 'rusty-rays-napi-node';
 const ModelChannels = {
   'model:InitFromFilePath': {
     args: [] as unknown as [path: string],
-    dataType: {} as true,
+    dataType: {} as { instanceUuid: string },
   },
   'model:InitFromFileTextString': {
     args: [] as unknown as [fileContent: string],
-    dataType: {} as true,
+    dataType: {} as { instanceUuid: string },
   },
   'model:getAllSpheres': {
     args: [],
