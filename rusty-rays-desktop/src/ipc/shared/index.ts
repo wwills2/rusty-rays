@@ -37,4 +37,11 @@ type RenderStatus = {
 };
 
 export { ModelChannels, toIpcError, allowedChannelNames };
-export type { Result, Args, DataType, ChannelNames, ChannelDefinitionsType, RenderStatus };
+export type {
+  Result,
+  Args,
+  DataType,
+  ChannelNames,
+  ChannelDefinitionsType,
+  RenderStatus,
+};

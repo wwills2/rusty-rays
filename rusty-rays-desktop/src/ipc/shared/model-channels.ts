@@ -13,6 +13,10 @@ const ModelChannels = {
     args: [],
     dataType: {} as Record<string, Sphere>,
   },
+  'model:SetModel': {
+    args: [] as unknown as [modelUuid: string | undefined],
+    dataType: {} as boolean,
+  },
 };
 
 export { ModelChannels };

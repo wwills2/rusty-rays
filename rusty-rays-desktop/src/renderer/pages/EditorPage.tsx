@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { Alert, Dialog, Loader } from '@/retro-ui-lib';
 import {
   useGetRenderStatusQuery,
@@ -8,16 +8,40 @@ import {
   useRenderMutation,
 } from '@/redux/ipc/tracer.ipc.ts';
 import { useGetAllSpheresQuery } from '@/redux/ipc/model.ipc.ts';
-import { RenderedImageCanvasWidget } from '@/components';
+import { CloseModelButton, RenderedImageCanvasWidget } from '@/components';
 import { loadLatestRender } from '@/indexed-db-image-cache.ts';
+import { useNavigate } from 'react-router';
+import ROUTES from '@/routes/route-constants.ts';
 
 const EditorPage: React.FC = () => {
+  const navigate = useNavigate();
+  // tracer needs to be loaded for this page to work
+  const { data: tracerInstanceUuid, isLoading: tracerInstanceUuidLoading } =
+    useGetTracerInstanceUuidQuery(null);
+  const tracerLoaded = useMemo(
+    () =>
+      !tracerInstanceUuid ||
+      !(tracerInstanceUuid === 'TRACER_INSTANCE_NOT_LOADED'),
+    [tracerInstanceUuid],
+  );
+
+  // navigate off the page if tracer is not loaded
+  useEffect(() => {
+    if (!tracerLoaded) {
+      navigate(ROUTES.LANDING)?.catch((error: unknown) => {
+        console.log('failed to navigate:', error);
+      });
+    }
+  }, [navigate, tracerLoaded]);
+
   const [pollRenderProgress, setPollRenderProgress] = useState(false);
-  const { data: tracerUuid } = useGetTracerInstanceUuidQuery(null);
   const { data: renderStatus } = useGetRenderStatusQuery(null, {
     pollingInterval: pollRenderProgress ? 100 : 0,
+    skip: !tracerLoaded || tracerInstanceUuidLoading,
   });
-  const { data: spheresMap } = useGetAllSpheresQuery(null);
+  const { data: spheresMap } = useGetAllSpheresQuery(null, {
+    skip: !tracerLoaded || tracerInstanceUuidLoading,
+  });
   const [triggerLoadRenderImage, { error: loadRenderImageError }] =
     useLazyLoadRenderImageQuery();
   const [triggerRender] = useRenderMutation();
@@ -27,22 +51,23 @@ const EditorPage: React.FC = () => {
   const [imageData, setImageData] = useState<Uint8Array<ArrayBuffer> | null>(
     null,
   );
+  const [dialogMessage, setDialogMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const execute = async () => {
-      if (renderStatus && tracerUuid) {
+      if (renderStatus && tracerInstanceUuid) {
         if (renderStatus.renderInProgress) {
           setPollRenderProgress(true);
         } else if (renderStatus.renderImageAvailable) {
           try {
             setPollRenderProgress(false);
-            await triggerLoadRenderImage(tracerUuid);
+            await triggerLoadRenderImage(tracerInstanceUuid);
           } catch (error) {
             console.error('Failed to load render image:', error);
           }
         }
 
-        const cachedImage = await loadLatestRender(tracerUuid);
+        const cachedImage = await loadLatestRender(tracerInstanceUuid);
         if (cachedImage) {
           setImageData(cachedImage);
         } else {
@@ -53,10 +78,7 @@ const EditorPage: React.FC = () => {
     };
 
     execute().catch(console.error);
-  }, [renderStatus, tracerUuid, triggerLoadRenderImage, triggerRender]);
-
-  const dialogTriggerRef = useRef<HTMLButtonElement | null>(null);
-  const [dialogBody, setDialogBody] = useState<string | null>(null);
+  }, [renderStatus, tracerInstanceUuid, triggerLoadRenderImage, triggerRender]);
 
   const handlePixelClick = useCallback(
     (x: number, y: number) => {
@@ -71,17 +93,13 @@ const EditorPage: React.FC = () => {
 
           const sphere = spheresMap ? spheresMap[uuid] : undefined;
           if (sphere) {
-            setDialogBody(JSON.stringify(sphere, null, 2));
+            setDialogMessage(JSON.stringify(sphere, null, 2));
           } else {
-            setDialogBody('The object information could not be retrieved.');
+            setDialogMessage('The object information could not be retrieved.');
           }
-
-          // open dialog
-          dialogTriggerRef.current?.click();
         } catch {
           // on IPC error, show retrieval message
-          setDialogBody('The object information could not be retrieved.');
-          dialogTriggerRef.current?.click();
+          setDialogMessage('The object information could not be retrieved.');
         }
       };
 
@@ -100,30 +118,37 @@ const EditorPage: React.FC = () => {
             <Alert>{`An error occurred: ${renderStatus.renderErrorMsg || 'Failed to load render image'}`}</Alert>
           ) : (
             <div className="h-full w-full">
-              <RenderedImageCanvasWidget
-                imageData={imageData}
-                onClickImagePixel={handlePixelClick}
-              />
-              <Dialog>
-                <Dialog.Trigger asChild>
-                  <button className="hidden" ref={dialogTriggerRef} />
-                </Dialog.Trigger>
-                <Dialog.Content>
-                  <Dialog.Header>Sphere info</Dialog.Header>
-                  {dialogBody ? (
-                    <pre
-                      style={{
-                        whiteSpace: 'pre-wrap',
-                        fontSize: 12,
-                        lineHeight: 1.4,
-                        fontFamily: 'monospace',
-                      }}
-                    >
-                      {dialogBody}
-                    </pre>
-                  ) : null}
-                </Dialog.Content>
-              </Dialog>
+              <CloseModelButton />
+              <div className="h-full w-full">
+                <RenderedImageCanvasWidget
+                  imageData={imageData}
+                  onClickImagePixel={handlePixelClick}
+                />
+              </div>
+              {dialogMessage && (
+                <Dialog
+                  open
+                  onOpenChange={() => {
+                    setDialogMessage(null);
+                  }}
+                >
+                  <Dialog.Content>
+                    <Dialog.Header>Sphere info</Dialog.Header>
+                    {dialogMessage ? (
+                      <pre
+                        style={{
+                          whiteSpace: 'pre-wrap',
+                          fontSize: 12,
+                          lineHeight: 1.4,
+                          fontFamily: 'monospace',
+                        }}
+                      >
+                        {dialogMessage}
+                      </pre>
+                    ) : null}
+                  </Dialog.Content>
+                </Dialog>
+              )}
             </div>
           )}
         </div>

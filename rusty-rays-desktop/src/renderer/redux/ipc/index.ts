@@ -13,16 +13,24 @@ import {
 } from '../../../ipc/shared';
 
 function processIpcResult<CN extends ChannelNames, R>(
+  channelName: CN,
   result: Result<CN>,
   operation: (data: DataType<CN>) => R,
 ) {
-  if (result.data) {
+  if (result.data !== undefined && result.error === undefined) {
     return { data: operation(result.data) };
   } else {
     if (result.error instanceof Error) {
-      throw result.error;
+      throw new Error(
+        `IPC channel ${channelName} returned error: ${result.error.message}`,
+        {
+          cause: result.error,
+        },
+      );
     } else {
-      throw new Error(`Unknow IPC error: ${JSON.stringify(result.error)}`);
+      throw new Error(
+        `IPC channel ${channelName} returned unknown error: ${JSON.stringify(result.error)}`,
+      );
     }
   }
 }
@@ -55,6 +63,7 @@ const ipcApi = createApi({
   reducerPath: 'ipcApi',
   endpoints: () => ({}),
   baseQuery: fakeBaseQuery(),
+  tagTypes: [...allowedChannelNames],
 });
 
 export { ipcApi, invoke, processIpcResult };
