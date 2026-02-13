@@ -1,8 +1,7 @@
 import { BrowserRouter, Navigate, Route, Routes } from 'react-router';
 import React from 'react';
 import ROUTES from '@/routes/route-constants.ts';
-import { LandingPage } from '@/pages';
-import { EditorPage } from '@/pages/EditorPage.tsx';
+import { EditorPage, LandingPage } from '@/pages';
 
 const AppRouter: React.FC = () => {
   return (

@@ -1,55 +1,67 @@
 import type { DataType } from '@/redux/ipc/index.ts';
 import { invoke, ipcApi, processIpcResult } from '@/redux/ipc/index.ts';
-import { saveLatestRender } from '@/indexed-db-image-cache.ts';
+import { clearCache, saveLatestRender } from '@/indexed-db-image-cache.ts';
 
 export const tracerIpcApi = ipcApi.injectEndpoints({
   endpoints: (builder) => ({
     render: builder.mutation<DataType<'tracer:TriggerRender'>, null>({
       queryFn: async () => {
-        const result = await invoke('tracer:TriggerRender');
-        return processIpcResult(result, (data) => data);
+        const channelName = 'tracer:TriggerRender';
+        const result = await invoke(channelName);
+        return processIpcResult(channelName, result, (data) => data);
       },
+      invalidatesTags: ['tracer:GetRenderStatus', 'tracer:GetRenderImageData'],
     }),
+
     getRenderStatus: builder.query<DataType<'tracer:GetRenderStatus'>, null>({
       queryFn: async () => {
-        const result = await invoke('tracer:GetRenderStatus');
-        return processIpcResult(result, (data) => data);
+        const channelName = 'tracer:GetRenderStatus';
+        const result = await invoke(channelName);
+        return processIpcResult(channelName, result, (data) => data);
       },
     }),
+
     loadRenderImage: builder.query<boolean, string>({
       queryFn: async (instanceUuid) => {
-        const result = await invoke('tracer:GetRenderImageData');
-        const { data: imageData } = processIpcResult(result, (data) => {
-          return new Uint8Array(data);
-        });
+        const channelName = 'tracer:GetRenderImageData';
+        const result = await invoke(channelName);
 
+        const { data: imageData } = processIpcResult(
+          channelName,
+          result,
+          (data) => new Uint8Array(data),
+        );
+        await clearCache();
         await saveLatestRender(instanceUuid, imageData);
         return { data: true };
       },
     }),
+
     getTracerInstanceUuid: builder.query<
       DataType<'tracer:GetInstanceUuid'>,
       null
     >({
       queryFn: async () => {
-        const result = await invoke('tracer:GetInstanceUuid');
-        return processIpcResult(result, (data) => data);
+        const channelName = 'tracer:GetInstanceUuid';
+        const result = await invoke(channelName);
+        return processIpcResult(channelName, result, (data) => data);
       },
+      providesTags: ['tracer:GetInstanceUuid'],
     }),
+
     getIntersectedUuidByPixelPos: builder.query<
       string | null,
       { x: number; y: number }
     >({
       queryFn: async ({ x, y }) => {
-        const result = await invoke(
-          'tracer:GetIntersectedUuidByPixelPos',
-          x,
-          y,
-        );
-        return processIpcResult(result, (data) => data);
+        const channelName = 'tracer:GetIntersectedUuidByPixelPos';
+        const result = await invoke(channelName, x, y);
+        return processIpcResult(channelName, result, (data) => data);
       },
+      providesTags: ['tracer:GetIntersectedUuidByPixelPos'],
     }),
   }),
+
   overrideExisting: false,
 });
 

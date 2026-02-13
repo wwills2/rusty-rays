@@ -2,7 +2,7 @@
 
 export type RendererCache = {
   latestRender?: Uint8Array;
-  tracerUuid?: string;
+  tracerInstanceUuid?: string;
 };
 
 const DB_NAME = 'renderer-cache';
@@ -30,7 +30,7 @@ function openDB(): Promise<IDBDatabase> {
 }
 
 async function saveLatestRender(
-  tracerUuid: string,
+  tracerInstanceUuid: string,
   data: Uint8Array,
 ): Promise<void> {
   const blob = new Blob([new Uint8Array(data).slice().buffer], {
@@ -41,7 +41,7 @@ async function saveLatestRender(
   const tx = db.transaction(STORE_NAME, 'readwrite');
   const store = tx.objectStore(STORE_NAME);
 
-  store.put(blob, tracerUuid);
+  store.put(blob, tracerInstanceUuid);
 
   return new Promise((resolve, reject) => {
     tx.oncomplete = () => {
@@ -54,12 +54,12 @@ async function saveLatestRender(
 }
 
 async function loadLatestRender(
-  tracerUuid: string,
+  tracerInstanceUuid: string,
 ): Promise<Uint8Array<ArrayBuffer> | undefined> {
   const db = await openDB();
   const tx = db.transaction(STORE_NAME, 'readonly');
   const store = tx.objectStore(STORE_NAME);
-  const request = store.get(tracerUuid);
+  const request = store.get(tracerInstanceUuid);
 
   return new Promise((resolve, reject) => {
     request.onsuccess = async () => {

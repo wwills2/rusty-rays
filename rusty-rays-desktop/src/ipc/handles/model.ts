@@ -58,6 +58,21 @@ function initModelChannels() {
       return toIpcError(error, 'failed to fetch spheres');
     }
   });
+
+  handle('model:SetModel', (_, args) => {
+    try {
+      const [uuid] = args;
+      if (uuid === undefined) {
+        setModel(undefined);
+        return { data: true };
+      } else {
+        // todo load the model corresponding to the uuid if provided. functionality yet to be implemented
+        return toIpcError(new Error(`cannot load model with uuid ${uuid}`), '');
+      }
+    } catch (error) {
+      return toIpcError(error, 'failed to set model');
+    }
+  });
 }
 
 export { initModelChannels };

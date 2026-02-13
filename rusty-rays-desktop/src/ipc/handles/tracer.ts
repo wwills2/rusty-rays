@@ -11,7 +11,7 @@ function initTracerChannels() {
   handle('tracer:GetInstanceUuid', () => {
     const instance = getTracerInstance();
     if (instance === undefined) {
-      return { data: undefined };
+      return { data: 'TRACER_INSTANCE_NOT_LOADED' };
     }
     return { data: instance.uuid };
   });
@@ -25,6 +25,7 @@ function initTracerChannels() {
     }
 
     try {
+      // do not await, let this process continue in the background
       triggerRender().catch(() => {});
       return { data: true };
     } catch (error: unknown) {
