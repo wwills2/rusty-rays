@@ -135,17 +135,17 @@ const RenderedImageCanvasWidget: React.FC<RenderedImageCanvasWigetProps> = ({
     resizeObserver.observe(canvas);
 
     // Also redraw if devicePixelRatio changes (zoom / moving window between monitors)
-    const mq = window.matchMedia(
+    const mediaQueryList = window.matchMedia(
       `(resolution: ${window.devicePixelRatio}dppx)`,
     );
     const onDprChange = () => {
       draw();
     };
-    mq.addEventListener('change', onDprChange);
+    mediaQueryList.addEventListener('change', onDprChange);
 
     return () => {
       resizeObserver.disconnect();
-      mq.removeEventListener('change', onDprChange);
+      mediaQueryList.removeEventListener('change', onDprChange);
     };
   }, []);
 
@@ -200,7 +200,7 @@ const RenderedImageCanvasWidget: React.FC<RenderedImageCanvasWigetProps> = ({
   }, []);
 
   return (
-    <div className="w-full h-full">
+    <div className="w-full h-full relative">
       <canvas
         ref={canvasRef}
         onMouseMove={onMouseMove}
@@ -210,7 +210,6 @@ const RenderedImageCanvasWidget: React.FC<RenderedImageCanvasWigetProps> = ({
           width: '100%',
           height: '100%',
           display: 'block',
-          position: 'relative',
           background: 'black',
         }}
       />

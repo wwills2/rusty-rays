@@ -109,17 +109,21 @@ const EditorPage: React.FC = () => {
   );
 
   return (
-    <div className="w-full h-full items-center justify-center">
+    <div className="flex flex-col w-full h-full items-center justify-center">
       {!renderStatus || renderStatus.renderInProgress || !imageData ? (
-        <Loader />
+        <div>
+          <Loader />
+        </div>
       ) : (
         <div className="w-full h-full">
           {renderStatus.renderErrorMsg || loadRenderImageError ? (
             <Alert>{`An error occurred: ${renderStatus.renderErrorMsg || 'Failed to load render image'}`}</Alert>
           ) : (
-            <div className="h-full w-full">
-              <CloseModelButton />
-              <div className="h-full w-full">
+            <div className="flex flex-col h-full w-full">
+              <div>
+                <CloseModelButton />
+              </div>
+              <div className="flex-1 min-h-0">
                 <RenderedImageCanvasWidget
                   imageData={imageData}
                   onClickImagePixel={handlePixelClick}
@@ -134,18 +138,14 @@ const EditorPage: React.FC = () => {
                 >
                   <Dialog.Content>
                     <Dialog.Header>Sphere info</Dialog.Header>
-                    {dialogMessage ? (
-                      <pre
-                        style={{
-                          whiteSpace: 'pre-wrap',
-                          fontSize: 12,
-                          lineHeight: 1.4,
-                          fontFamily: 'monospace',
-                        }}
-                      >
-                        {dialogMessage}
-                      </pre>
-                    ) : null}
+                    <Dialog.Description
+                      style={{
+                        whiteSpace: 'pre-wrap',
+                        fontSize: 12,
+                      }}
+                    >
+                      {dialogMessage || null}
+                    </Dialog.Description>
                   </Dialog.Content>
                 </Dialog>
               )}
