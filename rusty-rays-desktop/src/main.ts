@@ -64,6 +64,8 @@ function createMainWindow() {
   }
 }
 
+app.commandLine.appendSwitch('enable-features', 'OverlayScrollbar');
+
 app
   .whenReady()
   .then(() => {

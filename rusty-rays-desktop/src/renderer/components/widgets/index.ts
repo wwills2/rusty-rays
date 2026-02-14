@@ -1,1 +1,1 @@
-export * from './renderedImageCanvasWidget.tsx';
+export * from './RenderedImageCanvasWidget.tsx';

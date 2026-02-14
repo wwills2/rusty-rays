@@ -37,14 +37,20 @@ export const tracerIpcApi = ipcApi.injectEndpoints({
       },
     }),
 
-    getTracerInstanceUuid: builder.query<
-      DataType<'tracer:GetInstanceUuid'>,
-      null
-    >({
+    getTracerInstanceUuid: builder.query<string | undefined, null>({
       queryFn: async () => {
         const channelName = 'tracer:GetInstanceUuid';
         const result = await invoke(channelName);
-        return processIpcResult(channelName, result, (data) => data);
+        const { data: tracerInstanceUuid } = processIpcResult(
+          channelName,
+          result,
+          (data) => data,
+        );
+        if (tracerInstanceUuid === 'TRACER_INSTANCE_NOT_LOADED') {
+          return { data: undefined };
+        } else {
+          return { data: tracerInstanceUuid };
+        }
       },
       providesTags: ['tracer:GetInstanceUuid'],
     }),

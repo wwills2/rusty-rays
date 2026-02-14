@@ -210,7 +210,16 @@ const RenderedImageCanvasWidget: React.FC<RenderedImageCanvasWigetProps> = ({
           width: '100%',
           height: '100%',
           display: 'block',
-          background: 'black',
+          backgroundColor: 'var(--color-background)',
+
+          backgroundImage: `
+    linear-gradient(45deg, var(--color-muted) 25%, transparent 25%),
+    linear-gradient(-45deg, var(--color-muted) 25%, transparent 25%),
+    linear-gradient(45deg, transparent 75%, var(--color-muted) 75%),
+    linear-gradient(-45deg, transparent 75%, var(--color-muted) 75%)
+  `,
+          backgroundSize: '20px 20px',
+          backgroundPosition: '0 0, 0 10px, 10px -10px, -10px 0px',
         }}
       />
       <div
