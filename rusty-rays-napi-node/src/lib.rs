@@ -116,35 +116,29 @@ mod bindings {
 
     #[napi]
     pub struct Tracer {
-        inner: Arc<rusty_rays_core::Tracer>,
-        semaphore: Arc<tokio::sync::Semaphore>,
+        inner: Arc<tokio::sync::Mutex<rusty_rays_core::Tracer>>,
     }
 
     #[napi]
     impl Tracer {
-        #[napi(constructor)]
-        pub fn new(model: &Model) -> napi::Result<Self> {
-            let model_clone = (*model.inner).clone();
+        #[napi(factory)]
+        pub async fn create(model: &Model) -> napi::Result<Self> {
+            let model_guard = model.inner.lock().await;
+            let model_clone = (*model_guard).clone();
             let tracer = rusty_rays_core::Tracer::new(model_clone);
 
             Ok(Self {
-                inner: Arc::new(tracer),
-                semaphore: Arc::new(tokio::sync::Semaphore::new(1)),
+                inner: Arc::new(tokio::sync::Mutex::new(tracer)),
             })
         }
 
         #[napi]
         pub async fn render_to_image_buffer(&self, image_format: String) -> napi::Result<Buffer> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
             let inner_tracer_clone = self.inner.clone();
             let raw_image = tokio::task::spawn_blocking(move || {
-                let raw_render = match inner_tracer_clone.render() {
+                let tracer_guard = inner_tracer_clone.blocking_lock();
+
+                let raw_render = match tracer_guard.render() {
                     Ok(render) => render,
                     Err(error) => return Err(error.to_string()),
                 };
@@ -163,11 +157,10 @@ mod bindings {
 
         #[napi]
         pub async fn render_to_file(&self, output_file_path: String) -> napi::Result<()> {
-            let _acquired_permit = self.semaphore.clone().acquire_owned().await;
-
             let inner_tracer_clone = self.inner.clone();
             tokio::task::spawn_blocking(move || {
-                let raw_render = match inner_tracer_clone.render() {
+                let tracer_guard = inner_tracer_clone.blocking_lock();
+                let raw_render = match tracer_guard.render() {
                     Ok(render) => render,
                     Err(error) => return Err(error.to_string()),
                 };
@@ -190,27 +183,12 @@ mod bindings {
             x: u32,
             y: u32,
         ) -> napi::Result<Option<IntersectedObjectInfo>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            let inner_tracer_clone = self.inner.clone();
-            let result = tokio::task::spawn_blocking(move || {
-                Ok::<Option<IntersectedObjectInfo>, String>(
-                    inner_tracer_clone
-                        .get_intersected_uuid_by_pixel_pos(x as usize, y as usize)
-                        .map(|(u, t)| IntersectedObjectInfo {
-                            uuid: u.to_string(),
-                            object_type: t,
-                        }),
-                )
-            })
-            .await
-            .map_err(|e| napi::Error::from_reason(format!("task panicked: {e}")))?
-            .map_err(napi::Error::from_reason)?;
+            let tracer_guard = self.inner.lock().await;
+            let result = tracer_guard.get_intersected_uuid_by_pixel_pos(x as usize, y as usize)
+                .map(|(u, t)| IntersectedObjectInfo {
+                    uuid: u.to_string(),
+                    object_type: t,
+                });
 
             Ok(result)
         }
@@ -218,8 +196,7 @@ mod bindings {
 
     #[napi]
     pub struct Model {
-        inner: Arc<rusty_rays_core::Model>,
-        semaphore: Arc<tokio::sync::Semaphore>,
+        inner: Arc<tokio::sync::Mutex<rusty_rays_core::Model>>,
     }
 
     #[napi]
@@ -235,8 +212,7 @@ mod bindings {
             .map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
             Ok(Self {
-                inner: Arc::new(model),
-                semaphore: Arc::new(tokio::sync::Semaphore::new(1)),
+                inner: Arc::new(tokio::sync::Mutex::new(model)),
             })
         }
 
@@ -245,22 +221,15 @@ mod bindings {
             let model = rusty_rays_core::Model::from_string(input_string)
                 .map_err(|e| napi::Error::new(napi::Status::GenericFailure, e.to_string()))?;
             Ok(Self {
-                inner: Arc::new(model),
-                semaphore: Arc::new(tokio::sync::Semaphore::new(1)),
+                inner: Arc::new(tokio::sync::Mutex::new(model)),
             })
         }
 
         #[napi(getter)]
         pub async fn get_all_spheres(&self) -> napi::Result<HashMap<String, Sphere>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+            let model_guard = self.inner.lock().await;
 
-            Ok(self
-                .inner
+            Ok(model_guard
                 .get_all_spheres()
                 .iter()
                 .map(|(k, v)| (k.to_string(), v.into()))
@@ -269,15 +238,9 @@ mod bindings {
 
         #[napi(getter)]
         pub async fn get_all_cones(&self) -> napi::Result<HashMap<String, Cone>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+            let model_guard = self.inner.lock().await;
 
-            Ok(self
-                .inner
+            Ok(model_guard
                 .get_all_cones()
                 .iter()
                 .map(|(k, v)| (k.to_string(), v.into()))
@@ -286,15 +249,9 @@ mod bindings {
 
         #[napi(getter)]
         pub async fn get_all_polygons(&self) -> napi::Result<HashMap<String, Polygon>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+            let model_guard = self.inner.lock().await;
 
-            Ok(self
-                .inner
+            Ok(model_guard
                 .get_all_polygons()
                 .iter()
                 .map(|(k, v)| (k.to_string(), v.into()))
@@ -303,15 +260,9 @@ mod bindings {
 
         #[napi(getter)]
         pub async fn get_all_triangles(&self) -> napi::Result<HashMap<String, Triangle>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+            let model_guard = self.inner.lock().await;
 
-            Ok(self
-                .inner
+            Ok(model_guard
                 .get_all_triangles()
                 .iter()
                 .map(|(k, v)| (k.to_string(), v.into()))
@@ -319,219 +270,72 @@ mod bindings {
         }
 
         #[napi]
-        pub async unsafe fn upsert_sphere(
-            &mut self,
-            sphere: Sphere,
-        ) -> napi::Result<Option<Sphere>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            let inner = match Arc::get_mut(&mut self.inner) {
-                Some(inner) => inner,
-                None => {
-                    return Err(napi::Error::from_reason(
-                        "Cannot modify model: multiple references exist",
-                    ));
-                }
-            };
-
-            let core_sphere = sphere.try_into()?;
-
-            Ok(inner.upsert_sphere(core_sphere).map(|s| (&s).into()))
+        pub async fn upsert_sphere(&self, sphere: Sphere) -> napi::Result<Option<Sphere>> {
+            let mut model_guard = self.inner.lock().await;
+            Ok(model_guard.upsert_sphere(sphere.try_into()?).map(|s| (&s).into()))
         }
 
         #[napi]
-        pub async unsafe fn delete_sphere(&mut self, uuid: String) -> napi::Result<Option<Sphere>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+        pub async fn delete_sphere(&self, uuid: String) -> napi::Result<Option<Sphere>> {
+            let uuid =
+                Uuid::from_str(&uuid).map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-            let inner = match Arc::get_mut(&mut self.inner) {
-                Some(inner) => inner,
-                None => {
-                    return Err(napi::Error::from_reason(
-                        "Cannot modify model: multiple references exist",
-                    ));
-                }
-            };
+            let mut model_guard = self.inner.lock().await;
+            Ok(model_guard.delete_sphere(uuid).map(|s| (&s).into()))
+        }
+
+        #[napi]
+        pub async fn upsert_cone(&self, cone: Cone) -> napi::Result<Option<Cone>> {
+            let mut model_guard = self.inner.lock().await;
+            Ok(model_guard.upsert_cone( cone.try_into()?).map(|c| (&c).into()))
+        }
+
+        #[napi]
+        pub async fn delete_cone(&self, uuid: String) -> napi::Result<Option<Cone>> {
+            let uuid =
+                Uuid::from_str(&uuid).map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+            let mut model_guard = self.inner.lock().await;
+            Ok(model_guard.delete_cone(uuid).map(|c| (&c).into()))
+        }
+
+        #[napi]
+        pub async fn upsert_polygon(&self, polygon: Polygon) -> napi::Result<Option<Polygon>> {
+            let mut model_guard = self.inner.lock().await;
+            Ok(model_guard.upsert_polygon(polygon.try_into()?).map(|p| (&p).into()))
+        }
+
+        #[napi]
+        pub async fn delete_polygon(&self, uuid: String) -> napi::Result<Option<Polygon>> {
+            let uuid =
+                Uuid::from_str(&uuid).map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+
+            let mut model_guard = self.inner.lock().await;
+            Ok(model_guard.delete_polygon(uuid).map(|p| (&p).into()))
+        }
+
+        #[napi]
+        pub async fn upsert_triangle(&self, triangle: Triangle) -> napi::Result<Option<Triangle>> {
+            let mut model_guard = self.inner.lock().await;
+            Ok(model_guard.upsert_triangle(triangle.try_into()?).map(|t| (&t).into()))
+        }
+
+        #[napi]
+        pub async fn delete_triangle(&self, uuid: String) -> napi::Result<Option<Triangle>> {
+            let mut model_guard = self.inner.lock().await;
 
             let uuid =
                 Uuid::from_str(&uuid).map_err(|e| napi::Error::from_reason(e.to_string()))?;
 
-            Ok(inner.delete_sphere(uuid).map(|s| (&s).into()))
-        }
-
-        #[napi]
-        pub async unsafe fn upsert_cone(&mut self, cone: Cone) -> napi::Result<Option<Cone>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            let inner = match Arc::get_mut(&mut self.inner) {
-                Some(inner) => inner,
-                None => {
-                    return Err(napi::Error::from_reason(
-                        "Cannot modify model: multiple references exist",
-                    ));
-                }
-            };
-
-            let core_cone = cone.try_into()?;
-
-            Ok(inner.upsert_cone(core_cone).map(|c| (&c).into()))
-        }
-
-        #[napi]
-        pub async unsafe fn delete_cone(&mut self, uuid: String) -> napi::Result<Option<Cone>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            let inner = match Arc::get_mut(&mut self.inner) {
-                Some(inner) => inner,
-                None => {
-                    return Err(napi::Error::from_reason(
-                        "Cannot modify model: multiple references exist",
-                    ));
-                }
-            };
-
-            let uuid =
-                Uuid::from_str(&uuid).map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            Ok(inner.delete_cone(uuid).map(|c| (&c).into()))
-        }
-
-        #[napi]
-        pub async unsafe fn upsert_polygon(
-            &mut self,
-            polygon: Polygon,
-        ) -> napi::Result<Option<Polygon>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            let inner = match Arc::get_mut(&mut self.inner) {
-                Some(inner) => inner,
-                None => {
-                    return Err(napi::Error::from_reason(
-                        "Cannot modify model: multiple references exist",
-                    ));
-                }
-            };
-
-            let core_polygon = polygon.try_into()?;
-
-            Ok(inner.upsert_polygon(core_polygon).map(|p| (&p).into()))
-        }
-
-        #[napi]
-        pub async unsafe fn delete_polygon(
-            &mut self,
-            uuid: String,
-        ) -> napi::Result<Option<Polygon>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            let inner = match Arc::get_mut(&mut self.inner) {
-                Some(inner) => inner,
-                None => {
-                    return Err(napi::Error::from_reason(
-                        "Cannot modify model: multiple references exist",
-                    ));
-                }
-            };
-
-            let uuid =
-                Uuid::from_str(&uuid).map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            Ok(inner.delete_polygon(uuid).map(|p| (&p).into()))
-        }
-
-        #[napi]
-        pub async unsafe fn upsert_triangle(
-            &mut self,
-            triangle: Triangle,
-        ) -> napi::Result<Option<Triangle>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            let inner = match Arc::get_mut(&mut self.inner) {
-                Some(inner) => inner,
-                None => {
-                    return Err(napi::Error::from_reason(
-                        "Cannot modify model: multiple references exist",
-                    ));
-                }
-            };
-
-            let core_triangle = triangle.try_into()?;
-
-            Ok(inner.upsert_triangle(core_triangle).map(|t| (&t).into()))
-        }
-
-        #[napi]
-        pub async unsafe fn delete_triangle(
-            &mut self,
-            uuid: String,
-        ) -> napi::Result<Option<Triangle>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            let inner = match Arc::get_mut(&mut self.inner) {
-                Some(inner) => inner,
-                None => {
-                    return Err(napi::Error::from_reason(
-                        "Cannot modify model: multiple references exist",
-                    ));
-                }
-            };
-
-            let uuid =
-                Uuid::from_str(&uuid).map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
-            Ok(inner.delete_triangle(uuid).map(|t| (&t).into()))
+            Ok(model_guard.delete_triangle(uuid).map(|t| (&t).into()))
         }
 
         #[napi(getter)]
         pub async fn get_all_surfaces(&self) -> napi::Result<Vec<Surface>> {
-            let _acquired_permit = self
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+            let model_guard = self.inner.lock().await;
 
-            Ok(self
-                .inner
+            Ok(model_guard
                 .surfaces
                 .values()
                 .map(|surface| surface.clone().into())

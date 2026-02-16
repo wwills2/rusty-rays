@@ -54,8 +54,8 @@ async function main() {
     }
     console.log('adding second sphere to model:', newSphere);
     await model.upsertSphere(newSphere);
-    console.log("second sphere successfully added")
-    const tracer = new Tracer(model);
+    console.log("second sphere successfully added");
+    const tracer = await Tracer.create(model);
     await tracer.renderToFile(`${testArtifactDir}/jsRender.png`);
 
     shutdownLogger();

@@ -8,10 +8,10 @@ function initModelChannels() {
     try {
       const [path] = args;
       const model = await Model.fromFilePath(path);
-      const instanceUuid = setModel(model);
+      const instanceUuid = await setModel(model);
       if (!instanceUuid) {
         return toIpcError(
-          new Error(`invalid tracer instance uuid. recieved ${instanceUuid}`),
+          new Error(`invalid tracer instance uuid. received ${instanceUuid}`),
           '',
         );
       }
@@ -22,11 +22,11 @@ function initModelChannels() {
     }
   });
 
-  handle('model:InitFromFileTextString', (_, args) => {
+  handle('model:InitFromFileTextString', async (_, args) => {
     try {
       const [fileText] = args;
       const model = Model.fromString(fileText);
-      const instanceUuid = setModel(model);
+      const instanceUuid = await setModel(model);
       if (!instanceUuid) {
         return toIpcError(
           new Error(`invalid tracer instance uuid. received ${instanceUuid}`),
@@ -59,11 +59,11 @@ function initModelChannels() {
     }
   });
 
-  handle('model:SetModel', (_, args) => {
+  handle('model:SetModel', async (_, args) => {
     try {
       const [uuid] = args;
       if (uuid === undefined) {
-        setModel(undefined);
+        await setModel(undefined);
         return { data: true };
       } else {
         // todo load the model corresponding to the uuid if provided. functionality yet to be implemented

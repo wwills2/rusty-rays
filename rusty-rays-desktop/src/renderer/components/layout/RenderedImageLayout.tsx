@@ -5,7 +5,7 @@ import React, { useCallback, useEffect, useState } from 'react';
 import {
   useGetRenderStatusQuery,
   useGetTracerInstanceUuidQuery,
-  useLazyGetIntersectedUuidByPixelPosQuery,
+  useLazyGetIntersectedObjectByPixelPosQuery,
   useLazyLoadRenderImageQuery,
   useRenderMutation,
 } from '@/redux/ipc/tracer.ipc.ts';
@@ -27,7 +27,7 @@ const RenderedImageLayout: React.FC = () => {
     useLazyLoadRenderImageQuery();
   const [triggerRender] = useRenderMutation();
   const [triggerGetIntersectedUuid] =
-    useLazyGetIntersectedUuidByPixelPosQuery();
+    useLazyGetIntersectedObjectByPixelPosQuery();
 
   const [imageData, setImageData] = useState<Uint8Array<ArrayBuffer> | null>(
     null,
@@ -65,13 +65,17 @@ const RenderedImageLayout: React.FC = () => {
     (x: number, y: number) => {
       const execute = async () => {
         try {
-          const uuid = await triggerGetIntersectedUuid({ x, y }).unwrap();
+          const intersectedInfo = await triggerGetIntersectedUuid({
+            x,
+            y,
+          }).unwrap();
 
-          if (!uuid) {
+          if (!intersectedInfo) {
             // no intersection — do not open dialog
             return;
           }
 
+          const uuid = intersectedInfo.uuid;
           const sphere = spheresMap ? spheresMap[uuid] : undefined;
           if (sphere) {
             setDialogMessage(JSON.stringify(sphere, null, 2));
