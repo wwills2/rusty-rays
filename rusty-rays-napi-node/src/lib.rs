@@ -49,6 +49,7 @@ mod bindings {
     #[napi(object)]
     pub struct IntersectedObjectInfo {
         pub uuid: String,
+        #[napi(ts_type = "\"cone\" | \"sphere\" | \"polygon\" | \"triangle\"")]
         pub object_type: String,
     }
 
@@ -184,7 +185,8 @@ mod bindings {
             y: u32,
         ) -> napi::Result<Option<IntersectedObjectInfo>> {
             let tracer_guard = self.inner.lock().await;
-            let result = tracer_guard.get_intersected_uuid_by_pixel_pos(x as usize, y as usize)
+            let result = tracer_guard
+                .get_intersected_uuid_by_pixel_pos(x as usize, y as usize)
                 .map(|(u, t)| IntersectedObjectInfo {
                     uuid: u.to_string(),
                     object_type: t,
@@ -272,7 +274,9 @@ mod bindings {
         #[napi]
         pub async fn upsert_sphere(&self, sphere: Sphere) -> napi::Result<Option<Sphere>> {
             let mut model_guard = self.inner.lock().await;
-            Ok(model_guard.upsert_sphere(sphere.try_into()?).map(|s| (&s).into()))
+            Ok(model_guard
+                .upsert_sphere(sphere.try_into()?)
+                .map(|s| (&s).into()))
         }
 
         #[napi]
@@ -287,7 +291,9 @@ mod bindings {
         #[napi]
         pub async fn upsert_cone(&self, cone: Cone) -> napi::Result<Option<Cone>> {
             let mut model_guard = self.inner.lock().await;
-            Ok(model_guard.upsert_cone( cone.try_into()?).map(|c| (&c).into()))
+            Ok(model_guard
+                .upsert_cone(cone.try_into()?)
+                .map(|c| (&c).into()))
         }
 
         #[napi]
@@ -302,14 +308,15 @@ mod bindings {
         #[napi]
         pub async fn upsert_polygon(&self, polygon: Polygon) -> napi::Result<Option<Polygon>> {
             let mut model_guard = self.inner.lock().await;
-            Ok(model_guard.upsert_polygon(polygon.try_into()?).map(|p| (&p).into()))
+            Ok(model_guard
+                .upsert_polygon(polygon.try_into()?)
+                .map(|p| (&p).into()))
         }
 
         #[napi]
         pub async fn delete_polygon(&self, uuid: String) -> napi::Result<Option<Polygon>> {
             let uuid =
                 Uuid::from_str(&uuid).map_err(|e| napi::Error::from_reason(e.to_string()))?;
-
 
             let mut model_guard = self.inner.lock().await;
             Ok(model_guard.delete_polygon(uuid).map(|p| (&p).into()))
@@ -318,7 +325,9 @@ mod bindings {
         #[napi]
         pub async fn upsert_triangle(&self, triangle: Triangle) -> napi::Result<Option<Triangle>> {
             let mut model_guard = self.inner.lock().await;
-            Ok(model_guard.upsert_triangle(triangle.try_into()?).map(|t| (&t).into()))
+            Ok(model_guard
+                .upsert_triangle(triangle.try_into()?)
+                .map(|t| (&t).into()))
         }
 
         #[napi]
@@ -431,16 +440,21 @@ mod bindings {
     }
 
     #[napi(object)]
-    pub struct Polygon {
-        pub uuid: String,
-        pub surface: String,
+    pub struct PolygonDerived {
         pub plane_basis_vectors: (Coords, Coords),
         pub plane_sample_point: Coords,
         pub plane_normal: Coords,
         pub plane_projected_vertices: Vec<PlaneCoords2D>,
         pub point_in_polygon_inf_test_vector: PlaneCoords2D,
         pub projection_origin: Coords,
+    }
+
+    #[napi(object)]
+    pub struct Polygon {
+        pub uuid: String,
+        pub surface: String,
         pub vertices: Vec<Coords>,
+        pub derived: PolygonDerived,
     }
 
     impl From<&rusty_rays_core::Polygon> for Polygon {
@@ -448,23 +462,25 @@ mod bindings {
             Polygon {
                 uuid: polygon.uuid.to_string(),
                 surface: polygon.surface.clone(),
-                plane_basis_vectors: (
-                    polygon.plane.basis_vectors.0.clone().into(),
-                    polygon.plane.basis_vectors.1.clone().into(),
-                ),
-                plane_sample_point: polygon.plane.sample_point.clone().into(),
-                plane_normal: polygon.plane.normal.clone().into(),
-                plane_projected_vertices: polygon
-                    .plane_projected_vertices
-                    .iter()
-                    .map(|v| PlaneCoords2D { x: v.x, y: v.y })
-                    .collect(),
-                point_in_polygon_inf_test_vector: PlaneCoords2D {
-                    x: polygon.point_in_polygon_inf_test_vector.x,
-                    y: polygon.point_in_polygon_inf_test_vector.y,
-                },
-                projection_origin: polygon.projection_origin.clone().into(),
                 vertices: polygon.vertices.iter().map(|v| v.clone().into()).collect(),
+                derived: PolygonDerived {
+                    plane_basis_vectors: (
+                        polygon.plane.basis_vectors.0.clone().into(),
+                        polygon.plane.basis_vectors.1.clone().into(),
+                    ),
+                    plane_sample_point: polygon.plane.sample_point.clone().into(),
+                    plane_normal: polygon.plane.normal.clone().into(),
+                    plane_projected_vertices: polygon
+                        .plane_projected_vertices
+                        .iter()
+                        .map(|v| PlaneCoords2D { x: v.x, y: v.y })
+                        .collect(),
+                    point_in_polygon_inf_test_vector: PlaneCoords2D {
+                        x: polygon.point_in_polygon_inf_test_vector.x,
+                        y: polygon.point_in_polygon_inf_test_vector.y,
+                    },
+                    projection_origin: polygon.projection_origin.clone().into(),
+                },
             }
         }
     }
@@ -473,50 +489,42 @@ mod bindings {
         type Error = napi::Error;
 
         fn try_from(polygon: Polygon) -> napi::Result<rusty_rays_core::Polygon> {
-            Ok(rusty_rays_core::Polygon {
-                uuid: Uuid::from_str(&polygon.uuid)
-                    .map_err(|e| napi::Error::from_reason(e.to_string()))?,
-                surface: polygon.surface,
-                plane: rusty_rays_core::Plane {
-                    uuid: Uuid::new_v4(), // Generate a new UUID for the internal plane
-                    basis_vectors: (
-                        polygon.plane_basis_vectors.0.into(),
-                        polygon.plane_basis_vectors.1.into(),
-                    ),
-                    sample_point: polygon.plane_sample_point.into(),
-                    normal: polygon.plane_normal.into(),
-                    surface: String::new(),
-                },
-                plane_projected_vertices: polygon
-                    .plane_projected_vertices
-                    .into_iter()
-                    .map(|v| v.into())
-                    .collect(),
-                point_in_polygon_inf_test_vector: polygon.point_in_polygon_inf_test_vector.into(),
-                projection_origin: polygon.projection_origin.into(),
-                vertices: polygon.vertices.into_iter().map(|v| v.into()).collect(),
-            })
+            let mut core_polygon = rusty_rays_core::Polygon::new(
+                polygon.vertices.into_iter().map(|v| v.into()).collect(),
+                polygon.surface,
+            )
+            .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+            core_polygon.uuid = Uuid::from_str(&polygon.uuid)
+                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+
+            Ok(core_polygon)
         }
+    }
+
+    #[napi(object)]
+    pub struct TriangleDerived {
+        pub plane_basis_vectors: (Coords, Coords),
+        pub plane_sample_point: Coords,
+        pub plane_normal: Coords,
+        pub edge_1: Coords,
+        pub edge_2: Coords,
+        pub edge_3: Coords,
+        pub flat_shaded: bool,
+        pub total_area: f64,
     }
 
     #[napi(object)]
     pub struct Triangle {
         pub uuid: String,
         pub surface: String,
-        pub plane_basis_vectors: (Coords, Coords),
-        pub plane_sample_point: Coords,
-        pub plane_normal: Coords,
         pub vertex_1: Coords,
         pub vertex_2: Coords,
         pub vertex_3: Coords,
-        pub edge_1: Coords,
-        pub edge_2: Coords,
-        pub edge_3: Coords,
-        pub v1_normal: Coords,
-        pub v2_normal: Coords,
-        pub v3_normal: Coords,
-        pub flat_shaded: bool,
-        pub total_area: f64,
+        pub v1_normal: Option<Coords>,
+        pub v2_normal: Option<Coords>,
+        pub v3_normal: Option<Coords>,
+        pub derived: TriangleDerived,
     }
 
     impl From<&rusty_rays_core::Triangle> for Triangle {
@@ -524,23 +532,25 @@ mod bindings {
             Triangle {
                 uuid: triangle.uuid.to_string(),
                 surface: triangle.surface.clone(),
-                plane_basis_vectors: (
-                    triangle.plane.basis_vectors.0.clone().into(),
-                    triangle.plane.basis_vectors.1.clone().into(),
-                ),
-                plane_sample_point: triangle.plane.sample_point.clone().into(),
-                plane_normal: triangle.plane.normal.clone().into(),
                 vertex_1: triangle.vertex_1.clone().into(),
                 vertex_2: triangle.vertex_2.clone().into(),
                 vertex_3: triangle.vertex_3.clone().into(),
-                edge_1: triangle.edge_1.clone().into(),
-                edge_2: triangle.edge_2.clone().into(),
-                edge_3: triangle.edge_3.clone().into(),
-                v1_normal: triangle.v1_normal.clone().into(),
-                v2_normal: triangle.v2_normal.clone().into(),
-                v3_normal: triangle.v3_normal.clone().into(),
-                flat_shaded: triangle.flat_shaded,
-                total_area: triangle.total_area,
+                v1_normal: Some(triangle.v1_normal.clone().into()),
+                v2_normal: Some(triangle.v2_normal.clone().into()),
+                v3_normal: Some(triangle.v3_normal.clone().into()),
+                derived: TriangleDerived {
+                    plane_basis_vectors: (
+                        triangle.plane.basis_vectors.0.clone().into(),
+                        triangle.plane.basis_vectors.1.clone().into(),
+                    ),
+                    plane_sample_point: triangle.plane.sample_point.clone().into(),
+                    plane_normal: triangle.plane.normal.clone().into(),
+                    edge_1: triangle.edge_1.clone().into(),
+                    edge_2: triangle.edge_2.clone().into(),
+                    edge_3: triangle.edge_3.clone().into(),
+                    flat_shaded: triangle.flat_shaded,
+                    total_area: triangle.total_area,
+                },
             }
         }
     }
@@ -549,32 +559,19 @@ mod bindings {
         type Error = napi::Error;
 
         fn try_from(triangle: Triangle) -> napi::Result<rusty_rays_core::Triangle> {
-            Ok(rusty_rays_core::Triangle {
-                uuid: Uuid::from_str(&triangle.uuid)
-                    .map_err(|e| napi::Error::from_reason(e.to_string()))?,
-                surface: triangle.surface,
-                plane: rusty_rays_core::Plane {
-                    uuid: Uuid::new_v4(), // Generate a new UUID for the internal plane
-                    basis_vectors: (
-                        triangle.plane_basis_vectors.0.into(),
-                        triangle.plane_basis_vectors.1.into(),
-                    ),
-                    sample_point: triangle.plane_sample_point.into(),
-                    normal: triangle.plane_normal.into(),
-                    surface: String::new(),
-                },
-                vertex_1: triangle.vertex_1.into(),
-                vertex_2: triangle.vertex_2.into(),
-                vertex_3: triangle.vertex_3.into(),
-                edge_1: triangle.edge_1.into(),
-                edge_2: triangle.edge_2.into(),
-                edge_3: triangle.edge_3.into(),
-                v1_normal: triangle.v1_normal.into(),
-                v2_normal: triangle.v2_normal.into(),
-                v3_normal: triangle.v3_normal.into(),
-                flat_shaded: triangle.flat_shaded,
-                total_area: triangle.total_area,
-            })
+            let mut core_triangle = rusty_rays_core::Triangle::new(
+                triangle.vertex_1.into(),
+                triangle.vertex_2.into(),
+                triangle.vertex_3.into(),
+                triangle.v1_normal.map(|n| n.into()),
+                triangle.v2_normal.map(|n| n.into()),
+                triangle.v3_normal.map(|n| n.into()),
+                triangle.surface,
+            )
+            .map_err(|error| napi::Error::from_reason(error.to_string()))?;
+            core_triangle.uuid = Uuid::from_str(triangle.uuid.as_str())
+                .map_err(|e| napi::Error::from_reason(e.to_string()))?;
+            Ok(core_triangle)
         }
     }
 

@@ -59,6 +59,63 @@ function initModelChannels() {
     }
   });
 
+  handle('model:getAllCones', async () => {
+    try {
+      const instance = getTracerInstance();
+      if (!instance) {
+        return toIpcError(
+          new Error('failed to fetch cones. no model loaded'),
+          '',
+        );
+      }
+
+      const { model } = instance;
+      const data = await model.allCones;
+
+      return { data };
+    } catch (error) {
+      return toIpcError(error, 'failed to fetch cones');
+    }
+  });
+
+  handle('model:getAllTriangles', async () => {
+    try {
+      const instance = getTracerInstance();
+      if (!instance) {
+        return toIpcError(
+          new Error('failed to fetch triangles. no model loaded'),
+          '',
+        );
+      }
+
+      const { model } = instance;
+      const data = await model.allTriangles;
+
+      return { data };
+    } catch (error) {
+      return toIpcError(error, 'failed to fetch triangles');
+    }
+  });
+
+  handle('model:getAllPolygons', async () => {
+    try {
+      const instance = getTracerInstance();
+      if (!instance) {
+        return toIpcError(
+          new Error('failed to fetch polygons. no model loaded'),
+          '',
+        );
+      }
+
+      const { model } = instance;
+      const data = await model.allPolygons;
+
+      return { data };
+    } catch (error) {
+      return toIpcError(error, 'failed to fetch polygons');
+    }
+  });
+
   handle('model:SetModel', async (_, args) => {
     try {
       const [uuid] = args;

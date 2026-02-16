@@ -27,22 +27,12 @@ impl Plane {
         let normal = calculate_plane_normal_vector(points_on_plane)?;
         let basis_vectors = calculate_basis_vectors(points_on_plane, &normal)?;
 
-        // todo need to parse plane from file
-        let placeholder_surface = Surface {
-            name: String::new(),
-            ambient: Color::new(),
-            diffuse: Color::new(),
-            specular: Color::new(),
-            specpow: 0.0,
-            reflect: 0.0,
-        };
-
         Ok(Plane {
             uuid: Uuid::new_v4(),
             sample_point: points_on_plane[0].clone(),
             normal,
             basis_vectors,
-            surface: placeholder_surface.name,
+            surface: String::new(),
         })
     }
 

@@ -9,7 +9,12 @@ import {
   useLazyLoadRenderImageQuery,
   useRenderMutation,
 } from '@/redux/ipc/tracer.ipc.ts';
-import { useGetAllSpheresQuery } from '@/redux/ipc/model.ipc.ts';
+import {
+  useGetAllConesQuery,
+  useGetAllPolygonsQuery,
+  useGetAllSpheresQuery,
+  useGetAllTrianglesQuery,
+} from '@/redux/ipc/model.ipc.ts';
 import { loadLatestRender } from '@/indexed-db-image-cache.ts';
 
 const RenderedImageLayout: React.FC = () => {
@@ -21,6 +26,15 @@ const RenderedImageLayout: React.FC = () => {
     skip: !tracerInstanceUuid || tracerInstanceUuidLoading,
   });
   const { data: spheresMap } = useGetAllSpheresQuery(null, {
+    skip: !tracerInstanceUuid || tracerInstanceUuidLoading,
+  });
+  const { data: conesMap } = useGetAllConesQuery(null, {
+    skip: !tracerInstanceUuid || tracerInstanceUuidLoading,
+  });
+  const { data: trianglesMap } = useGetAllTrianglesQuery(null, {
+    skip: !tracerInstanceUuid || tracerInstanceUuidLoading,
+  });
+  const { data: polygonsMap } = useGetAllPolygonsQuery(null, {
     skip: !tracerInstanceUuid || tracerInstanceUuidLoading,
   });
   const [triggerLoadRenderImage, { error: loadRenderImageError }] =
@@ -75,12 +89,41 @@ const RenderedImageLayout: React.FC = () => {
             return;
           }
 
-          const uuid = intersectedInfo.uuid;
-          const sphere = spheresMap ? spheresMap[uuid] : undefined;
-          if (sphere) {
-            setDialogMessage(JSON.stringify(sphere, null, 2));
-          } else {
-            setDialogMessage('The object information could not be retrieved.');
+          const { uuid, objectType } = intersectedInfo;
+          switch (objectType) {
+            case 'sphere': {
+              const sphere = spheresMap ? spheresMap[uuid] : undefined;
+              if (sphere) {
+                setDialogMessage(JSON.stringify(sphere, null, 2));
+              }
+              break;
+            }
+            case 'cone': {
+              const cone = conesMap ? conesMap[uuid] : undefined;
+              if (cone) {
+                setDialogMessage(JSON.stringify(cone, null, 2));
+              }
+              break;
+            }
+            case 'triangle': {
+              const triangle = trianglesMap ? trianglesMap[uuid] : undefined;
+              if (triangle) {
+                const {derived: _, ...triangleRest} = triangle;
+                setDialogMessage(JSON.stringify(triangleRest, null, 2));
+              }
+              break;
+            }
+            case 'polygon': {
+              const polygon = polygonsMap ? polygonsMap[uuid] : undefined;
+              if (polygon) {
+                const{derived: _, ...polygonRest} = polygon;
+                setDialogMessage(JSON.stringify(polygonRest, null, 2));
+              }
+              break;
+            }
+            default: {
+              setDialogMessage('The object information could not be retrieved.');
+            }
           }
         } catch {
           // on IPC error, show retrieval message
@@ -90,7 +133,13 @@ const RenderedImageLayout: React.FC = () => {
 
       execute().catch(console.error);
     },
-    [triggerGetIntersectedUuid, spheresMap],
+    [
+      triggerGetIntersectedUuid,
+      spheresMap,
+      conesMap,
+      trianglesMap,
+      polygonsMap,
+    ],
   );
 
   return (

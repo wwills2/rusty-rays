@@ -50,7 +50,7 @@ impl Triangle {
         };
 
         let flat_shaded =
-            maybe_v1_normal.is_none() && maybe_v2_normal.is_none() && maybe_v3_normal.is_none();
+            maybe_v1_normal.is_none() || maybe_v2_normal.is_none() || maybe_v3_normal.is_none();
 
         Ok(Triangle {
             uuid: Uuid::new_v4(),
