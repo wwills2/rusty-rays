@@ -6,6 +6,7 @@ pub use coords::Coords;
 use misc_types::Ray;
 pub use misc_types::{Fov, Screen, Surface};
 pub use model::Model;
+pub use plane_coords_2d::PlaneCoords2D;
 pub use primitives::Cone;
 pub use primitives::Plane;
 pub use primitives::Polygon;
@@ -75,12 +76,12 @@ impl Tracer {
         Self::_render(self_arc)
     }
 
-    pub fn get_intersected_uuid_by_pixel_pos(&self, x: usize, y: usize) -> Option<uuid::Uuid> {
+    pub fn get_intersected_uuid_by_pixel_pos(&self, x: usize, y: usize) -> Option<(uuid::Uuid, String)> {
         // i & j refer to 2d array indices -> transpose of x & y pixel positions
         let ray = self.camera.calc_ray_definition(y, x, &self.model);
         let maybe_intersection = self.bvh.intersect(&ray);
         if let Some(intersection) = maybe_intersection {
-            Some(intersection.intersected_primitive_uuid)
+            Some((intersection.intersected_primitive_uuid, intersection.primitive_type))
         } else {
             None
         }

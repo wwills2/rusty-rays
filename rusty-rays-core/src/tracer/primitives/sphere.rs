@@ -85,6 +85,7 @@ impl Primitive for Sphere {
         let normal = (&location - &self.position).calc_normalized_vector();
 
         Some(Intersection {
+            primitive_type: TYPE_NAME.to_string(),
             distance_along_ray: distance,
             ray: ray.clone(),
             position: location.clone(),

@@ -93,6 +93,7 @@ impl Primitive for Plane {
     fn calculate_intersection(&self, ray: &Ray) -> Option<Intersection> {
         let (position, distance_along_ray) = self.calculate_intersection_coords_only(ray)?;
         Some(Intersection {
+            primitive_type: TYPE_NAME.to_string(),
             position,
             intersected_primitive_uuid: self.uuid,
             distance_along_ray,

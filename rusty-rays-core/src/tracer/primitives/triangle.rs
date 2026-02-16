@@ -159,6 +159,7 @@ impl Primitive for Triangle {
             };
 
             Some(Intersection {
+                primitive_type: TYPE_NAME.to_string(),
                 surface_normal_at_intersection,
                 distance_along_ray,
                 intersected_primitive_uuid: self.uuid,

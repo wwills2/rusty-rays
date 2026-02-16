@@ -113,6 +113,7 @@ impl Clone for Ray {
 
 // intersection type and methods
 pub struct Intersection {
+    pub primitive_type: String,
     pub distance_along_ray: f64,
     pub ray: Ray,
     pub position: Coords,

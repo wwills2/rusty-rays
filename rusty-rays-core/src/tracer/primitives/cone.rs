@@ -138,6 +138,7 @@ impl Primitive for Cone {
         .calc_normalized_vector();
 
         Some(Intersection {
+            primitive_type: TYPE_NAME.to_string(),
             distance_along_ray: t,
             ray: ray.clone(),
             position: intersection_point,
