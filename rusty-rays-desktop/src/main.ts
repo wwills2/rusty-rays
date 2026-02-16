@@ -7,7 +7,7 @@ import { initIpcChannels } from '#/ipc/handles';
 export const __filename = fileURLToPath(import.meta.url);
 export const __dirname = path.dirname(__filename);
 
-function setConentSecurityPolicy(policy: string[]) {
+function setContentSecurityPolicy(policy: string[]) {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {
     callback({
       responseHeaders: {
@@ -64,11 +64,27 @@ function createMainWindow() {
   }
 }
 
+app.commandLine.appendSwitch('enable-features', 'OverlayScrollbar');
+
 app
   .whenReady()
   .then(() => {
     if (process.env.SPA_SRC !== 'vite') {
-      setConentSecurityPolicy(["default-src 'none'"]);
+      setContentSecurityPolicy([
+        `
+  default-src 'none';
+  script-src 'self';
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data: file: blob:;
+  font-src 'self' file:;
+  connect-src 'self' https:;
+  media-src 'self' file:;
+  object-src 'none';
+  frame-src 'none';
+  base-uri 'self';
+  form-action 'self';
+`,
+      ]);
     }
 
     initIpcChannels();

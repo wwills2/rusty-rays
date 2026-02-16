@@ -39,7 +39,7 @@ export const modelsIpcApi = ipcApi.injectEndpoints({
         const result = await invoke(channelName, modelUuid);
         return processIpcResult(channelName, result, (data) => data);
       },
-      invalidatesTags: ['model:getAllSpheres', 'tracer:GetInstanceUuid'],
+      invalidatesTags: ['tracer:GetInstanceUuid', 'model:getAllSpheres'],
     }),
   }),
   overrideExisting: false,
