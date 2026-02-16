@@ -96,7 +96,7 @@ const RenderedImageLayout: React.FC = () => {
           <div className="flex flex-col h-full w-full items-center justify-center bg-muted">
             <Alert className="flex flex-col lg:max-w-2/3 max-w-1/2">
               <Alert.Title className="text-center">
-                Rendering in progress...
+                Render in progress...
               </Alert.Title>
               <div className="flex items-center justify-center pt-2">
                 <Loader count={10} delayStep={60} />

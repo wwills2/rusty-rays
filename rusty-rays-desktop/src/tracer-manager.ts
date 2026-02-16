@@ -102,4 +102,4 @@ export {
   takeRenderImageData,
   getRenderStatus,
 };
-export type { TracerInstance};
+export type { TracerInstance };
