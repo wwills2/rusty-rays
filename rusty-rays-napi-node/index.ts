@@ -1,4 +1,4 @@
-import {createRequire} from "node:module";
+import { createRequire } from "node:module";
 import type {bindings} from "./bindings/index.d.ts";
 
 // type exports
@@ -6,9 +6,13 @@ export type Config = bindings.Config;
 export type Tracer = bindings.Tracer;
 export type Model = bindings.Model;
 export type Sphere = bindings.Sphere;
+export type Cone = bindings.Cone;
+export type Polygon = bindings.Polygon;
+export type Triangle = bindings.Triangle;
 export type Surface = bindings.Surface;
 export type Color = bindings.Color;
 export type Coords = bindings.Coords;
+export type IntersectedObjectInfo = bindings.IntersectedObjectInfo
 
 // code exports
 const require = createRequire(import.meta.url);

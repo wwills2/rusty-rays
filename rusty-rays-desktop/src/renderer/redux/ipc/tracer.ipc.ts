@@ -1,6 +1,7 @@
 import type { DataType } from '@/redux/ipc/index.ts';
 import { invoke, ipcApi, processIpcResult } from '@/redux/ipc/index.ts';
 import { clearCache, saveLatestRender } from '@/indexed-db-image-cache.ts';
+import type { IntersectedObjectInfo } from 'rusty-rays-napi-node/index.ts';
 
 export const tracerIpcApi = ipcApi.injectEndpoints({
   endpoints: (builder) => ({
@@ -55,8 +56,8 @@ export const tracerIpcApi = ipcApi.injectEndpoints({
       providesTags: ['tracer:GetInstanceUuid'],
     }),
 
-    getIntersectedUuidByPixelPos: builder.query<
-      string | null,
+    getIntersectedObjectByPixelPos: builder.query<
+      IntersectedObjectInfo | null,
       { x: number; y: number }
     >({
       queryFn: async ({ x, y }) => {
@@ -73,7 +74,7 @@ export const tracerIpcApi = ipcApi.injectEndpoints({
 
 export const {
   useRenderMutation,
-  useLazyGetIntersectedUuidByPixelPosQuery,
+  useLazyGetIntersectedObjectByPixelPosQuery,
   useGetTracerInstanceUuidQuery,
   useLazyLoadRenderImageQuery,
   useGetRenderStatusQuery,

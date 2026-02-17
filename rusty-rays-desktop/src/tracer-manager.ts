@@ -24,7 +24,7 @@ function getTracerInstance(): TracerInstance | undefined {
   return tracerInstance;
 }
 
-function setModel(model: Model | undefined): string | undefined {
+async function setModel(model: Model | undefined) {
   if (renderStatus.renderInProgress) {
     throw new Error('Cannot set model. render in progress');
   }
@@ -32,7 +32,11 @@ function setModel(model: Model | undefined): string | undefined {
   tempRenderImageData = undefined;
 
   if (model) {
-    tracerInstance = { uuid: uuidv4(), model, tracer: new Tracer(model) };
+    tracerInstance = {
+      uuid: uuidv4(),
+      model,
+      tracer: await Tracer.create(model),
+    };
     resetRenderStatus();
     return tracerInstance.uuid;
   } else {

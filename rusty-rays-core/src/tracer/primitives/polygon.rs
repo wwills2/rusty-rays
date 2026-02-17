@@ -145,6 +145,7 @@ impl Primitive for Polygon {
 
         if projected_edge_intersection_count % 2 != 0 {
             Some(Intersection {
+                primitive_type: TYPE_NAME.to_string(),
                 position: plane_intersection_point,
                 ray: ray.clone(),
                 distance_along_ray: distance,

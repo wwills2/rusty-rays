@@ -4,11 +4,10 @@ use uuid::Uuid;
 
 use crate::tracer::Coords;
 use crate::tracer::bvh::Aabb;
-use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::misc_types::{Intersection, Ray};
 use crate::tracer::plane_coords_2d::PlaneCoords2D;
 use crate::tracer::primitives::Primitive;
 use crate::tracer::primitives::plane::PlaneError::FailedToInitializePlane;
-use crate::tracer::shader::Color;
 
 pub static TYPE_NAME: &str = "plane";
 
@@ -27,22 +26,12 @@ impl Plane {
         let normal = calculate_plane_normal_vector(points_on_plane)?;
         let basis_vectors = calculate_basis_vectors(points_on_plane, &normal)?;
 
-        // todo need to parse plane from file
-        let placeholder_surface = Surface {
-            name: String::new(),
-            ambient: Color::new(),
-            diffuse: Color::new(),
-            specular: Color::new(),
-            specpow: 0.0,
-            reflect: 0.0,
-        };
-
         Ok(Plane {
             uuid: Uuid::new_v4(),
             sample_point: points_on_plane[0].clone(),
             normal,
             basis_vectors,
-            surface: placeholder_surface.name,
+            surface: String::new(),
         })
     }
 
@@ -93,6 +82,7 @@ impl Primitive for Plane {
     fn calculate_intersection(&self, ray: &Ray) -> Option<Intersection> {
         let (position, distance_along_ray) = self.calculate_intersection_coords_only(ray)?;
         Some(Intersection {
+            primitive_type: TYPE_NAME.to_string(),
             position,
             intersected_primitive_uuid: self.uuid,
             distance_along_ray,
