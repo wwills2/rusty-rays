@@ -32,7 +32,11 @@ async function setModel(model: Model | undefined) {
   tempRenderImageData = undefined;
 
   if (model) {
-    tracerInstance = { uuid: uuidv4(), model, tracer: await Tracer.create(model) };
+    tracerInstance = {
+      uuid: uuidv4(),
+      model,
+      tracer: await Tracer.create(model),
+    };
     resetRenderStatus();
     return tracerInstance.uuid;
   } else {

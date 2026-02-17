@@ -12,11 +12,15 @@ export default defineConfig([
   {
     rules: {
       semi: ['error', 'always'],
-      'no-unused-vars': ['error', {
-        varsIgnorePattern: '^_',
-        argsIgnorePattern: '^_',
-        destructuredArrayIgnorePattern: '^_'
-      }],
+      '@typescript-eslint/no-unused-vars': [
+        'error',
+        {
+          args: 'after-used',
+          varsIgnorePattern: '^_',
+          argsIgnorePattern: '^_',
+          destructuredArrayIgnorePattern: '^_',
+        },
+      ],
       quotes: ['error', 'single', { avoidEscape: true }],
       '@typescript-eslint/restrict-template-expressions': [
         'error',

@@ -108,7 +108,7 @@ const RenderedImageLayout: React.FC = () => {
             case 'triangle': {
               const triangle = trianglesMap ? trianglesMap[uuid] : undefined;
               if (triangle) {
-                const {derived: _, ...triangleRest} = triangle;
+                const { derived: _derived, ...triangleRest } = triangle;
                 setDialogMessage(JSON.stringify(triangleRest, null, 2));
               }
               break;
@@ -116,13 +116,15 @@ const RenderedImageLayout: React.FC = () => {
             case 'polygon': {
               const polygon = polygonsMap ? polygonsMap[uuid] : undefined;
               if (polygon) {
-                const{derived: _, ...polygonRest} = polygon;
+                const { derived: _derived, ...polygonRest } = polygon;
                 setDialogMessage(JSON.stringify(polygonRest, null, 2));
               }
               break;
             }
             default: {
-              setDialogMessage('The object information could not be retrieved.');
+              setDialogMessage(
+                'The object information could not be retrieved.',
+              );
             }
           }
         } catch {

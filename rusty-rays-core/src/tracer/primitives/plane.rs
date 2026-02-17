@@ -4,11 +4,10 @@ use uuid::Uuid;
 
 use crate::tracer::Coords;
 use crate::tracer::bvh::Aabb;
-use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::misc_types::{Intersection, Ray};
 use crate::tracer::plane_coords_2d::PlaneCoords2D;
 use crate::tracer::primitives::Primitive;
 use crate::tracer::primitives::plane::PlaneError::FailedToInitializePlane;
-use crate::tracer::shader::Color;
 
 pub static TYPE_NAME: &str = "plane";
 
