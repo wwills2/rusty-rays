@@ -3,7 +3,7 @@ eyep 2 1 -8
 lookp 0 0 0
 up 0 1 0
 fov 25 25
-screen 4500 4500
+screen 8000 8000
 sample 1 nojitter
 light 1 extended 0.5 -10 3 -20
 light 1 extended 0.5 5 8 -5

@@ -1,6 +1,6 @@
 use crate::tracer::camera::Camera;
+use crate::utils::logger::{debug, error, info, trace, warn, LOG};
 use crate::utils::Config;
-use crate::utils::logger::{LOG, debug, error, info, trace, warn};
 use bvh::Bvh;
 pub use coords::Coords;
 use misc_types::Ray;
@@ -14,7 +14,7 @@ use primitives::Primitive;
 pub use primitives::Sphere;
 pub use primitives::Triangle;
 pub use shader::Color;
-use std::sync::{Arc, Mutex, atomic};
+use std::sync::{atomic, Arc, Mutex};
 use std::time::SystemTime;
 use std::{f64, fmt, thread};
 
@@ -32,7 +32,6 @@ mod shader;
 pub struct Tracer {
     model: Model,
     bvh: Bvh,
-    primary_rays: Vec<Ray>,
     camera: Camera,
 }
 
@@ -40,7 +39,6 @@ impl Clone for Tracer {
     fn clone(&self) -> Self {
         Tracer {
             model: self.model.clone(),
-            primary_rays: self.primary_rays.clone(),
             bvh: self.bvh.clone(),
             camera: self.camera.clone(),
         }
@@ -54,7 +52,6 @@ impl Tracer {
             "initializing renderer. calculating primary ray definitions and bvh"
         );
         let camera = Camera::new(&model);
-        let primary_rays = Self::calculate_primary_rays(&model, &camera);
 
         // Collect all primitives into a vector for Bvh construction
         let primitives_for_bvh: Vec<Box<dyn Primitive>> =
@@ -62,12 +59,7 @@ impl Tracer {
         let mut bvh = Bvh::new();
         bvh.build(primitives_for_bvh);
 
-        Self {
-            model,
-            primary_rays,
-            bvh,
-            camera,
-        }
+        Self { model, bvh, camera }
     }
 
     pub fn render(&self) -> Result<Vec<Vec<Color>>, RenderError> {
@@ -100,8 +92,9 @@ impl Tracer {
         let num_threads = max_threads.min(num_physical_cores).max(1);
         let mut thread_handles = vec![];
 
+        let total_pixels = self.model.screen.width * self.model.screen.height;
         let ray_counter_arc = Arc::new(atomic::AtomicUsize::new(0));
-        let ten_percent_arc = Arc::new((self.primary_rays.len() / 10).max(1));
+        let ten_percent_arc = Arc::new((total_pixels / 10).max(1));
         let progress_block_counter_arc = Arc::new(atomic::AtomicUsize::new(0));
 
         let image_data_arc = Arc::new(Mutex::new(vec![
@@ -134,11 +127,16 @@ impl Tracer {
                         info!(LOG, "rendering {}% complete", progress_block * 10);
                     }
 
-                    if ray_index >= _self_arc_clone.primary_rays.len() {
+                    if ray_index >= total_pixels {
                         break;
                     }
 
-                    let ray = &_self_arc_clone.primary_rays[ray_index];
+                    let i = ray_index % _self_arc_clone.model.screen.width;
+                    let j = ray_index / _self_arc_clone.model.screen.width;
+                    let ray =
+                        &_self_arc_clone
+                            .camera
+                            .calc_ray_definition(i, j, &_self_arc_clone.model);
                     let pixel_color =
                         shader::process_ray(0, ray, &_self_arc_clone.model, &_self_arc_clone.bvh);
                     thread_rendered_pixels.push(((ray.i, ray.j), pixel_color));
@@ -206,19 +204,6 @@ impl Tracer {
                 "an asynchronous resource sharing error occurred".to_string(),
             )),
         }
-    }
-
-    fn calculate_primary_rays(model: &Model, camera: &Camera) -> Vec<Ray> {
-        let mut rays: Vec<Ray> = Vec::new();
-
-        for i in 0..model.screen.height {
-            for j in 0..model.screen.width {
-                let ray = camera.calc_ray_definition(i, j, model);
-                rays.push(ray);
-            }
-        }
-
-        rays
     }
 }
 
