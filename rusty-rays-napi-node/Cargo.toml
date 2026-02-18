@@ -7,18 +7,17 @@ authors = ['William Wills']
 resolver = "2"
 
 [lib]
-name = "rusty_rays_core"
+name = "rusty_rays_napi_node"
 crate-type = ["cdylib"]
 
 [dependencies]
-napi-derive = "3.2.4"
+napi-derive = "3.5.2"
 rusty-rays-core = { path = "../rusty-rays-core" }
-tokio = "1.47.1"
+tokio = "1.49.0"
 
 [dependencies.napi]
-version = "3.2.4"
-default-features = false
+version = "3.8.3"
 features = ['napi10', 'tokio_rt']
 
 [build-dependencies]
-napi-build = "2.2.3"
+napi-build = "2.3.1"

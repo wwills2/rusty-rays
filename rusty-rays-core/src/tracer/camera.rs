@@ -1,4 +1,4 @@
-use crate::logger::{LOG, debug, trace};
+use crate::logger::{debug, trace, LOG};
 use crate::tracer::misc_types::Ray;
 use crate::{Coords, Model};
 use std::f64;
@@ -30,7 +30,7 @@ impl Camera {
 
         debug!(
             LOG,
-            "calculating primary rays. details:
+            "calculating camera and scene definition details:
 direction vec: {}
 forward vec: {}
 right vec: {}

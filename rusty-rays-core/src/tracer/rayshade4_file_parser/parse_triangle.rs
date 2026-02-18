@@ -2,7 +2,6 @@ use std::collections::HashMap;
 use std::iter::Peekable;
 use std::str::SplitWhitespace;
 
-use crate::tracer::Coords;
 use crate::tracer::misc_types::Surface;
 use crate::tracer::model::ModelError;
 use crate::tracer::model::ModelError::FailedToParseInputFile;
@@ -10,7 +9,8 @@ use crate::tracer::primitives::Triangle;
 use crate::tracer::rayshade4_file_parser::{
     GetNextLineClosure, NextIfClosure, NextLine, SCENE_DATA_KEYWORDS,
 };
-use crate::utils::logger::{LOG, debug, trace};
+use crate::tracer::Coords;
+use crate::utils::logger::{debug, trace, LOG};
 
 pub fn process_triangle(
     determine_next_line_iter: &mut GetNextLineClosure,
@@ -73,7 +73,7 @@ pub fn process_triangle(
 
         let maybe_next_line = line_read_result?;
         if maybe_next_line.is_none() {
-            debug!(
+            trace!(
                 LOG,
                 "process_triangle() received None for next line. instantiating triangle"
             );
@@ -117,7 +117,7 @@ pub fn process_triangle(
 
             return match triangle_result {
                 Ok(triangle) => {
-                    debug!(LOG, "appending triangle and returning");
+                    trace!(LOG, "appending triangle and returning");
                     Ok(triangle)
                 }
                 Err(error) => Err(FailedToParseInputFile(line_number, error.to_string())),
