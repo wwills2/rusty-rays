@@ -158,23 +158,23 @@ const RenderedImageCanvasWidget: React.FC<RenderedImageCanvasWigetProps> = ({
   // Load image
   useEffect(() => {
     if (imageUrl) {
-      let cancelled = false;
+      let canceled = false;
       const img = new Image();
       img.decoding = 'async';
       img.onload = () => {
-        if (cancelled) return;
+        if (canceled) return;
         imgRef.current = img;
         draw(); // initial
       };
       img.onerror = () => {
-        if (cancelled) return;
+        if (canceled) return;
         imgRef.current = null;
         drawRectRef.current = null;
       };
       img.src = imageUrl;
 
       return () => {
-        cancelled = true;
+        canceled = true;
       };
     }
   }, [imageUrl]);

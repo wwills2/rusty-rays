@@ -10,7 +10,7 @@ use crate::tracer::rayshade4_file_parser::{
     GetNextLineClosure, NextIfClosure, NextLine, SCENE_DATA_KEYWORDS,
 };
 use crate::tracer::Coords;
-use crate::utils::logger::{debug, trace, LOG};
+use crate::utils::logger::{trace, LOG};
 
 pub fn process_triangle(
     determine_next_line_iter: &mut GetNextLineClosure,
