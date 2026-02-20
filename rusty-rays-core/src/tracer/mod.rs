@@ -155,7 +155,7 @@ impl Tracer {
                     }
 
                     // Progress emission based on configured blocks.
-                    if ray_index != 0 && (ray_index % block_size == 0) {
+                    if ray_index % block_size == 0 {
                         let block_idx = _progress_block_counter_arc_clone
                             .fetch_add(1, atomic::Ordering::Relaxed)
                             + 1;

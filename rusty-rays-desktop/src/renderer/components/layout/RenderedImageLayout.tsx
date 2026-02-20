@@ -37,8 +37,10 @@ const RenderedImageLayout: React.FC = () => {
   const { data: polygonsMap } = useGetAllPolygonsQuery(null, {
     skip: !tracerInstanceUuid || tracerInstanceUuidLoading,
   });
-  const [triggerLoadRenderImage, { error: loadRenderImageError }] =
-    useLazyLoadRenderImageQuery();
+  const [
+    triggerLoadRenderImage,
+    { isLoading: loadingRenderImage, error: loadRenderImageError },
+  ] = useLazyLoadRenderImageQuery();
   const [triggerRender] = useRenderMutation();
   const [triggerGetIntersectedUuid] =
     useLazyGetIntersectedObjectByPixelPosQuery();
@@ -163,12 +165,28 @@ const RenderedImageLayout: React.FC = () => {
                 </>
               ) : (
                 <>
-                  <Alert.Title className="text-center">
-                    Render in progress...
-                  </Alert.Title>
-                  <div className="flex items-center justify-center pt-2">
-                    <Progress value={renderStatus?.renderProgressPercentage} />
-                  </div>
+                  {loadingRenderImage ||
+                  !renderStatus?.renderProgressPercentage ? (
+                    <>
+                      <Alert.Title className="text-center">
+                        Loading...
+                      </Alert.Title>
+                      <div className="flex items-center justify-center pt-2">
+                        <Loader count={10} delayStep={60} />
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <Alert.Title className="text-center">
+                        Render in progress...
+                      </Alert.Title>
+                      <div className="flex items-center justify-center pt-2">
+                        <Progress
+                          value={renderStatus.renderProgressPercentage || 0}
+                        />
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </Alert>

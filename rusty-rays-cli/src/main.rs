@@ -5,10 +5,11 @@ use std::thread;
 use rusty_rays_core::logger::{error, info, shutdown_logger, LOG};
 use rusty_rays_core::{write_render_to_file, Model, Tracer};
 
-// Add this dependency in Cargo.toml:
-// signal-hook = "0.3"
 use rusty_rays_core::CancellationToken;
-use signal_hook::consts::signal::{SIGINT, SIGTERM, SIGTSTP};
+
+#[cfg(unix)]
+use signal_hook::consts::signal::SIGTSTP;
+#[cfg(unix)]
 use signal_hook::iterator::Signals;
 
 #[derive(Parser, Debug)]
@@ -48,36 +49,13 @@ fn main() {
             info!(LOG, "initialized model from input file");
             let tracer = Tracer::new(model);
 
-            // Cancellation token shared with signal handler.
+            // Cancellation token shared with handlers.
             let cancel = CancellationToken::default();
 
-            // Spawn a small signal-listener thread that cancels the render on Ctrl+Z (SIGTSTP),
-            // Ctrl+C (SIGINT), or termination (SIGTERM).
-            let cancel_for_signals = cancel.clone();
-            let signals_thread = thread::spawn(move || {
-                // Note: catching SIGTSTP prevents the default "suspend process" behavior.
-                let mut signals =
-                    Signals::new([SIGTSTP, SIGINT, SIGTERM]).expect("failed to register signals");
-                for sig in signals.forever() {
-                    match sig {
-                        SIGTSTP => {
-                            info!(LOG, "received Ctrl+Z (SIGTSTP). canceling render...");
-                        }
-                        SIGINT => {
-                            info!(LOG, "received Ctrl+C (SIGINT). canceling render...");
-                        }
-                        SIGTERM => {
-                            info!(LOG, "received SIGTERM. canceling render...");
-                        }
-                        _ => {}
-                    }
-                    cancel_for_signals.cancel();
-                    break;
-                }
-            });
+            // Install signal/console handlers.
+            let signals_thread = install_cancel_handlers(cancel.clone());
 
-            // Run the render on a background thread so main can respond to signals and then
-            // exit only after render returns.
+            // Run the render on a background thread so main can cleanly wait for completion/cancel.
             let progress_blocks = args.progress_blocks;
             let cancel_for_render = cancel.clone();
 
@@ -87,15 +65,16 @@ fn main() {
             });
 
             // Wait for render to finish (either completed or canceled)
-            let maybe_raw_pixel_colors = render_thread.join().unwrap_or_else(|error| {
+            let maybe_raw_pixel_colors = render_thread.join().unwrap_or_else(|_error| {
                 Err(rusty_rays_core::RenderError(
                     "render thread panicked".to_string(),
                 ))
             });
 
-            // Make sure the signal thread stops (if render finished normally, we still want to exit cleanly)
-            // Dropping the process will end it anyway, but joining avoids dangling threads in some environments.
-            let _ = signals_thread.join();
+            // If we spawned a Unix SIGTSTP listener thread, join it so we don't leave a dangling thread.
+            if let Some(t) = signals_thread {
+                let _ = t.join();
+            }
 
             match maybe_raw_pixel_colors {
                 Ok(raw_pixel_colors) => {
@@ -125,4 +104,36 @@ fn main() {
     }
 
     shutdown_logger();
+}
+
+fn install_cancel_handlers(cancel: CancellationToken) -> Option<std::thread::JoinHandle<()>> {
+    // Cross-platform Ctrl+C (and Ctrl+Break on Windows).
+    {
+        let cancel_for_ctrlc = cancel.clone();
+        ctrlc::set_handler(move || {
+            info!(LOG, "received Ctrl+C (or Ctrl+Break). canceling render...");
+            cancel_for_ctrlc.cancel();
+        })
+            .expect("failed to set Ctrl+C handler");
+    }
+
+    // Unix-only: also cancel on Ctrl+Z (SIGTSTP).
+    #[cfg(unix)]
+    {
+        let cancel_for_sigstp = cancel.clone();
+        return Some(thread::spawn(move || {
+            // Catching SIGTSTP prevents the default "suspend process" behavior.
+            let mut signals = Signals::new([SIGTSTP]).expect("failed to register SIGTSTP");
+            for _sig in signals.forever() {
+                info!(LOG, "received Ctrl+Z (SIGTSTP). canceling render...");
+                cancel_for_sigstp.cancel();
+                break;
+            }
+        }));
+    }
+
+    #[cfg(not(unix))]
+    {
+        None
+    }
 }
