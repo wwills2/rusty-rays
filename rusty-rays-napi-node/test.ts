@@ -7,6 +7,7 @@ import {
     logTrace,
     logWarn,
     Model,
+    type RenderEvent,
     setConfig,
     shutdownLogger,
     type Sphere,
@@ -56,7 +57,24 @@ async function main() {
     await model.upsertSphere(newSphere);
     console.log("second sphere successfully added");
     const tracer = await Tracer.create(model);
-    await tracer.renderToFile(`${testArtifactDir}/jsRender.png`);
+
+    const onRenderEvent = (_: unknown, event: RenderEvent) => {
+        console.log('render event:', JSON.stringify(event));
+    }
+    // do not await and test cancellation
+    console.log('starting render to test cancellation');
+    tracer
+        .renderToFile(`${testArtifactDir}/jsRender.png`, 20, onRenderEvent)
+        .catch((error) => console.error('caught exception from render function', error));
+
+    console.log('cancelling render');
+    setTimeout(() => tracer.cancelRender(), 100);
+
+    // give cancel test time to complete
+    await new Promise((resolve) => setTimeout(resolve, 3000))
+
+    console.log('awaiting render test');
+    await tracer.renderToFile(`${testArtifactDir}/jsRender.png`, 20, onRenderEvent);
 
     shutdownLogger();
 }

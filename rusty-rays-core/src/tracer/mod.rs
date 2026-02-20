@@ -3,7 +3,7 @@ use crate::utils::Config;
 use crate::utils::logger::{LOG, debug, error, info, trace, warn};
 use bvh::Bvh;
 pub use coords::Coords;
-use misc_types::Ray;
+pub use misc_types::{CancellationToken, RenderEvent};
 pub use misc_types::{Fov, Screen, Surface};
 pub use model::Model;
 pub use plane_coords_2d::PlaneCoords2D;
@@ -14,7 +14,7 @@ use primitives::Primitive;
 pub use primitives::Sphere;
 pub use primitives::Triangle;
 pub use shader::Color;
-use std::sync::{Arc, Mutex, atomic};
+use std::sync::{Arc, Mutex, atomic, mpsc};
 use std::time::SystemTime;
 use std::{f64, fmt, thread};
 
@@ -32,7 +32,6 @@ mod shader;
 pub struct Tracer {
     model: Model,
     bvh: Bvh,
-    primary_rays: Vec<Ray>,
     camera: Camera,
 }
 
@@ -40,7 +39,6 @@ impl Clone for Tracer {
     fn clone(&self) -> Self {
         Tracer {
             model: self.model.clone(),
-            primary_rays: self.primary_rays.clone(),
             bvh: self.bvh.clone(),
             camera: self.camera.clone(),
         }
@@ -54,7 +52,6 @@ impl Tracer {
             "initializing renderer. calculating primary ray definitions and bvh"
         );
         let camera = Camera::new(&model);
-        let primary_rays = Self::calculate_primary_rays(&model, &camera);
 
         // Collect all primitives into a vector for Bvh construction
         let primitives_for_bvh: Vec<Box<dyn Primitive>> =
@@ -62,18 +59,24 @@ impl Tracer {
         let mut bvh = Bvh::new();
         bvh.build(primitives_for_bvh);
 
-        Self {
-            model,
-            primary_rays,
-            bvh,
-            camera,
-        }
+        Self { model, bvh, camera }
     }
 
-    pub fn render(&self) -> Result<Vec<Vec<Color>>, RenderError> {
+    /// Optional cancellation token, optional event sender, optional progress blocks.
+    ///
+    /// `progress_blocks` controls how many progress events are emitted across the whole render:
+    /// - Some(10) => ~10% increments
+    /// - Some(100) => ~1% increments
+    /// - Some(0) or None => disabled (no progress events; logging still occurs only for other messages)
+    pub fn render(
+        &self,
+        cancel: Option<CancellationToken>,
+        events_tx: Option<mpsc::Sender<RenderEvent>>,
+        num_progress_blocks: Option<usize>,
+    ) -> Result<Vec<Vec<Color>>, RenderError> {
         info!(LOG, "rendering model");
         let self_arc = Arc::new(self.clone());
-        Self::_render(self_arc)
+        Self::_render(self_arc, cancel, events_tx, num_progress_blocks)
     }
 
     pub fn get_intersected_uuid_by_pixel_pos(
@@ -94,14 +97,25 @@ impl Tracer {
         }
     }
 
-    fn _render(self: Arc<Self>) -> Result<Vec<Vec<Color>>, RenderError> {
+    fn _render(
+        self: Arc<Self>,
+        cancel: Option<CancellationToken>,
+        event_tx: Option<mpsc::Sender<RenderEvent>>,
+        num_progress_blocks: Option<usize>,
+    ) -> Result<Vec<Vec<Color>>, RenderError> {
         let max_threads = Config::get().max_render_threads;
         let num_physical_cores = num_cpus::get_physical();
         let num_threads = max_threads.min(num_physical_cores).max(1);
         let mut thread_handles = vec![];
 
+        let total_pixels = self.model.screen.width * self.model.screen.height;
         let ray_counter_arc = Arc::new(atomic::AtomicUsize::new(0));
-        let ten_percent_arc = Arc::new((self.primary_rays.len() / 10).max(1));
+
+        // Progress configuration (optional)
+        let _num_progress_blocks = num_progress_blocks.unwrap_or(10);
+        let block_size = (total_pixels / _num_progress_blocks).max(1);
+
+        // Counts how many blocks have been emitted (so only one thread emits each block once).
         let progress_block_counter_arc = Arc::new(atomic::AtomicUsize::new(0));
 
         let image_data_arc = Arc::new(Mutex::new(vec![
@@ -110,37 +124,69 @@ impl Tracer {
         ]));
         let self_arc = Arc::new(self.clone());
 
+        // If caller didn't provide a token, use a default "never canceled" token.
+        let cancel = cancel.unwrap_or_default();
+
         let start_time = SystemTime::now();
         for thread_num in 0..num_threads {
             // these arc clones do not clone the underlying data
             let _image_data_arc_clone = Arc::clone(&image_data_arc);
             let _self_arc_clone = Arc::clone(&self_arc);
             let _ray_counter_arc_clone = Arc::clone(&ray_counter_arc);
-            let _ten_percent_arc_clone = Arc::clone(&ten_percent_arc);
             let _progress_block_counter_arc_clone = Arc::clone(&progress_block_counter_arc);
+
+            let cancel_clone = cancel.clone();
+            let events_tx_clone = event_tx.clone();
 
             let handle = thread::spawn(move || {
                 info!(LOG, "starting render thread #{}", thread_num);
                 let mut thread_rendered_pixels: Vec<((usize, usize), Color)> = vec![];
 
                 loop {
-                    let ray_index = _ray_counter_arc_clone.fetch_add(1, atomic::Ordering::Relaxed);
-                    trace!(LOG, "thread {} rendering ray #{}", thread_num, ray_index);
-
-                    if ray_index != 0 && ray_index.is_multiple_of(*_ten_percent_arc_clone) {
-                        let progress_block = _progress_block_counter_arc_clone
-                            .fetch_add(1, atomic::Ordering::Relaxed)
-                            + 1; // fetch_add() returns the previous value, not the new sum
-                        info!(LOG, "rendering {}% complete", progress_block * 10);
-                    }
-
-                    if ray_index >= _self_arc_clone.primary_rays.len() {
+                    if cancel_clone.is_canceled() {
                         break;
                     }
 
-                    let ray = &_self_arc_clone.primary_rays[ray_index];
+                    let ray_index = _ray_counter_arc_clone.fetch_add(1, atomic::Ordering::Relaxed);
+                    trace!(LOG, "thread {} rendering ray #{}", thread_num, ray_index);
+
+                    if ray_index >= total_pixels {
+                        break;
+                    }
+
+                    // Progress emission based on configured blocks.
+                    if ray_index.is_multiple_of(block_size) {
+                        let block_idx = _progress_block_counter_arc_clone
+                            .fetch_add(1, atomic::Ordering::Relaxed)
+                            + 1;
+
+                        // Clamp to avoid emitting past 100% due to rounding.
+                        if block_idx <= _num_progress_blocks {
+                            let percent = ((block_idx * 100) / _num_progress_blocks).min(100) as u8;
+
+                            info!(LOG, "rendering {}% complete", percent);
+
+                            if let Some(tx) = &events_tx_clone {
+                                let _ = tx.send(RenderEvent::Progress { percent });
+                            }
+                        }
+                    }
+
+                    let i = ray_index % _self_arc_clone.model.screen.width;
+                    let j = ray_index / _self_arc_clone.model.screen.width;
+
+                    if cancel_clone.is_canceled() {
+                        break;
+                    }
+
+                    let ray =
+                        &_self_arc_clone
+                            .camera
+                            .calc_ray_definition(i, j, &_self_arc_clone.model);
+
                     let pixel_color =
                         shader::process_ray(0, ray, &_self_arc_clone.model, &_self_arc_clone.bvh);
+
                     thread_rendered_pixels.push(((ray.i, ray.j), pixel_color));
                 }
 
@@ -156,6 +202,11 @@ impl Tracer {
                             "thread {} encountered poisoned data error when trying to write pixel colors to image data",
                             thread_num,
                         );
+                        if let Some(tx) = &events_tx_clone {
+                            let _ = tx.send(RenderEvent::Error(
+                                "poisoned mutex while writing image data".to_string(),
+                            ));
+                        }
                     }
                 }
             });
@@ -176,25 +227,45 @@ impl Tracer {
             }
         }
 
+        let stop_time = SystemTime::now();
+        let elapsed_millis = stop_time
+            .duration_since(start_time)
+            .map(|d| d.as_millis())
+            .unwrap_or(0);
+
         if thread_error {
+            if let Some(tx) = &event_tx {
+                let _ = tx.send(RenderEvent::Error(
+                    "render threads did not exit properly".to_string(),
+                ));
+            }
             return Err(RenderError(
                 "render threads did not exit properly".to_string(),
             ));
         }
 
+        if cancel.is_canceled()
+            && let Some(tx) = &event_tx
+        {
+            let _ = tx.send(RenderEvent::Canceled {
+                millis: elapsed_millis,
+            });
+        }
+
+        if let Some(tx) = &event_tx {
+            let _ = tx.send(RenderEvent::Finished {
+                millis: elapsed_millis,
+            });
+        }
+
         match Arc::try_unwrap(image_data_arc) {
             Ok(image_data_mutex) => match image_data_mutex.into_inner() {
                 Ok(raw_image_data) => {
-                    let stop_time = SystemTime::now();
-                    let maybe_duration = stop_time.duration_since(start_time);
-                    if let Ok(elapsed_time) = maybe_duration {
-                        info!(
-                            LOG,
-                            "render completed in {} seconds",
-                            elapsed_time.as_millis() as f64 / 1000.0
-                        )
-                    }
-
+                    info!(
+                        LOG,
+                        "render completed in {} seconds",
+                        elapsed_millis as f64 / 1000.0
+                    );
                     Ok(raw_image_data)
                 }
                 Err(error) => Err(RenderError(format!(
@@ -207,23 +278,10 @@ impl Tracer {
             )),
         }
     }
-
-    fn calculate_primary_rays(model: &Model, camera: &Camera) -> Vec<Ray> {
-        let mut rays: Vec<Ray> = Vec::new();
-
-        for i in 0..model.screen.height {
-            for j in 0..model.screen.width {
-                let ray = camera.calc_ray_definition(i, j, model);
-                rays.push(ray);
-            }
-        }
-
-        rays
-    }
 }
 
 #[derive(Debug)]
-pub struct RenderError(String);
+pub struct RenderError(pub String);
 
 impl fmt::Display for RenderError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {

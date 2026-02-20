@@ -9,8 +9,8 @@ mod bindings {
     use std::collections::HashMap;
     use std::str::FromStr;
     use std::sync::Arc;
-
     #[napi]
+
     pub fn log_error(message: String) -> napi::Result<()> {
         rusty_rays_core::logger::error!(rusty_rays_core::logger::LOG, "{}", message);
         Ok(())
@@ -116,8 +116,36 @@ mod bindings {
     }
 
     #[napi]
+    #[derive(Clone)]
+    pub enum RenderEvent {
+        Progress { percent: u8 },
+        Finished { millis: u32 },
+        WritingImage,
+        Canceled { millis: u32 },
+        Error { message: String },
+    }
+
+    impl From<rusty_rays_core::RenderEvent> for RenderEvent {
+        fn from(core_event: rusty_rays_core::RenderEvent) -> Self {
+            match core_event {
+                rusty_rays_core::RenderEvent::Progress { percent } => {
+                    RenderEvent::Progress { percent }
+                }
+                rusty_rays_core::RenderEvent::Finished { millis } => RenderEvent::Finished {
+                    millis: millis.min(u32::MAX as u128) as u32,
+                },
+                rusty_rays_core::RenderEvent::Canceled { millis } => RenderEvent::Canceled {
+                    millis: millis.min(u32::MAX as u128) as u32,
+                },
+                rusty_rays_core::RenderEvent::Error(s) => RenderEvent::Error { message: s },
+            }
+        }
+    }
+
+    #[napi]
     pub struct Tracer {
         inner: Arc<tokio::sync::Mutex<rusty_rays_core::Tracer>>,
+        current_render_cancel: Arc<tokio::sync::Mutex<Option<rusty_rays_core::CancellationToken>>>,
     }
 
     #[napi]
@@ -130,51 +158,94 @@ mod bindings {
 
             Ok(Self {
                 inner: Arc::new(tokio::sync::Mutex::new(tracer)),
+                current_render_cancel: Arc::new(tokio::sync::Mutex::new(None)),
             })
         }
 
         #[napi]
-        pub async fn render_to_image_buffer(&self, image_format: String) -> napi::Result<Buffer> {
-            let inner_tracer_clone = self.inner.clone();
-            let raw_image = tokio::task::spawn_blocking(move || {
-                let tracer_guard = inner_tracer_clone.blocking_lock();
+        pub async fn render_to_image_buffer(
+            &self,
+            image_format: String,
+            num_progress_blocks: i64,
+            on_event: napi::threadsafe_function::ThreadsafeFunction<RenderEvent>,
+        ) -> napi::Result<Buffer> {
+            let inner = self.inner.clone();
+            let on_event = Arc::new(on_event);
+            let write_image = move |raw_render| {
+                rusty_rays_core::write_render_to_image_buffer(image_format, &raw_render)
+                    .map(Buffer::from)
+                    .map_err(|e| e.to_string())
+            };
 
-                let raw_render = match tracer_guard.render() {
-                    Ok(render) => render,
-                    Err(error) => return Err(error.to_string()),
-                };
+            let cancel_token = rusty_rays_core::CancellationToken::default();
+            self.current_render_cancel
+                .lock()
+                .await
+                .replace(cancel_token.clone());
 
-                match rusty_rays_core::write_render_to_image_buffer(image_format, &raw_render) {
-                    Ok(serialized_render) => Ok(Buffer::from(serialized_render)),
-                    Err(error) => Err(error.to_string()),
-                }
-            })
-            .await
-            .map_err(|e| napi::Error::from_reason(format!("task panicked: {e}")))?
-            .map_err(napi::Error::from_reason)?;
+            let handle = Self::spawn_blocking_render_with_events(
+                inner,
+                cancel_token,
+                num_progress_blocks,
+                on_event,
+                write_image,
+            );
 
-            Ok(raw_image)
+            let buf = handle
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("task panicked: {e}")))?
+                .map_err(napi::Error::from_reason)?;
+
+            self.clear_cancel_token().await;
+
+            Ok(buf)
         }
 
         #[napi]
-        pub async fn render_to_file(&self, output_file_path: String) -> napi::Result<()> {
-            let inner_tracer_clone = self.inner.clone();
-            tokio::task::spawn_blocking(move || {
-                let tracer_guard = inner_tracer_clone.blocking_lock();
-                let raw_render = match tracer_guard.render() {
-                    Ok(render) => render,
-                    Err(error) => return Err(error.to_string()),
-                };
+        pub async fn render_to_file(
+            &self,
+            output_file_path: String,
+            num_progress_blocks: i64,
+            on_event: napi::threadsafe_function::ThreadsafeFunction<RenderEvent>,
+        ) -> napi::Result<()> {
+            let inner = self.inner.clone();
+            let on_event = Arc::new(on_event);
+            let write_image = move |raw_render| {
+                rusty_rays_core::write_render_to_file(&output_file_path.into(), &raw_render)
+                    .map_err(|e| e.to_string())?;
+                Ok(())
+            };
 
-                match rusty_rays_core::write_render_to_file(&output_file_path.into(), &raw_render) {
-                    Ok(serialized_render) => Ok(serialized_render),
-                    Err(error) => Err(error.to_string()),
-                }
-            })
-            .await
-            .map_err(|e| napi::Error::from_reason(format!("task panicked: {e}")))?
-            .map_err(napi::Error::from_reason)?;
+            let cancel_token = rusty_rays_core::CancellationToken::default();
+            self.current_render_cancel
+                .lock()
+                .await
+                .replace(cancel_token.clone());
 
+            let handle = Self::spawn_blocking_render_with_events(
+                inner,
+                cancel_token,
+                num_progress_blocks,
+                on_event,
+                write_image,
+            );
+
+            handle
+                .await
+                .map_err(|e| napi::Error::from_reason(format!("task panicked: {e}")))?
+                .map_err(napi::Error::from_reason)?;
+
+            self.clear_cancel_token().await;
+
+            Ok(())
+        }
+
+        #[napi]
+        pub async fn cancel_render(&self) -> napi::Result<()> {
+            if let Some(token) = self.current_render_cancel.lock().await.clone() {
+                token.cancel();
+            }
+            self.clear_cancel_token().await;
             Ok(())
         }
 
@@ -193,6 +264,86 @@ mod bindings {
                 });
 
             Ok(result)
+        }
+
+        fn spawn_blocking_render_with_events<T, F>(
+            inner: Arc<tokio::sync::Mutex<rusty_rays_core::Tracer>>,
+            cancel_token: rusty_rays_core::CancellationToken,
+            num_progress_blocks: i64,
+            on_event: Arc<napi::threadsafe_function::ThreadsafeFunction<RenderEvent>>,
+            write_image: F,
+        ) -> tokio::task::JoinHandle<Result<T, String>>
+        where
+            T: Send + 'static,
+            F: FnOnce(Vec<Vec<rusty_rays_core::Color>>) -> Result<T, String> + Send + 'static,
+        {
+            tokio::task::spawn_blocking(move || -> Result<T, String> {
+                // Channel that core uses to emit RenderEvent values.
+                let (tx, rx) = std::sync::mpsc::channel::<rusty_rays_core::RenderEvent>();
+
+                // Forward core events to JS on a dedicated listener thread.
+                let on_event_listener = on_event.clone();
+                let listener_handle = std::thread::spawn(move || {
+                    let mut render_time_millis = 0;
+                    for core_render_event in rx.iter() {
+                        let render_event: RenderEvent = core_render_event.into();
+                        if let RenderEvent::Finished { millis } = render_event {
+                            // we're not done until the render has been written as an image
+                            // do not send the finished event on render completion
+                            render_time_millis = millis;
+                        } else {
+                            let _ = on_event_listener.call(
+                                Ok(render_event),
+                                napi::threadsafe_function::ThreadsafeFunctionCallMode::NonBlocking,
+                            );
+                        }
+                    }
+
+                    render_time_millis
+                });
+
+                let tracer_guard = inner.blocking_lock();
+                let raw_render = match tracer_guard.render(
+                    Some(cancel_token),
+                    Some(tx),
+                    Some(num_progress_blocks as usize),
+                ) {
+                    Ok(render) => render,
+                    Err(error) => {
+                        // Ensure listener can exit cleanly.
+                        let _ = listener_handle.join();
+                        return Err(error.to_string());
+                    }
+                };
+
+                // Join the listener (rx will be closed because tx was dropped when render returned).
+                let listener_join_result = listener_handle.join();
+                let render_time_millis = match listener_join_result {
+                    Ok(t) => t,
+                    Err(_) => return Err("Render listener thread panicked".to_string()),
+                };
+
+                let _ = on_event.call(
+                    Ok(RenderEvent::WritingImage),
+                    napi::threadsafe_function::ThreadsafeFunctionCallMode::NonBlocking,
+                );
+
+                // Do the endpoint-specific final step.
+                let write_result = write_image(raw_render);
+
+                let _ = on_event.call(
+                    Ok(RenderEvent::Finished {
+                        millis: render_time_millis,
+                    }),
+                    napi::threadsafe_function::ThreadsafeFunctionCallMode::NonBlocking,
+                );
+
+                write_result
+            })
+        }
+
+        async fn clear_cancel_token(&self) {
+            let _ = self.current_render_cancel.lock().await.take();
         }
     }
 

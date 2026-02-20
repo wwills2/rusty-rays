@@ -5,8 +5,8 @@ use std::path::PathBuf;
 use std::sync::OnceLock;
 
 pub use tracer::{
-    Color, Cone, Coords, Fov, Model, Plane, PlaneCoords2D, Polygon, Screen, Sphere, Surface,
-    Tracer, Triangle,
+    CancellationToken, Color, Cone, Coords, Fov, Model, Plane, PlaneCoords2D, Polygon, RenderError,
+    RenderEvent, Screen, Sphere, Surface, Tracer, Triangle,
 };
 pub use utils::{Config, logger, write_render_to_file, write_render_to_image_buffer};
 pub use uuid::Uuid;
