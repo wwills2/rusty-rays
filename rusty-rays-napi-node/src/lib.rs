@@ -293,7 +293,7 @@ mod bindings {
                             render_time_millis = millis;
                         } else {
                             let _ = on_event_listener.call(
-                                Ok(render_event.into()),
+                                Ok(render_event),
                                 napi::threadsafe_function::ThreadsafeFunctionCallMode::NonBlocking,
                             );
                         }

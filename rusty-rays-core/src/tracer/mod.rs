@@ -1,6 +1,6 @@
 use crate::tracer::camera::Camera;
-use crate::utils::logger::{debug, error, info, trace, warn, LOG};
 use crate::utils::Config;
+use crate::utils::logger::{LOG, debug, error, info, trace, warn};
 use bvh::Bvh;
 pub use coords::Coords;
 pub use misc_types::{CancellationToken, RenderEvent};
@@ -14,7 +14,7 @@ use primitives::Primitive;
 pub use primitives::Sphere;
 pub use primitives::Triangle;
 pub use shader::Color;
-use std::sync::{atomic, mpsc, Arc, Mutex};
+use std::sync::{Arc, Mutex, atomic, mpsc};
 use std::time::SystemTime;
 use std::{f64, fmt, thread};
 
@@ -155,7 +155,7 @@ impl Tracer {
                     }
 
                     // Progress emission based on configured blocks.
-                    if ray_index % block_size == 0 {
+                    if ray_index.is_multiple_of(block_size) {
                         let block_idx = _progress_block_counter_arc_clone
                             .fetch_add(1, atomic::Ordering::Relaxed)
                             + 1;
@@ -244,12 +244,12 @@ impl Tracer {
             ));
         }
 
-        if cancel.is_canceled() {
-            if let Some(tx) = &event_tx {
-                let _ = tx.send(RenderEvent::Canceled {
-                    millis: elapsed_millis,
-                });
-            }
+        if cancel.is_canceled()
+            && let Some(tx) = &event_tx
+        {
+            let _ = tx.send(RenderEvent::Canceled {
+                millis: elapsed_millis,
+            });
         }
 
         if let Some(tx) = &event_tx {

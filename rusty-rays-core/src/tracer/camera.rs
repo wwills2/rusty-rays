@@ -1,4 +1,4 @@
-use crate::logger::{debug, trace, LOG};
+use crate::logger::{LOG, debug, trace};
 use crate::tracer::misc_types::Ray;
 use crate::{Coords, Model};
 use std::f64;

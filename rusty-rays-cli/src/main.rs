@@ -2,8 +2,8 @@ use clap::Parser;
 use std::path::PathBuf;
 use std::thread;
 
-use rusty_rays_core::logger::{error, info, shutdown_logger, LOG};
-use rusty_rays_core::{write_render_to_file, Model, Tracer};
+use rusty_rays_core::logger::{LOG, error, info, shutdown_logger};
+use rusty_rays_core::{Model, Tracer, write_render_to_file};
 
 use rusty_rays_core::CancellationToken;
 
@@ -114,7 +114,7 @@ fn install_cancel_handlers(cancel: CancellationToken) -> Option<std::thread::Joi
             info!(LOG, "received Ctrl+C (or Ctrl+Break). canceling render...");
             cancel_for_ctrlc.cancel();
         })
-            .expect("failed to set Ctrl+C handler");
+        .expect("failed to set Ctrl+C handler");
     }
 
     // Unix-only: also cancel on Ctrl+Z (SIGTSTP).

@@ -106,6 +106,8 @@ async function triggerRender() {
       onRenderEvent,
     );
 
+    // if we get a cancel event from the renderer process, this will be true
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
     if (!canceled) {
       tempRenderImageData = new Uint8Array(imageData).slice().buffer;
       renderStatus.renderImageAvailable = true;

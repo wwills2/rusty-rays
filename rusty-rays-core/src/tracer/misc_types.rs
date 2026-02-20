@@ -1,5 +1,5 @@
 use std::fmt;
-use std::sync::{atomic, Arc};
+use std::sync::{Arc, atomic};
 use uuid::Uuid;
 
 use crate::tracer::Color;

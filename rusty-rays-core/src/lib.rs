@@ -8,7 +8,7 @@ pub use tracer::{
     CancellationToken, Color, Cone, Coords, Fov, Model, Plane, PlaneCoords2D, Polygon, RenderError,
     RenderEvent, Screen, Sphere, Surface, Tracer, Triangle,
 };
-pub use utils::{logger, write_render_to_file, write_render_to_image_buffer, Config};
+pub use utils::{Config, logger, write_render_to_file, write_render_to_image_buffer};
 pub use uuid::Uuid;
 
 /// Override the default config directory. This the directory where the config file is stored,
