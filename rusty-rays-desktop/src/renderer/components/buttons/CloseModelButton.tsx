@@ -13,8 +13,8 @@ const CloseModelButton: React.FC = () => {
   const [errorMessage, setErrorMessage] = useState<string>('');
 
   const maybeRenderInProgress = useMemo(
-    () => renderStatus?.renderInProgress || fetchingRenderStatus,
-    [fetchingRenderStatus, renderStatus?.renderInProgress],
+    () => !!renderStatus?.renderProgressPercentage || fetchingRenderStatus,
+    [fetchingRenderStatus, renderStatus?.renderProgressPercentage],
   );
 
   const onClickClose = useCallback(() => {

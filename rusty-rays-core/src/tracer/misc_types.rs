@@ -1,5 +1,5 @@
 use std::fmt;
-
+use std::sync::{atomic, Arc};
 use uuid::Uuid;
 
 use crate::tracer::Color;
@@ -119,4 +119,24 @@ pub struct Intersection {
     pub position: Coords,
     pub surface_normal_at_intersection: Coords,
     pub intersected_primitive_uuid: Uuid,
+}
+
+#[derive(Clone, Default)]
+pub struct CancellationToken(Arc<atomic::AtomicBool>);
+
+impl CancellationToken {
+    pub fn cancel(&self) {
+        self.0.store(true, atomic::Ordering::Relaxed);
+    }
+    pub fn is_canceled(&self) -> bool {
+        self.0.load(atomic::Ordering::Relaxed)
+    }
+}
+
+#[derive(Clone, Debug)]
+pub enum RenderEvent {
+    Progress { percent: u8 },
+    Finished { millis: u128 },
+    Canceled { millis: u128 },
+    Error(String),
 }

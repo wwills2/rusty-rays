@@ -6,3 +6,4 @@ export * from './Input.tsx';
 export * from './Loader.tsx'
 export * from './Dialog.tsx'
 export * from './Tab.tsx'
+export * from './Progress.tsx'

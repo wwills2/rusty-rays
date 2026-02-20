@@ -4,8 +4,10 @@
  */
 
 import { v4 as uuidv4 } from 'uuid';
+import type { RenderEvent } from 'rusty-rays-napi-node';
 import { Model, Tracer } from 'rusty-rays-napi-node';
 import type { RenderStatus } from '#/ipc/shared';
+import * as _ from 'lodash';
 
 type TracerInstance =
   | { uuid: string; model: Model; tracer: Tracer }
@@ -14,7 +16,8 @@ type TracerInstance =
 let tracerInstance: TracerInstance = undefined;
 let tempRenderImageData: ArrayBuffer | undefined = undefined;
 let renderStatus: RenderStatus = {
-  renderInProgress: false,
+  renderProgressPercentage: undefined,
+  writingImage: false,
   renderImageAvailable: false,
   renderErrorMsg: undefined,
   tracerInstanceUuid: undefined,
@@ -25,7 +28,7 @@ function getTracerInstance(): TracerInstance | undefined {
 }
 
 async function setModel(model: Model | undefined) {
-  if (renderStatus.renderInProgress) {
+  if (!_.isNil(renderStatus.renderProgressPercentage)) {
     throw new Error('Cannot set model. render in progress');
   }
 
@@ -46,7 +49,7 @@ async function setModel(model: Model | undefined) {
 }
 
 async function triggerRender() {
-  if (renderStatus.renderInProgress) {
+  if (!_.isNil(renderStatus.renderProgressPercentage)) {
     throw new Error('Render already in progress');
   }
 
@@ -60,10 +63,56 @@ async function triggerRender() {
   }
 
   try {
-    renderStatus.renderInProgress = true;
-    const imageData = await instance.tracer.renderToImageBuffer('png');
-    tempRenderImageData = new Uint8Array(imageData).slice().buffer;
-    renderStatus.renderImageAvailable = true;
+    let canceled = false;
+    renderStatus.renderProgressPercentage = 0;
+    const onRenderEvent = (error: unknown, event: RenderEvent) => {
+      if (error && !renderStatus.renderErrorMsg) {
+        renderStatus.renderErrorMsg =
+          'Received error during render: ' + JSON.stringify(error);
+        tracerInstance?.tracer.cancelRender().catch((error: unknown) => {
+          console.error(
+            'an error occurred while trying to cancel render:',
+            error,
+          );
+        });
+        return;
+      }
+
+      switch (event.type) {
+        case 'Progress':
+          renderStatus.renderProgressPercentage = event.percent;
+          break;
+        case 'WritingImage':
+          renderStatus.writingImage = true;
+          break;
+        case 'Finished':
+          renderStatus.renderProgressPercentage = undefined;
+          renderStatus.writingImage = false;
+          break;
+        case 'Canceled':
+          canceled = true;
+          break;
+        case 'Error':
+          renderStatus.renderErrorMsg = 'Render failed: ' + event.message;
+          break;
+        default:
+          break;
+      }
+    };
+
+    const imageData = await instance.tracer.renderToImageBuffer(
+      'png',
+      50,
+      onRenderEvent,
+    );
+
+    if (!canceled) {
+      tempRenderImageData = new Uint8Array(imageData).slice().buffer;
+      renderStatus.renderImageAvailable = true;
+    } else {
+      resetRenderStatus();
+      tempRenderImageData = undefined;
+    }
   } catch (error) {
     if (error instanceof Error) {
       renderStatus.renderErrorMsg = error.message;
@@ -71,7 +120,7 @@ async function triggerRender() {
       renderStatus.renderErrorMsg = `Unknown error: ${JSON.stringify(error)}`;
     }
   } finally {
-    renderStatus.renderInProgress = false;
+    renderStatus.renderProgressPercentage = undefined;
   }
 }
 
@@ -82,17 +131,37 @@ function takeRenderImageData() {
   return copy;
 }
 
+async function cancelRender() {
+  try {
+    await tracerInstance?.tracer.cancelRender();
+    resetRenderStatus();
+  } catch (error) {
+    if (error instanceof Error) {
+      console.error(
+        'an error occurred while trying to cancel render:',
+        error.message,
+      );
+    } else {
+      console.error(
+        'an unknown error occurred while trying to cancel render:',
+        error,
+      );
+    }
+  }
+}
+
 function getRenderStatus() {
   return { ...renderStatus, tracerInstanceUuid: tracerInstance?.uuid };
 }
 
 function resetRenderStatus() {
-  if (renderStatus.renderInProgress) {
+  if (!_.isNil(renderStatus.renderProgressPercentage)) {
     throw new Error('Cannot reset render status. Render in progress');
   }
 
   renderStatus = {
-    renderInProgress: false,
+    renderProgressPercentage: undefined,
+    writingImage: false,
     renderImageAvailable: false,
     renderErrorMsg: undefined,
     tracerInstanceUuid: tracerInstance?.uuid,
@@ -105,5 +174,6 @@ export {
   triggerRender,
   takeRenderImageData,
   getRenderStatus,
+  cancelRender,
 };
 export type { TracerInstance };

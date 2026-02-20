@@ -31,7 +31,8 @@ function toIpcError(error: unknown, altMsg: string) {
  */
 type RenderStatus = {
   tracerInstanceUuid?: string;
-  renderInProgress: boolean;
+  renderProgressPercentage?: number;
+  writingImage: boolean;
   renderErrorMsg?: string;
   renderImageAvailable: boolean;
 };

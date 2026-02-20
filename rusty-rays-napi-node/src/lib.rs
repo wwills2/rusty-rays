@@ -122,7 +122,7 @@ mod bindings {
         Finished { millis: u32 },
         WritingImage,
         Canceled { millis: u32 },
-        Error(String),
+        Error { message: String },
     }
 
     impl From<rusty_rays_core::RenderEvent> for RenderEvent {
@@ -137,7 +137,7 @@ mod bindings {
                 rusty_rays_core::RenderEvent::Canceled { millis } => RenderEvent::Canceled {
                     millis: millis.min(u32::MAX as u128) as u32,
                 },
-                rusty_rays_core::RenderEvent::Error(s) => RenderEvent::Error(s),
+                rusty_rays_core::RenderEvent::Error(s) => RenderEvent::Error { message: s },
             }
         }
     }

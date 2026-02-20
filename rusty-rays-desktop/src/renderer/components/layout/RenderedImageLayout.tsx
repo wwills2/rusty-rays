@@ -1,4 +1,4 @@
-import { Alert, Card, Dialog, Loader } from '@/retro-ui-lib';
+import { Alert, Card, Dialog, Loader, Progress } from '@/retro-ui-lib';
 import { RenderedImageCanvasWidget } from '@/components';
 import React, { useCallback, useEffect, useState } from 'react';
 
@@ -51,7 +51,7 @@ const RenderedImageLayout: React.FC = () => {
   useEffect(() => {
     const execute = async () => {
       if (renderStatus && tracerInstanceUuid) {
-        if (renderStatus.renderInProgress) {
+        if (renderStatus.renderProgressPercentage) {
           setPollRenderProgress(true);
         } else if (renderStatus.renderImageAvailable) {
           try {
@@ -147,15 +147,30 @@ const RenderedImageLayout: React.FC = () => {
   return (
     <Card className="flex-1 min-h-0">
       <Card.Content className="p-2 w-full h-full items-center justify-center">
-        {!renderStatus || renderStatus.renderInProgress || !imageData ? (
+        {!renderStatus ||
+        renderStatus.renderProgressPercentage ||
+        !imageData ? (
           <div className="flex flex-col h-full w-full items-center justify-center bg-muted">
             <Alert className="flex flex-col lg:max-w-2/3 max-w-1/2">
-              <Alert.Title className="text-center">
-                Render in progress...
-              </Alert.Title>
-              <div className="flex items-center justify-center pt-2">
-                <Loader count={10} delayStep={60} />
-              </div>
+              {renderStatus?.writingImage ? (
+                <>
+                  <Alert.Title className="text-center">
+                    Encoding image...
+                  </Alert.Title>
+                  <div className="flex items-center justify-center pt-2">
+                    <Loader count={10} delayStep={60} />
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Alert.Title className="text-center">
+                    Render in progress...
+                  </Alert.Title>
+                  <div className="flex items-center justify-center pt-2">
+                    <Progress value={renderStatus?.renderProgressPercentage} />
+                  </div>
+                </>
+              )}
             </Alert>
           </div>
         ) : (

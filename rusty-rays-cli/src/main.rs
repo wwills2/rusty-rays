@@ -3,10 +3,11 @@ use std::path::PathBuf;
 use std::thread;
 
 use rusty_rays_core::logger::{error, info, shutdown_logger, LOG};
-use rusty_rays_core::{write_render_to_file, CancellationToken, Model, Tracer};
+use rusty_rays_core::{write_render_to_file, Model, Tracer};
 
 // Add this dependency in Cargo.toml:
 // signal-hook = "0.3"
+use rusty_rays_core::CancellationToken;
 use signal_hook::consts::signal::{SIGINT, SIGTERM, SIGTSTP};
 use signal_hook::iterator::Signals;
 

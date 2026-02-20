@@ -3,6 +3,7 @@ use crate::utils::logger::{debug, error, info, trace, warn, LOG};
 use crate::utils::Config;
 use bvh::Bvh;
 pub use coords::Coords;
+pub use misc_types::{CancellationToken, RenderEvent};
 pub use misc_types::{Fov, Screen, Surface};
 pub use model::Model;
 pub use plane_coords_2d::PlaneCoords2D;
@@ -26,25 +27,6 @@ mod plane_coords_2d;
 mod primitives;
 mod rayshade4_file_parser;
 mod shader;
-
-#[derive(Clone, Default)]
-pub struct CancellationToken(Arc<atomic::AtomicBool>);
-impl CancellationToken {
-    pub fn cancel(&self) {
-        self.0.store(true, atomic::Ordering::Relaxed);
-    }
-    pub fn is_canceled(&self) -> bool {
-        self.0.load(atomic::Ordering::Relaxed)
-    }
-}
-
-#[derive(Clone, Debug)]
-pub enum RenderEvent {
-    Progress { percent: u8 },
-    Finished { millis: u128 },
-    Canceled { millis: u128 },
-    Error(String),
-}
 
 #[derive(Debug)]
 pub struct Tracer {
@@ -89,12 +71,12 @@ impl Tracer {
     pub fn render(
         &self,
         cancel: Option<CancellationToken>,
-        events: Option<mpsc::Sender<RenderEvent>>,
+        events_tx: Option<mpsc::Sender<RenderEvent>>,
         num_progress_blocks: Option<usize>,
     ) -> Result<Vec<Vec<Color>>, RenderError> {
         info!(LOG, "rendering model");
         let self_arc = Arc::new(self.clone());
-        Self::_render(self_arc, cancel, events, num_progress_blocks)
+        Self::_render(self_arc, cancel, events_tx, num_progress_blocks)
     }
 
     pub fn get_intersected_uuid_by_pixel_pos(
@@ -154,7 +136,7 @@ impl Tracer {
             let _progress_block_counter_arc_clone = Arc::clone(&progress_block_counter_arc);
 
             let cancel_clone = cancel.clone();
-            let events_clone = event_tx.clone();
+            let events_tx_clone = event_tx.clone();
 
             let handle = thread::spawn(move || {
                 info!(LOG, "starting render thread #{}", thread_num);
@@ -184,7 +166,7 @@ impl Tracer {
 
                             info!(LOG, "rendering {}% complete", percent);
 
-                            if let Some(tx) = &events_clone {
+                            if let Some(tx) = &events_tx_clone {
                                 let _ = tx.send(RenderEvent::Progress { percent });
                             }
                         }
@@ -220,7 +202,7 @@ impl Tracer {
                             "thread {} encountered poisoned data error when trying to write pixel colors to image data",
                             thread_num,
                         );
-                        if let Some(tx) = &events_clone {
+                        if let Some(tx) = &events_tx_clone {
                             let _ = tx.send(RenderEvent::Error(
                                 "poisoned mutex while writing image data".to_string(),
                             ));
@@ -268,7 +250,6 @@ impl Tracer {
                     millis: elapsed_millis,
                 });
             }
-            return Err(RenderError("canceled".to_string()));
         }
 
         if let Some(tx) = &event_tx {
