@@ -1,11 +1,5 @@
 // sub-process-shared.ts
-import type {
-  Cone,
-  Polygon,
-  RenderEvent,
-  Sphere,
-  Triangle,
-} from 'rusty-rays-napi-node';
+import type { Cone, IntersectedObjectInfo, Polygon, RenderEvent, Sphere, Triangle } from 'rusty-rays-napi-node';
 import type { RenderStatus } from '#/ipc/shared';
 
 /**
@@ -73,7 +67,7 @@ const SubprocessRpc = {
   },
   'tracer:GetIntersectedUuidByPixelPos': {
     args: [] as unknown as [x: number, y: number],
-    result: {} as string | null,
+    result: {} as IntersectedObjectInfo | null, // <-- was string | null
   },
 } as const;
 

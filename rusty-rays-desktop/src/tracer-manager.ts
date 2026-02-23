@@ -8,9 +8,8 @@ const client = new TracerSubprocessClient('TODO');
 
 type TracerInstance = { uuid: string } | undefined;
 
-// Local mirror (same shape as before)
+// Local mirror
 let tracerInstance: TracerInstance = undefined;
-let tempRenderImageData: ArrayBuffer | undefined = undefined;
 
 let renderStatus: RenderStatus = {
   renderProgressPercentage: undefined,
@@ -22,13 +21,15 @@ let renderStatus: RenderStatus = {
 
 // Stream render events from child into local status
 client.onRenderEvent((payload) => {
-  const event = payload as
-    | RenderEvent
-    | { type: 'InternalError'; message: string };
+  // payload is RenderEventEnvelope; narrow it first
+  if (payload.type === 'InternalError') {
+    renderStatus.renderErrorMsg = payload.message;
+    return;
+  }
 
-  if (!event || typeof (event as any).type !== 'string') return;
+  const event: RenderEvent = payload.event;
 
-  switch ((event as any).type) {
+  switch (event.type) {
     case 'Progress':
       renderStatus.renderProgressPercentage = event.percent;
       break;
@@ -38,15 +39,14 @@ client.onRenderEvent((payload) => {
     case 'Finished':
       renderStatus.renderProgressPercentage = undefined;
       renderStatus.writingImage = false;
+      // optional: mark image available when Finished arrives (or keep it purely server-driven)
+      // renderStatus.renderImageAvailable = true;
       break;
     case 'Canceled':
-      // you may choose to clear state here; current code clears on fetch/take
+      // optional: clear status or leave to TakeRenderImageData/reset
       break;
     case 'Error':
       renderStatus.renderErrorMsg = 'Render failed: ' + event.message;
-      break;
-    case 'InternalError':
-      renderStatus.renderErrorMsg = (event as any).message;
       break;
     default:
       break;
@@ -80,10 +80,8 @@ async function setModelFromFilePath(path: string) {
     throw new Error('Cannot set model. render in progress');
   }
 
-  tempRenderImageData = undefined;
-
-  const { instanceUuid } = await client.invoke<{ instanceUuid: string }>(
-    'model.initFromFilePath',
+  const { instanceUuid } = await client.invoke(
+    'model:InitFromFilePath',
     [path],
     120_000,
   );
@@ -98,10 +96,8 @@ async function setModelFromFileTextString(fileText: string) {
     throw new Error('Cannot set model. render in progress');
   }
 
-  tempRenderImageData = undefined;
-
-  const { instanceUuid } = await client.invoke<{ instanceUuid: string }>(
-    'model.initFromFileTextString',
+  const { instanceUuid } = await client.invoke(
+    'model:InitFromFileTextString',
     [fileText],
     120_000,
   );
@@ -115,8 +111,8 @@ async function setModel(undefinedModel: undefined) {
   if (!_.isNil(renderStatus.renderProgressPercentage)) {
     throw new Error('Cannot set model. render in progress');
   }
-  tempRenderImageData = undefined;
-  await client.invoke('model.setModel', [undefinedModel]);
+
+  await client.invoke('model:SetModel', [undefinedModel]);
   tracerInstance = undefined;
   resetRenderStatus();
 }
@@ -135,22 +131,21 @@ async function triggerRender() {
   }
 
   renderStatus.renderProgressPercentage = 0;
-  await client.invoke('tracer.triggerRender', [], 5_000); // returns immediately; events stream
+  await client.invoke('tracer:TriggerRender', [], 5_000);
 }
 
 async function cancelRender() {
-  await client.invoke('tracer.cancelRender', [], 10_000);
+  await client.invoke('tracer:CancelRender', [], 10_000);
   resetRenderStatus();
 }
 
 async function takeRenderImageData() {
   resetRenderStatus();
-  const imageData = await client.invoke<ArrayBuffer | undefined>(
-    'tracer.takeRenderImageData',
+  const imageData = await client.invoke(
+    'tracer:TakeRenderImageData',
     [],
     60_000,
   );
-  tempRenderImageData = undefined;
   return imageData;
 }
 
@@ -160,26 +155,50 @@ async function getIntersectedUuidByPixelPos(x: number, y: number) {
       'No model loaded. A model must be loaded to query intersections',
     );
   }
-  return await client.invoke<string | null>(
-    'tracer.getIntersectedUuidByPixelPos',
+
+  // NOTE: return type updated below (IntersectedObjectInfo | null)
+  return await client.invoke(
+    'tracer:GetIntersectedUuidByPixelPos',
     [x, y],
     30_000,
   );
 }
 
+async function getAllSpheres() {
+  if (!tracerInstance)
+    throw new Error('failed to fetch spheres. no model loaded');
+  return await client.invoke('model:GetAllSpheres', [], 30_000);
+}
+async function getAllCones() {
+  if (!tracerInstance)
+    throw new Error('failed to fetch cones. no model loaded');
+  return await client.invoke('model:GetAllCones', [], 30_000);
+}
+async function getAllTriangles() {
+  if (!tracerInstance)
+    throw new Error('failed to fetch triangles. no model loaded');
+  return await client.invoke('model:GetAllTriangles', [], 30_000);
+}
+async function getAllPolygons() {
+  if (!tracerInstance)
+    throw new Error('failed to fetch polygons. no model loaded');
+  return await client.invoke('model:GetAllPolygons', [], 30_000);
+}
+
 export {
-  // keep old exports (you’ll wire model init channels to the new setters)
   getTracerInstance,
   triggerRender,
   cancelRender,
   getRenderStatus,
   takeRenderImageData,
-
-  // new setters you’ll call from your model IPC handlers
   setModelFromFilePath,
   setModelFromFileTextString,
   setModel,
   getIntersectedUuidByPixelPos,
+  getAllSpheres,
+  getAllCones,
+  getAllTriangles,
+  getAllPolygons,
 };
 
 export type { TracerInstance };

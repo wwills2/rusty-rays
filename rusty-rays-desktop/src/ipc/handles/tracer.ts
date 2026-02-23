@@ -1,5 +1,7 @@
+// src/ipc/handles/tracer.ts
 import { handle } from '#/ipc/handles/index';
 import {
+  getIntersectedUuidByPixelPos,
   getRenderStatus,
   getTracerInstance,
   takeRenderImageData,
@@ -10,9 +12,7 @@ import { toIpcError } from '#/ipc/shared';
 function initTracerChannels() {
   handle('tracer:GetInstanceUuid', () => {
     const instance = getTracerInstance();
-    if (instance === undefined) {
-      return { data: 'TRACER_INSTANCE_NOT_LOADED' };
-    }
+    if (instance === undefined) return { data: 'TRACER_INSTANCE_NOT_LOADED' };
     return { data: instance.uuid };
   });
 
@@ -25,7 +25,7 @@ function initTracerChannels() {
     }
 
     try {
-      // do not await, let this process continue in the background
+      // fire-and-forget; status updates and errors come from streamed events
       triggerRender().catch(() => {});
       return { data: true };
     } catch (error: unknown) {
@@ -38,14 +38,13 @@ function initTracerChannels() {
     return { data };
   });
 
-  handle('tracer:GetRenderImageData', () => {
-    const { renderErrorMsg } = getRenderStatus();
-    if (renderErrorMsg) {
-      const renderError = new Error(renderErrorMsg);
-      return toIpcError(renderError, 'Render failed');
+  handle('tracer:GetRenderImageData', async () => {
+    try {
+      const data = await takeRenderImageData();
+      return { data };
+    } catch (error) {
+      return toIpcError(error, 'Render failed');
     }
-    const renderImageData = takeRenderImageData();
-    return { data: renderImageData };
   });
 
   handle('tracer:GetIntersectedUuidByPixelPos', async (_, args) => {
@@ -60,10 +59,8 @@ function initTracerChannels() {
 
     try {
       const [x, y] = args;
-      const { tracer } = instance;
-      const maybeIntersectedObjectUuid =
-        await tracer.getIntersectedUuidByPixelPos(x, y);
-      return { data: maybeIntersectedObjectUuid };
+      const data = await getIntersectedUuidByPixelPos(x, y);
+      return { data };
     } catch (error: unknown) {
       return toIpcError(
         error,
