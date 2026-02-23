@@ -40,7 +40,7 @@ async function main() {
     logTrace('THIS TRACE MESSAGE SHOULD NOT BE SEEN');
     await new Promise((resolve) => setTimeout(resolve, 100))
 
-    const model = await Model.fromFilePath('../sample-files/single-sphere-test-extended.ray');
+    const model = await Model.fromFilePath('../sample-files/jacks.ray');
     const spheres: Record<string, Sphere> = await model.allSpheres;
     console.log(`loaded ${Object.keys(spheres).length} spheres from model`);
     const newSphere: Sphere = {
