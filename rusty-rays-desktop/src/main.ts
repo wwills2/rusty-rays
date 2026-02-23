@@ -4,8 +4,8 @@ import { fileURLToPath } from 'url';
 import { initIpcChannels } from '#/ipc/handles';
 
 // ESM -> manually define __filename and __dirname
-export const __filename = fileURLToPath(import.meta.url);
-export const __dirname = path.dirname(__filename);
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 function setContentSecurityPolicy(policy: string[]) {
   session.defaultSession.webRequest.onHeadersReceived((details, callback) => {

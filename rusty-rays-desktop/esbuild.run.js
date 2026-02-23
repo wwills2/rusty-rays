@@ -9,18 +9,16 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 async function main() {
-  // Ensure dist directory exists
   try {
     await mkdir('build');
   } catch {}
 
-  // Shared config for both main and preload builds
   const sharedConfig = {
     alias: {
       '#': resolve(__dirname, 'src'),
     },
     platform: 'node',
-    format: 'esm', // Change to "cjs" if you prefer CJS output
+    format: 'esm',
     target: 'es2023',
     bundle: true,
     sourcemap: true,
@@ -32,7 +30,7 @@ async function main() {
     ],
   };
 
-  // Build main process
+  // Build main process (Electron)
   await esbuild.build({
     ...sharedConfig,
     entryPoints: ['src/main.ts'],
@@ -59,8 +57,18 @@ async function main() {
     outfile: 'build/preload.js',
   });
 
+  // Build tracer subprocess (Node-only worker)
+  await esbuild.build({
+    ...sharedConfig,
+    entryPoints: ['src/tracer-subprocess.ts'],
+    outfile: 'build/tracer-subprocess.js',
+    // optional but often helpful if you want to ensure it stays "node-ish"
+    // conditions: ['node'],
+  });
+
   console.log('Built main -> build/index.js');
   console.log('Built preload -> build/preload.js');
+  console.log('Built tracer subprocess -> build/tracer-subprocess.js');
 }
 
 main().catch((err) => {

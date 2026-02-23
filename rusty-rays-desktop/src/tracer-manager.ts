@@ -3,8 +3,11 @@ import * as _ from 'lodash';
 import type { RenderEvent } from 'rusty-rays-napi-node';
 import type { RenderStatus } from '#/ipc/shared';
 import { TracerSubprocessClient } from '#/tracer-subprocess-client';
+import { fileURLToPath } from 'url';
 
-const client = new TracerSubprocessClient('TODO');
+const client = new TracerSubprocessClient(
+  fileURLToPath(new URL('./tracer-subprocess.js', import.meta.url)),
+);
 
 type TracerInstance = { uuid: string } | undefined;
 
@@ -43,7 +46,7 @@ client.onRenderEvent((payload) => {
       // renderStatus.renderImageAvailable = true;
       break;
     case 'Canceled':
-      // optional: clear status or leave to TakeRenderImageData/reset
+      resetRenderStatus();
       break;
     case 'Error':
       renderStatus.renderErrorMsg = 'Render failed: ' + event.message;
@@ -136,7 +139,6 @@ async function triggerRender() {
 
 async function cancelRender() {
   await client.invoke('tracer:CancelRender', [], 10_000);
-  resetRenderStatus();
 }
 
 async function takeRenderImageData() {

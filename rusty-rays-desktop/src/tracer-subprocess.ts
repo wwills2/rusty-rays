@@ -11,7 +11,7 @@ import type {
   RpcResponse,
   SubprocessArgs,
   SubprocessEvent,
-  SubprocessResult
+  SubprocessResult,
 } from './sub-process-shared';
 import { isRpcRequest, serializeError } from './sub-process-shared';
 
@@ -119,6 +119,8 @@ async function triggerRender(): Promise<void> {
           break;
         case 'Canceled':
           canceled = true;
+          // this will prevet resetRenderStatus from throwing an error, DO NOT do this elsewhere, use the reset method
+          renderStatus.renderProgressPercentage = undefined;
           break;
         case 'Error':
           renderStatus.renderErrorMsg = 'Render failed: ' + event.message;
@@ -179,11 +181,10 @@ async function handleRpc(
 ): Promise<SubprocessResult<typeof req.method>> {
   switch (req.method) {
     case 'health:Ping': {
-      const result: SubprocessResult<'health:Ping'> = {
+      return {
         ok: true,
         pid: process.pid,
       };
-      return result;
     }
 
     case 'model:InitFromFilePath': {
