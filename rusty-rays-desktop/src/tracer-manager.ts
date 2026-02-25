@@ -42,8 +42,7 @@ client.onRenderEvent((payload) => {
     case 'Finished':
       renderStatus.renderProgressPercentage = undefined;
       renderStatus.writingImage = false;
-      // optional: mark image available when Finished arrives (or keep it purely server-driven)
-      // renderStatus.renderImageAvailable = true;
+      renderStatus.renderImageAvailable = true;
       break;
     case 'Canceled':
       resetRenderStatus();
@@ -143,12 +142,7 @@ async function cancelRender() {
 
 async function takeRenderImageData() {
   resetRenderStatus();
-  const imageData = await client.invoke(
-    'tracer:TakeRenderImageData',
-    [],
-    60_000,
-  );
-  return imageData;
+  return await client.invoke('tracer:TakeRenderImageData', [], 60_000);
 }
 
 async function getIntersectedUuidByPixelPos(x: number, y: number) {

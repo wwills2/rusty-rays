@@ -11,6 +11,7 @@ import type {
   SubprocessResult,
 } from './sub-process-shared';
 import { isRpcResponse, isSubprocessEvent } from './sub-process-shared';
+import * as inspector from 'node:inspector';
 
 type PendingCall = {
   resolve: (value: unknown) => void;
@@ -24,6 +25,7 @@ export class TracerSubprocessClient {
   private renderHandlers = new Set<(payload: RenderEventEnvelope) => void>();
   private started = false;
   private readonly entryPath: string;
+  private readonly debuggerAttached = inspector.url() !== undefined;
 
   constructor(entryPath: string) {
     this.entryPath = entryPath;
@@ -39,8 +41,10 @@ export class TracerSubprocessClient {
     this.started = true;
 
     const child = fork(this.entryPath, [], {
+      execPath: 'NODE EXEC PATH HERE', //todo set up node exec path
       stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
       env: process.env,
+      serialization: 'advanced',
     });
 
     this.child = child;
@@ -91,8 +95,10 @@ export class TracerSubprocessClient {
 
     const result = await new Promise<unknown>((resolve, reject) => {
       const timeout = setTimeout(() => {
-        this.pending.delete(id);
-        reject(new Error(`RPC timeout (${timeoutMs}ms): ${method}`));
+        if (!this.debuggerAttached) {
+          this.pending.delete(id);
+          reject(new Error(`RPC timeout (${timeoutMs}ms): ${method}`));
+        }
       }, timeoutMs);
 
       const rejectAsError = (e: unknown) => {

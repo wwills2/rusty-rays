@@ -1,5 +1,6 @@
 import type { RenderStatus } from './index';
 import type { IntersectedObjectInfo } from 'rusty-rays-napi-node';
+
 const TracerChannels = {
   'tracer:TriggerRender': {
     args: [],
@@ -15,7 +16,7 @@ const TracerChannels = {
   },
   'tracer:GetRenderImageData': {
     args: [],
-    dataType: {} as ArrayBuffer,
+    dataType: {} as Buffer,
   },
   'tracer:GetIntersectedUuidByPixelPos': {
     args: [] as unknown as [x: number, y: number],

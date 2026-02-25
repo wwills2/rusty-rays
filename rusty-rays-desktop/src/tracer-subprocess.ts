@@ -169,11 +169,13 @@ function getRenderStatus(): RenderStatus {
   return { ...renderStatus, tracerInstanceUuid: tracerInstance?.uuid };
 }
 
-function takeRenderImageData(): ArrayBuffer | undefined {
+function takeRenderImageData(): Buffer | undefined {
   resetRenderStatus();
-  const copy = tempRenderImageData;
-  tempRenderImageData = undefined;
-  return copy;
+  if (tempRenderImageData !== undefined) {
+    const buffer = Buffer.from(tempRenderImageData);
+    tempRenderImageData = undefined;
+    return buffer;
+  }
 }
 
 async function handleRpc(
@@ -310,7 +312,7 @@ process.on('message', (msg: unknown) => {
         kind: 'rpc.response',
         id: msg.id,
         ok: true,
-        result: result as never,
+        result: result,
       };
       send(resp);
     } catch (err) {

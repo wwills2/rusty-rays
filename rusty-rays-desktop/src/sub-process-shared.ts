@@ -63,7 +63,7 @@ const SubprocessRpc = {
   },
   'tracer:TakeRenderImageData': {
     args: [] as const,
-    result: {} as ArrayBuffer | undefined,
+    result: {} as Buffer | undefined,
   },
   'tracer:GetIntersectedUuidByPixelPos': {
     args: [] as unknown as [x: number, y: number],
