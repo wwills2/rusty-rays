@@ -61,7 +61,7 @@ async function main() {
   await esbuild.build({
     ...sharedConfig,
     entryPoints: ['src/tracer-subprocess.ts'],
-    outfile: 'build/tracer-subprocess.js',
+    outfile: 'build/tracer-subprocess.mjs',
     // optional but often helpful if you want to ensure it stays "node-ish"
     // conditions: ['node'],
   });

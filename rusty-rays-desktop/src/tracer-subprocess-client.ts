@@ -12,6 +12,8 @@ import type {
 } from './sub-process-shared';
 import { isRpcResponse, isSubprocessEvent } from './sub-process-shared';
 import * as inspector from 'node:inspector';
+import { app } from 'electron';
+import * as path from 'node:path';
 
 type PendingCall = {
   resolve: (value: unknown) => void;
@@ -40,8 +42,14 @@ export class TracerSubprocessClient {
     if (this.started) return;
     this.started = true;
 
+    const childExecPath = this.getSubprocessNodeExecPath();
+    console.log(
+      'executing tracer subprocess with node executable: ',
+      childExecPath,
+    );
+
     const child = fork(this.entryPath, [], {
-      execPath: 'NODE EXEC PATH HERE', //todo set up node exec path
+      execPath: childExecPath,
       stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
       env: process.env,
       serialization: 'advanced',
@@ -149,5 +157,16 @@ export class TracerSubprocessClient {
         /* empty */
       }
     }
+  }
+
+  // Returns the absolute path to the packaged Node runtime that the subprocess should use.
+  // - In packaged apps: binary is shipped via electron-builder extraResources and available under process.resourcesPath.
+  // - In development: the downloader stores the binary in the project root (same directory as package.json).
+  private getSubprocessNodeExecPath(): string {
+    if (app.isPackaged) {
+      return path.join(process.resourcesPath, 'subprocess-node.exe');
+    }
+    // In dev, app.getAppPath() points to the project directory (where package.json lives)
+    return path.join(app.getAppPath(), 'subprocess-node.exe');
   }
 }

@@ -12,6 +12,7 @@
     "vite": "npx vite -c vite.renderer.config.ts",
     "build": "npm run build:main && tsc -p tsconfig.vite.renderer.json && npx vite -c vite.renderer.config.ts build",
     "build:main": "tsc -p tsconfig.electron.main.json && node esbuild.run.js",
+    "postinstall": "node download-subprocess-node.js",
     "dist:linux:deb": "npm run clean && npm run build && npx electron-builder --linux deb",
     "dist:windows": "npm run clean && npm run build && npx electron-builder --windows",
     "electron:dev": "npm run build && npx cross-env SPA_SRC=vite npx electron .",
@@ -29,6 +30,15 @@
     "files": [
       "build/**/*",
       "!build/**/*.map"
+    ],
+    "extraResources": [
+      {
+        "from": ".",
+        "to": ".",
+        "filter": [
+          "subprocess-node.exe"
+        ]
+      }
     ],
     "win": {
       "target": "nsis"
