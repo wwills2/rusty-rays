@@ -9,8 +9,8 @@ import type {
   SubprocessEvent,
   SubprocessMethod,
   SubprocessResult,
-} from './sub-process-shared';
-import { isRpcResponse, isSubprocessEvent } from './sub-process-shared';
+} from './tracer-subprocess-shared';
+import { isRpcResponse, isSubprocessEvent } from './tracer-subprocess-shared';
 import * as inspector from 'node:inspector';
 import { app } from 'electron';
 import * as path from 'node:path';
@@ -75,7 +75,7 @@ export class TracerSubprocessClient {
       this.started = false;
     });
 
-    await this.invoke('health:Ping', [], 10_000);
+    await this.invoke('subProcIpc:Health:Ping', [], 10_000);
   }
 
   stop(): void {

@@ -12,8 +12,8 @@ import type {
   SubprocessArgs,
   SubprocessEvent,
   SubprocessResult,
-} from './sub-process-shared';
-import { isRpcRequest, serializeError } from './sub-process-shared';
+} from './tracer-subprocess-shared';
+import { isRpcRequest, serializeError } from './tracer-subprocess-shared';
 
 type TracerInstance =
   | { uuid: string; model: Model; tracer: Tracer }
@@ -182,15 +182,16 @@ async function handleRpc(
   req: RpcRequest,
 ): Promise<SubprocessResult<typeof req.method>> {
   switch (req.method) {
-    case 'health:Ping': {
+    case 'subProcIpc:Health:Ping': {
       return {
         ok: true,
         pid: process.pid,
       };
     }
 
-    case 'model:InitFromFilePath': {
-      const [path] = req.args as SubprocessArgs<'model:InitFromFilePath'>;
+    case 'subProcIpc:Model:InitFromFilePath': {
+      const [path] =
+        req.args as SubprocessArgs<'subProcIpc:Model:InitFromFilePath'>;
       const model = await Model.fromFilePath(path);
       const instanceUuid = await setModel(model);
       if (!instanceUuid)
@@ -202,9 +203,9 @@ async function handleRpc(
       };
     }
 
-    case 'model:InitFromFileTextString': {
+    case 'subProcIpc:Model:InitFromFileTextString': {
       const [fileText] =
-        req.args as SubprocessArgs<'model:InitFromFileTextString'>;
+        req.args as SubprocessArgs<'subProcIpc:Model:InitFromFileTextString'>;
       const model = Model.fromString(fileText);
       const instanceUuid = await setModel(model);
       if (!instanceUuid)
@@ -216,78 +217,78 @@ async function handleRpc(
       };
     }
 
-    case 'model:SetModel': {
-      const [uuid] = req.args as SubprocessArgs<'model:SetModel'>;
+    case 'subProcIpc:Model:SetModel': {
+      const [uuid] = req.args as SubprocessArgs<'subProcIpc:Model:SetModel'>;
       if (uuid === undefined) {
         await setModel(undefined);
-        const result: SubprocessResult<'model:SetModel'> = true;
+        const result: SubprocessResult<'subProcIpc:Model:SetModel'> = true;
         return result as SubprocessResult<typeof req.method>;
       }
       throw new Error(`cannot load model with uuid ${uuid}`);
     }
 
-    case 'model:GetAllSpheres': {
+    case 'subProcIpc:Model:GetAllSpheres': {
       if (!tracerInstance)
         throw new Error('failed to fetch spheres. no model loaded');
       return await tracerInstance.model.allSpheres;
     }
 
-    case 'model:GetAllCones': {
+    case 'subProcIpc:Model:GetAllCones': {
       if (!tracerInstance)
         throw new Error('failed to fetch cones. no model loaded');
       return await tracerInstance.model.allCones;
     }
 
-    case 'model:GetAllTriangles': {
+    case 'subProcIpc:Model:GetAllTriangles': {
       if (!tracerInstance)
         throw new Error('failed to fetch triangles. no model loaded');
       return await tracerInstance.model.allTriangles;
     }
 
-    case 'model:GetAllPolygons': {
+    case 'subProcIpc:Model:GetAllPolygons': {
       if (!tracerInstance)
         throw new Error('failed to fetch polygons. no model loaded');
       return await tracerInstance.model.allPolygons;
     }
 
-    case 'tracer:GetInstanceUuid': {
+    case 'subProcIpc:Tracer:GetInstanceUuid': {
       return tracerInstance
         ? tracerInstance.uuid
         : 'TRACER_INSTANCE_NOT_LOADED';
     }
 
-    case 'tracer:TriggerRender': {
+    case 'subProcIpc:Tracer:TriggerRender': {
       // eslint wants explicit void when not awaiting
       void triggerRender().catch((e: unknown) => {
         const msg = serializeError(e).message;
         emitRenderEvent({ type: 'InternalError', message: msg });
       });
-      const result: SubprocessResult<'tracer:TriggerRender'> = true;
+      const result: SubprocessResult<'subProcIpc:Tracer:TriggerRender'> = true;
       return result as SubprocessResult<typeof req.method>;
     }
 
-    case 'tracer:CancelRender': {
+    case 'subProcIpc:Tracer:CancelRender': {
       await cancelRender();
-      const result: SubprocessResult<'tracer:CancelRender'> = true;
+      const result: SubprocessResult<'subProcIpc:Tracer:CancelRender'> = true;
       return result as SubprocessResult<typeof req.method>;
     }
 
-    case 'tracer:GetRenderStatus': {
+    case 'subProcIpc:Tracer:GetRenderStatus': {
       return getRenderStatus();
     }
 
-    case 'tracer:TakeRenderImageData': {
+    case 'subProcIpc:Tracer:TakeRenderImageData': {
       return takeRenderImageData();
     }
 
-    case 'tracer:GetIntersectedUuidByPixelPos': {
+    case 'subProcIpc:Tracer:GetIntersectedUuidByPixelPos': {
       if (!tracerInstance) {
         throw new Error(
           'No model loaded. A model must be loaded to query intersections',
         );
       }
       const [x, y] =
-        req.args as SubprocessArgs<'tracer:GetIntersectedUuidByPixelPos'>;
+        req.args as SubprocessArgs<'subProcIpc:Tracer:GetIntersectedUuidByPixelPos'>;
       return await tracerInstance.tracer.getIntersectedUuidByPixelPos(x, y);
     }
 

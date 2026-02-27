@@ -80,7 +80,7 @@ async function setModelFromFilePath(path: string) {
   }
 
   const { instanceUuid } = await client.invoke(
-    'model:InitFromFilePath',
+    'subProcIpc:Model:InitFromFilePath',
     [path],
     120_000,
   );
@@ -96,7 +96,7 @@ async function setModelFromFileTextString(fileText: string) {
   }
 
   const { instanceUuid } = await client.invoke(
-    'model:InitFromFileTextString',
+    'subProcIpc:Model:InitFromFileTextString',
     [fileText],
     120_000,
   );
@@ -111,7 +111,7 @@ async function setModel(undefinedModel: undefined) {
     throw new Error('Cannot set model. render in progress');
   }
 
-  await client.invoke('model:SetModel', [undefinedModel]);
+  await client.invoke('subProcIpc:Model:SetModel', [undefinedModel]);
   tracerInstance = undefined;
   resetRenderStatus();
 }
@@ -130,16 +130,20 @@ async function triggerRender() {
   }
 
   renderStatus.renderProgressPercentage = 0;
-  await client.invoke('tracer:TriggerRender', [], 5_000);
+  await client.invoke('subProcIpc:Tracer:TriggerRender', [], 5_000);
 }
 
 async function cancelRender() {
-  await client.invoke('tracer:CancelRender', [], 10_000);
+  await client.invoke('subProcIpc:Tracer:CancelRender', [], 10_000);
 }
 
 async function takeRenderImageData() {
   resetRenderStatus();
-  return await client.invoke('tracer:TakeRenderImageData', [], 60_000);
+  return await client.invoke(
+    'subProcIpc:Tracer:TakeRenderImageData',
+    [],
+    60_000,
+  );
 }
 
 async function getIntersectedUuidByPixelPos(x: number, y: number) {
@@ -151,7 +155,7 @@ async function getIntersectedUuidByPixelPos(x: number, y: number) {
 
   // NOTE: return type updated below (IntersectedObjectInfo | null)
   return await client.invoke(
-    'tracer:GetIntersectedUuidByPixelPos',
+    'subProcIpc:Tracer:GetIntersectedUuidByPixelPos',
     [x, y],
     30_000,
   );
@@ -160,25 +164,25 @@ async function getIntersectedUuidByPixelPos(x: number, y: number) {
 async function getAllSpheres() {
   if (!tracerInstance)
     throw new Error('failed to fetch spheres. no model loaded');
-  return await client.invoke('model:GetAllSpheres', [], 30_000);
+  return await client.invoke('subProcIpc:Model:GetAllSpheres', [], 30_000);
 }
 
 async function getAllCones() {
   if (!tracerInstance)
     throw new Error('failed to fetch cones. no model loaded');
-  return await client.invoke('model:GetAllCones', [], 30_000);
+  return await client.invoke('subProcIpc:Model:GetAllCones', [], 30_000);
 }
 
 async function getAllTriangles() {
   if (!tracerInstance)
     throw new Error('failed to fetch triangles. no model loaded');
-  return await client.invoke('model:GetAllTriangles', [], 30_000);
+  return await client.invoke('subProcIpc:Model:GetAllTriangles', [], 30_000);
 }
 
 async function getAllPolygons() {
   if (!tracerInstance)
     throw new Error('failed to fetch polygons. no model loaded');
-  return await client.invoke('model:GetAllPolygons', [], 30_000);
+  return await client.invoke('subProcIpc:Model:GetAllPolygons', [], 30_000);
 }
 
 export {

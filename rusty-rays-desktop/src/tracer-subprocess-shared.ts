@@ -1,12 +1,5 @@
-// sub-process-shared.ts
-import type {
-  Cone,
-  IntersectedObjectInfo,
-  Polygon,
-  RenderEvent,
-  Sphere,
-  Triangle,
-} from 'rusty-rays-napi-node';
+// tracer-subprocess-shared.ts
+import type { Cone, IntersectedObjectInfo, Polygon, RenderEvent, Sphere, Triangle } from 'rusty-rays-napi-node';
 import type { RenderStatus } from '#/ipc/shared';
 
 /**
@@ -14,65 +7,65 @@ import type { RenderStatus } from '#/ipc/shared';
  * Mirrors your Electron IPC typing pattern.
  */
 const SubprocessRpc = {
-  'health:Ping': {
+  'subProcIpc:Health:Ping': {
     args: [],
     result: {} as { ok: true; pid: number },
   },
 
   // Model lifecycle
-  'model:InitFromFilePath': {
+  'subProcIpc:Model:InitFromFilePath': {
     args: [] as unknown as [path: string],
     result: {} as { instanceUuid: string },
   },
-  'model:InitFromFileTextString': {
+  'subProcIpc:Model:InitFromFileTextString': {
     args: [] as unknown as [fileText: string],
     result: {} as { instanceUuid: string },
   },
-  'model:SetModel': {
+  'subProcIpc:Model:SetModel': {
     args: [] as unknown as [modelUuid: string | undefined],
     result: {} as boolean,
   },
 
   // Model queries
-  'model:GetAllSpheres': {
+  'subProcIpc:Model:GetAllSpheres': {
     args: [],
     result: {} as Record<string, Sphere>,
   },
-  'model:GetAllCones': {
+  'subProcIpc:Model:GetAllCones': {
     args: [],
     result: {} as Record<string, Cone>,
   },
-  'model:GetAllTriangles': {
+  'subProcIpc:Model:GetAllTriangles': {
     args: [],
     result: {} as Record<string, Triangle>,
   },
-  'model:GetAllPolygons': {
+  'subProcIpc:Model:GetAllPolygons': {
     args: [],
     result: {} as Record<string, Polygon>,
   },
 
   // Tracer + render
-  'tracer:GetInstanceUuid': {
+  'subProcIpc:Tracer:GetInstanceUuid': {
     args: [],
     result: {} as string, // or "TRACER_INSTANCE_NOT_LOADED"
   },
-  'tracer:TriggerRender': {
+  'subProcIpc:Tracer:TriggerRender': {
     args: [] as const,
     result: {} as true,
   },
-  'tracer:CancelRender': {
+  'subProcIpc:Tracer:CancelRender': {
     args: [] as const,
     result: {} as true,
   },
-  'tracer:GetRenderStatus': {
+  'subProcIpc:Tracer:GetRenderStatus': {
     args: [] as const,
     result: {} as RenderStatus,
   },
-  'tracer:TakeRenderImageData': {
+  'subProcIpc:Tracer:TakeRenderImageData': {
     args: [] as const,
     result: {} as Buffer | undefined,
   },
-  'tracer:GetIntersectedUuidByPixelPos': {
+  'subProcIpc:Tracer:GetIntersectedUuidByPixelPos': {
     args: [] as unknown as [x: number, y: number],
     result: {} as IntersectedObjectInfo | null, // <-- was string | null
   },
