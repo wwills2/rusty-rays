@@ -9,7 +9,6 @@
     "build:napi": "rimraf bindings && napi build -o bindings --release --platform --js index.cjs",
     "build": "npm run clean && rimraf dist && npm run build:napi && tsup && shx cp -r bindings dist/",
     "test": "npm run build && tsc --module nodenext test.ts && node test.js",
-    "prepare": "npm run test",
     "clean": "rimraf --glob bindings dist test.js rusty-rays-napi-node-*.tgz",
     "lint": "cargo clippy"
   },

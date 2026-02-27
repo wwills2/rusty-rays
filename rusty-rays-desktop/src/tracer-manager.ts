@@ -3,11 +3,8 @@ import * as _ from 'lodash';
 import type { RenderEvent } from 'rusty-rays-napi-node';
 import type { RenderStatus } from '#/ipc/shared';
 import { TracerSubprocessClient } from '#/tracer-subprocess-client';
-import { fileURLToPath } from 'url';
 
-const client = new TracerSubprocessClient(
-  fileURLToPath(new URL('./tracer-subprocess.js', import.meta.url)),
-);
+const client = new TracerSubprocessClient();
 
 type TracerInstance = { uuid: string } | undefined;
 
@@ -165,16 +162,19 @@ async function getAllSpheres() {
     throw new Error('failed to fetch spheres. no model loaded');
   return await client.invoke('model:GetAllSpheres', [], 30_000);
 }
+
 async function getAllCones() {
   if (!tracerInstance)
     throw new Error('failed to fetch cones. no model loaded');
   return await client.invoke('model:GetAllCones', [], 30_000);
 }
+
 async function getAllTriangles() {
   if (!tracerInstance)
     throw new Error('failed to fetch triangles. no model loaded');
   return await client.invoke('model:GetAllTriangles', [], 30_000);
 }
+
 async function getAllPolygons() {
   if (!tracerInstance)
     throw new Error('failed to fetch polygons. no model loaded');

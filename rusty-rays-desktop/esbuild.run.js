@@ -68,7 +68,7 @@ async function main() {
 
   console.log('Built main -> build/index.js');
   console.log('Built preload -> build/preload.js');
-  console.log('Built tracer subprocess -> build/tracer-subprocess.js');
+  console.log('Built tracer subprocess -> build/tracer-subprocess.mjs');
 }
 
 main().catch((err) => {

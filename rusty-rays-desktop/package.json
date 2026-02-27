@@ -15,6 +15,7 @@
     "postinstall": "node download-subprocess-node.js",
     "dist:linux:deb": "npm run clean && npm run build && npx electron-builder --linux deb",
     "dist:windows": "npm run clean && npm run build && npx electron-builder --windows",
+    "dist:mac": "npm run clean && npm run build && npx electron-builder --mac",
     "electron:dev": "npm run build && npx cross-env SPA_SRC=vite npx electron .",
     "electron": "npm run build && npx electron .",
     "lint": "npx eslint . --fix && npx prettier . --write",
@@ -36,7 +37,10 @@
         "from": ".",
         "to": ".",
         "filter": [
-          "subprocess-node.exe"
+          "subprocess-node.exe",
+          "build/tracer-subprocess.mjs",
+          "build/bindings/index.cjs",
+          "build/bindings/index.*.node"
         ]
       }
     ],

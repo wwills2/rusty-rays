@@ -29,8 +29,8 @@ export class TracerSubprocessClient {
   private readonly entryPath: string;
   private readonly debuggerAttached = inspector.url() !== undefined;
 
-  constructor(entryPath: string) {
-    this.entryPath = entryPath;
+  constructor() {
+    this.entryPath = this.getSubprocessNodeSourcePath();
   }
 
   onRenderEvent(handler: (payload: RenderEventEnvelope) => void): () => void {
@@ -168,5 +168,16 @@ export class TracerSubprocessClient {
     }
     // In dev, app.getAppPath() points to the project directory (where package.json lives)
     return path.join(app.getAppPath(), 'subprocess-node.exe');
+  }
+
+  // Returns the absolute path to the packaged subprocess source file.
+  // - In packaged apps: the compiled file is shipped via electron-builder extraResources and available under process.resourcesPath.
+  // - In development: the file is located in the build directory root
+  private getSubprocessNodeSourcePath(): string {
+    if (app.isPackaged) {
+      return path.join(process.resourcesPath, 'build', 'tracer-subprocess.mjs');
+    }
+    // In dev, app.getAppPath() points to the project directory (where package.json lives)
+    return path.join(app.getAppPath(), 'build', 'tracer-subprocess.mjs');
   }
 }

@@ -1,5 +1,12 @@
 // sub-process-shared.ts
-import type { Cone, IntersectedObjectInfo, Polygon, RenderEvent, Sphere, Triangle } from 'rusty-rays-napi-node';
+import type {
+  Cone,
+  IntersectedObjectInfo,
+  Polygon,
+  RenderEvent,
+  Sphere,
+  Triangle,
+} from 'rusty-rays-napi-node';
 import type { RenderStatus } from '#/ipc/shared';
 
 /**
