@@ -7,11 +7,8 @@
   "types": "dist/index.d.ts",
   "scripts": {
     "build:napi": "rimraf bindings && napi build -o bindings --release --platform --js index.cjs",
-    "build:napi:debug": "rimraf bindings && napi build -o bindings --platform --js index.cjs",
     "build": "npm run clean && rimraf dist && npm run build:napi && tsup && shx cp -r bindings dist/",
-    "build:debug": "npm run clean && rimraf dist && npm run build:napi:debug && tsup && shx cp -r bindings dist/",
-    "test": "npm run build:debug && tsc --module nodenext test.ts && node test.js",
-    "prepare": "npm run test",
+    "test": "npm run build && tsc --module nodenext test.ts && node test.js",
     "clean": "rimraf --glob bindings dist test.js rusty-rays-napi-node-*.tgz",
     "lint": "cargo clippy"
   },

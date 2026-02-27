@@ -1,21 +1,22 @@
+// src/ipc/handles/model.ts
 import { handle } from './index';
-import { getTracerInstance, setModel } from '#/tracer-manager';
-import { Model } from 'rusty-rays-napi-node';
+import {
+  getAllCones,
+  getAllPolygons,
+  getAllSpheres,
+  getAllTriangles,
+  getTracerInstance,
+  setModel,
+  setModelFromFilePath,
+  setModelFromFileTextString,
+} from '#/tracer-manager';
 import { toIpcError } from '#/ipc/shared';
 
 function initModelChannels() {
   handle('model:InitFromFilePath', async (_, args) => {
     try {
       const [path] = args;
-      const model = await Model.fromFilePath(path);
-      const instanceUuid = await setModel(model);
-      if (!instanceUuid) {
-        return toIpcError(
-          new Error(`invalid tracer instance uuid. received ${instanceUuid}`),
-          '',
-        );
-      }
-
+      const instanceUuid = await setModelFromFilePath(path);
       return { data: { instanceUuid } };
     } catch (error) {
       return toIpcError(error, 'failed to initialize model from file');
@@ -25,21 +26,14 @@ function initModelChannels() {
   handle('model:InitFromFileTextString', async (_, args) => {
     try {
       const [fileText] = args;
-      const model = Model.fromString(fileText);
-      const instanceUuid = await setModel(model);
-      if (!instanceUuid) {
-        return toIpcError(
-          new Error(`invalid tracer instance uuid. received ${instanceUuid}`),
-          '',
-        );
-      }
-
+      const instanceUuid = await setModelFromFileTextString(fileText);
       return { data: { instanceUuid } };
     } catch (error) {
       return toIpcError(error, 'failed to initialize model from file text');
     }
   });
 
+  // Keep your existing IPC channel names, but fetch from subprocess.
   handle('model:getAllSpheres', async () => {
     try {
       const instance = getTracerInstance();
@@ -49,10 +43,7 @@ function initModelChannels() {
           '',
         );
       }
-
-      const { model } = instance;
-      const data = await model.allSpheres;
-
+      const data = await getAllSpheres();
       return { data };
     } catch (error) {
       return toIpcError(error, 'failed to fetch spheres');
@@ -68,10 +59,7 @@ function initModelChannels() {
           '',
         );
       }
-
-      const { model } = instance;
-      const data = await model.allCones;
-
+      const data = await getAllCones();
       return { data };
     } catch (error) {
       return toIpcError(error, 'failed to fetch cones');
@@ -87,10 +75,7 @@ function initModelChannels() {
           '',
         );
       }
-
-      const { model } = instance;
-      const data = await model.allTriangles;
-
+      const data = await getAllTriangles();
       return { data };
     } catch (error) {
       return toIpcError(error, 'failed to fetch triangles');
@@ -106,10 +91,7 @@ function initModelChannels() {
           '',
         );
       }
-
-      const { model } = instance;
-      const data = await model.allPolygons;
-
+      const data = await getAllPolygons();
       return { data };
     } catch (error) {
       return toIpcError(error, 'failed to fetch polygons');
@@ -122,10 +104,10 @@ function initModelChannels() {
       if (uuid === undefined) {
         await setModel(undefined);
         return { data: true };
-      } else {
-        // todo load the model corresponding to the uuid if provided. functionality yet to be implemented
-        return toIpcError(new Error(`cannot load model with uuid ${uuid}`), '');
       }
+
+      // still unimplemented
+      return toIpcError(new Error(`cannot load model with uuid ${uuid}`), '');
     } catch (error) {
       return toIpcError(error, 'failed to set model');
     }

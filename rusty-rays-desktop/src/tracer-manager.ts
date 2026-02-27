@@ -1,20 +1,16 @@
-/**
- * utility for managing the reference to the currently open model.
- * the model has an internal semaphore.
- */
-
-import { v4 as uuidv4 } from 'uuid';
-import type { RenderEvent } from 'rusty-rays-napi-node';
-import { Model, Tracer } from 'rusty-rays-napi-node';
-import type { RenderStatus } from '#/ipc/shared';
+// tracer-manager.ts
 import * as _ from 'lodash';
+import type { RenderEvent } from 'rusty-rays-napi-node';
+import type { RenderStatus } from '#/ipc/shared';
+import { TracerSubprocessClient } from '#/tracer-subprocess-client';
 
-type TracerInstance =
-  | { uuid: string; model: Model; tracer: Tracer }
-  | undefined;
+const client = new TracerSubprocessClient();
 
+type TracerInstance = { uuid: string } | undefined;
+
+// Local mirror
 let tracerInstance: TracerInstance = undefined;
-let tempRenderImageData: ArrayBuffer | undefined = undefined;
+
 let renderStatus: RenderStatus = {
   renderProgressPercentage: undefined,
   writingImage: false,
@@ -23,133 +19,41 @@ let renderStatus: RenderStatus = {
   tracerInstanceUuid: undefined,
 };
 
-function getTracerInstance(): TracerInstance | undefined {
-  return tracerInstance;
-}
-
-async function setModel(model: Model | undefined) {
-  if (!_.isNil(renderStatus.renderProgressPercentage)) {
-    throw new Error('Cannot set model. render in progress');
-  }
-
-  tempRenderImageData = undefined;
-
-  if (model) {
-    tracerInstance = {
-      uuid: uuidv4(),
-      model,
-      tracer: await Tracer.create(model),
-    };
-    resetRenderStatus();
-    return tracerInstance.uuid;
-  } else {
-    tracerInstance = undefined;
-    resetRenderStatus();
-  }
-}
-
-async function triggerRender() {
-  if (!_.isNil(renderStatus.renderProgressPercentage)) {
-    throw new Error('Render already in progress');
-  }
-
-  resetRenderStatus();
-
-  const instance = tracerInstance;
-  if (!instance) {
-    renderStatus.renderErrorMsg =
-      'No model loaded. A model must be loaded to render';
+// Stream render events from child into local status
+client.onRenderEvent((payload) => {
+  // payload is RenderEventEnvelope; narrow it first
+  if (payload.type === 'InternalError') {
+    renderStatus.renderErrorMsg = payload.message;
     return;
   }
 
-  try {
-    let canceled = false;
-    renderStatus.renderProgressPercentage = 0;
-    const onRenderEvent = (error: unknown, event: RenderEvent) => {
-      if (error && !renderStatus.renderErrorMsg) {
-        renderStatus.renderErrorMsg =
-          'Received error during render: ' + JSON.stringify(error);
-        tracerInstance?.tracer.cancelRender().catch((error: unknown) => {
-          console.error(
-            'an error occurred while trying to cancel render:',
-            error,
-          );
-        });
-        return;
-      }
+  const event: RenderEvent = payload.event;
 
-      switch (event.type) {
-        case 'Progress':
-          renderStatus.renderProgressPercentage = event.percent;
-          break;
-        case 'WritingImage':
-          renderStatus.writingImage = true;
-          break;
-        case 'Finished':
-          renderStatus.renderProgressPercentage = undefined;
-          renderStatus.writingImage = false;
-          break;
-        case 'Canceled':
-          canceled = true;
-          break;
-        case 'Error':
-          renderStatus.renderErrorMsg = 'Render failed: ' + event.message;
-          break;
-        default:
-          break;
-      }
-    };
-
-    const imageData = await instance.tracer.renderToImageBuffer(
-      'png',
-      50,
-      onRenderEvent,
-    );
-
-    // if we get a cancel event from the renderer process, this will be true
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-    if (!canceled) {
-      tempRenderImageData = new Uint8Array(imageData).slice().buffer;
+  switch (event.type) {
+    case 'Progress':
+      renderStatus.renderProgressPercentage = event.percent;
+      break;
+    case 'WritingImage':
+      renderStatus.writingImage = true;
+      break;
+    case 'Finished':
+      renderStatus.renderProgressPercentage = undefined;
+      renderStatus.writingImage = false;
       renderStatus.renderImageAvailable = true;
-    } else {
+      break;
+    case 'Canceled':
       resetRenderStatus();
-      tempRenderImageData = undefined;
-    }
-  } catch (error) {
-    if (error instanceof Error) {
-      renderStatus.renderErrorMsg = error.message;
-    } else {
-      renderStatus.renderErrorMsg = `Unknown error: ${JSON.stringify(error)}`;
-    }
-  } finally {
-    renderStatus.renderProgressPercentage = undefined;
+      break;
+    case 'Error':
+      renderStatus.renderErrorMsg = 'Render failed: ' + event.message;
+      break;
+    default:
+      break;
   }
-}
+});
 
-function takeRenderImageData() {
-  resetRenderStatus();
-  const copy = tempRenderImageData;
-  tempRenderImageData = undefined;
-  return copy;
-}
-
-async function cancelRender() {
-  try {
-    await tracerInstance?.tracer.cancelRender();
-    resetRenderStatus();
-  } catch (error) {
-    if (error instanceof Error) {
-      console.error(
-        'an error occurred while trying to cancel render:',
-        error.message,
-      );
-    } else {
-      console.error(
-        'an unknown error occurred while trying to cancel render:',
-        error,
-      );
-    }
-  }
+function getTracerInstance(): TracerInstance {
+  return tracerInstance;
 }
 
 function getRenderStatus() {
@@ -170,12 +74,131 @@ function resetRenderStatus() {
   };
 }
 
+async function setModelFromFilePath(path: string) {
+  if (!_.isNil(renderStatus.renderProgressPercentage)) {
+    throw new Error('Cannot set model. render in progress');
+  }
+
+  const { instanceUuid } = await client.invoke(
+    'subProcIpc:Model:InitFromFilePath',
+    [path],
+    120_000,
+  );
+
+  tracerInstance = { uuid: instanceUuid };
+  resetRenderStatus();
+  return instanceUuid;
+}
+
+async function setModelFromFileTextString(fileText: string) {
+  if (!_.isNil(renderStatus.renderProgressPercentage)) {
+    throw new Error('Cannot set model. render in progress');
+  }
+
+  const { instanceUuid } = await client.invoke(
+    'subProcIpc:Model:InitFromFileTextString',
+    [fileText],
+    120_000,
+  );
+
+  tracerInstance = { uuid: instanceUuid };
+  resetRenderStatus();
+  return instanceUuid;
+}
+
+async function setModel(undefinedModel: undefined) {
+  if (!_.isNil(renderStatus.renderProgressPercentage)) {
+    throw new Error('Cannot set model. render in progress');
+  }
+
+  await client.invoke('subProcIpc:Model:SetModel', [undefinedModel]);
+  tracerInstance = undefined;
+  resetRenderStatus();
+}
+
+async function triggerRender() {
+  if (!_.isNil(renderStatus.renderProgressPercentage)) {
+    throw new Error('Render already in progress');
+  }
+
+  resetRenderStatus();
+
+  if (!tracerInstance) {
+    renderStatus.renderErrorMsg =
+      'No model loaded. A model must be loaded to render';
+    return;
+  }
+
+  renderStatus.renderProgressPercentage = 0;
+  await client.invoke('subProcIpc:Tracer:TriggerRender', [], 5_000);
+}
+
+async function cancelRender() {
+  await client.invoke('subProcIpc:Tracer:CancelRender', [], 10_000);
+}
+
+async function takeRenderImageData() {
+  resetRenderStatus();
+  return await client.invoke(
+    'subProcIpc:Tracer:TakeRenderImageData',
+    [],
+    60_000,
+  );
+}
+
+async function getIntersectedUuidByPixelPos(x: number, y: number) {
+  if (!tracerInstance) {
+    throw new Error(
+      'No model loaded. A model must be loaded to query intersections',
+    );
+  }
+
+  // NOTE: return type updated below (IntersectedObjectInfo | null)
+  return await client.invoke(
+    'subProcIpc:Tracer:GetIntersectedUuidByPixelPos',
+    [x, y],
+    30_000,
+  );
+}
+
+async function getAllSpheres() {
+  if (!tracerInstance)
+    throw new Error('failed to fetch spheres. no model loaded');
+  return await client.invoke('subProcIpc:Model:GetAllSpheres', [], 30_000);
+}
+
+async function getAllCones() {
+  if (!tracerInstance)
+    throw new Error('failed to fetch cones. no model loaded');
+  return await client.invoke('subProcIpc:Model:GetAllCones', [], 30_000);
+}
+
+async function getAllTriangles() {
+  if (!tracerInstance)
+    throw new Error('failed to fetch triangles. no model loaded');
+  return await client.invoke('subProcIpc:Model:GetAllTriangles', [], 30_000);
+}
+
+async function getAllPolygons() {
+  if (!tracerInstance)
+    throw new Error('failed to fetch polygons. no model loaded');
+  return await client.invoke('subProcIpc:Model:GetAllPolygons', [], 30_000);
+}
+
 export {
   getTracerInstance,
-  setModel,
   triggerRender,
-  takeRenderImageData,
-  getRenderStatus,
   cancelRender,
+  getRenderStatus,
+  takeRenderImageData,
+  setModelFromFilePath,
+  setModelFromFileTextString,
+  setModel,
+  getIntersectedUuidByPixelPos,
+  getAllSpheres,
+  getAllCones,
+  getAllTriangles,
+  getAllPolygons,
 };
+
 export type { TracerInstance };
