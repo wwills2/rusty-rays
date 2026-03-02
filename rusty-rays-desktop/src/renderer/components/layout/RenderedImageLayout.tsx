@@ -16,6 +16,7 @@ import {
   useGetAllTrianglesQuery,
 } from '@/redux/ipc/model.ipc.ts';
 import { loadLatestRender } from '@/indexed-db-image-cache.ts';
+import _ from 'lodash';
 
 const RenderedImageLayout: React.FC = () => {
   const [pollRenderProgress, setPollRenderProgress] = useState(false);
@@ -67,8 +68,12 @@ const RenderedImageLayout: React.FC = () => {
         const cachedImage = await loadLatestRender(tracerInstanceUuid);
         if (cachedImage) {
           setImageData(cachedImage);
-        } else {
+        } else if (
+          _.isNil(renderStatus.renderProgressPercentage) &&
+          !renderStatus.writingImage
+        ) {
           setPollRenderProgress(true);
+          console.debug('triggering render. status:', renderStatus);
           await triggerRender(null);
         }
       }
