@@ -1,0 +1,171 @@
+name: Release Build (CLI + Desktop)
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [main]
+
+jobs:
+  verify-version-bumps:
+    if: >-
+      ${{ github.event.pull_request.merged == true &&
+          github.event.pull_request.base.ref == 'main' &&
+          github.event.pull_request.head.ref == 'develop' }}
+    name: Verify version bumps
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js (for reading package.json)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Read versions from base and head
+        id: versions
+        run: |
+          set -euo pipefail
+          BASE_SHA='${{ github.event.pull_request.base.sha }}'
+          HEAD_SHA='${{ github.event.pull_request.head.sha }}'
+
+          echo "Base SHA: $BASE_SHA"
+          echo "Head SHA: $HEAD_SHA"
+
+          # Extract Cargo.toml versions
+          OLD_CARGO_VER=$(git show "$BASE_SHA:rusty-rays-cli/Cargo.toml" | sed -n 's/^version\s*=\s*"\(.*\)"/\1/p' | head -n1)
+          NEW_CARGO_VER=$(git show "$HEAD_SHA:rusty-rays-cli/Cargo.toml" | sed -n 's/^version\s*=\s*"\(.*\)"/\1/p' | head -n1)
+
+          # Extract package.json versions using Node from stdin to avoid jq dependency
+          OLD_PKG_VER=$(git show "$BASE_SHA:rusty-rays-desktop/package.json" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).version))")
+          NEW_PKG_VER=$(git show "$HEAD_SHA:rusty-rays-desktop/package.json" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).version))")
+
+          echo "old_cargo=$OLD_CARGO_VER" >> $GITHUB_OUTPUT
+          echo "new_cargo=$NEW_CARGO_VER" >> $GITHUB_OUTPUT
+          echo "old_pkg=$OLD_PKG_VER" >> $GITHUB_OUTPUT
+          echo "new_pkg=$NEW_PKG_VER" >> $GITHUB_OUTPUT
+
+          echo "Old CLI Cargo version: $OLD_CARGO_VER"
+          echo "New CLI Cargo version: $NEW_CARGO_VER"
+          echo "Old Desktop package version: $OLD_PKG_VER"
+          echo "New Desktop package version: $NEW_PKG_VER"
+
+      - name: Enforce version bumps
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.versions.outputs.old_cargo }}" = "${{ steps.versions.outputs.new_cargo }}" ]; then
+            echo "ERROR: rusty-rays-cli Cargo.toml version was not bumped." >&2
+            exit 1
+          fi
+          if [ "${{ steps.versions.outputs.old_pkg }}" = "${{ steps.versions.outputs.new_pkg }}" ]; then
+            echo "ERROR: rusty-rays-desktop package.json version was not bumped." >&2
+            exit 1
+          fi
+          echo "Version bump checks passed."
+
+  build-cli:
+    name: Build Rust CLI
+    needs: verify-version-bumps
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo registry
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.cargo/registry
+            ~/.cargo/git
+            target
+          key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
+
+      - name: Build CLI (release)
+        working-directory: rusty-rays-cli
+        run: cargo build --release
+        shell: bash
+
+      - name: Determine binary path
+        id: binpath
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [[ "${{ runner.os }}" == "Windows" ]]; then
+            echo "bin=rusty-rays-cli/target/release/rusty-rays-cli.exe" >> $GITHUB_OUTPUT
+          else
+            echo "bin=rusty-rays-cli/target/release/rusty-rays-cli" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Upload CLI binary artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rusty-rays-cli-${{ runner.os }}-x86_64
+          path: ${{ steps.binpath.outputs.bin }}
+
+  build-desktop:
+    name: Build Electron Desktop
+    needs: verify-version-bumps
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-13]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            rusty-rays-napi-node/package-lock.json
+            rusty-rays-desktop/package-lock.json
+
+      - name: Set up Rust (for napi build)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies (napi node)
+        working-directory: rusty-rays-napi-node
+        run: npm ci
+        shell: bash
+
+      - name: Install dependencies (desktop)
+        working-directory: rusty-rays-desktop
+        run: npm ci
+        shell: bash
+
+      - name: Package desktop (Linux)
+        if: startsWith(matrix.os, 'ubuntu')
+        working-directory: rusty-rays-desktop
+        run: npm run dist:linux:deb
+        shell: bash
+
+      - name: Package desktop (Windows)
+        if: startsWith(matrix.os, 'windows')
+        working-directory: rusty-rays-desktop
+        run: npm run dist:windows
+        shell: bash
+
+      - name: Package desktop (macOS Intel)
+        if: startsWith(matrix.os, 'macos')
+        working-directory: rusty-rays-desktop
+        run: npm run dist:mac
+        shell: bash
+
+      - name: Upload desktop dist artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: rusty-rays-desktop-dist-${{ runner.os }}
+          path: |
+            rusty-rays-desktop/dist/**

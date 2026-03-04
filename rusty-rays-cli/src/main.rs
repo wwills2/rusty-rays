@@ -2,8 +2,8 @@ use clap::Parser;
 use std::path::PathBuf;
 use std::thread;
 
-use rusty_rays_core::logger::{debug, error, info, shutdown_logger, LOG};
-use rusty_rays_core::{write_render_to_file, CancellationToken, Model, Tracer};
+use rusty_rays_core::logger::{LOG, debug, error, info, shutdown_logger};
+use rusty_rays_core::{CancellationToken, Model, Tracer, write_render_to_file};
 
 #[derive(Parser, Debug)]
 #[command(version, about, long_about = None)]

@@ -1,0 +1,55 @@
+name: PR Checks (Rust + Desktop Lint)
+
+on:
+  pull_request:
+    branches: ['**']
+
+jobs:
+  rust-checks:
+    name: Rust fmt + clippy
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Rust (with clippy & rustfmt)
+        uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+
+      - name: cargo fmt (check)
+        run: cargo fmt --all -- --check
+
+      - name: cargo clippy (warnings as errors)
+        run: cargo clippy --all-targets --all-features -- -D warnings
+
+  desktop-lint:
+    name: Desktop lint (eslint+prettier)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: |
+            rusty-rays-napi-node/package-lock.json
+            rusty-rays-desktop/package-lock.json
+
+      - name: Set up Rust (for napi preinstall/build)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Install dependencies (napi node)
+        working-directory: rusty-rays-napi-node
+        run: npm ci
+
+      - name: Install dependencies (desktop)
+        working-directory: rusty-rays-desktop
+        run: npm ci
+
+      - name: Run desktop lint
+        working-directory: rusty-rays-desktop
+        run: npm run lint
