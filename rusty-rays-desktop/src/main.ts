@@ -1,7 +1,7 @@
-import { app, BrowserWindow, session, shell } from 'electron';
+import { app, BrowserWindow, nativeImage, session, shell } from 'electron';
 import * as path from 'path';
 import { fileURLToPath } from 'url';
-import { initIpcChannels } from '#/ipc/handles';
+import { initIpcChannels } from '#/electron-ipc/handles';
 
 // ESM -> manually define __filename and __dirname
 const __filename = fileURLToPath(import.meta.url);
@@ -18,10 +18,25 @@ function setContentSecurityPolicy(policy: string[]) {
   });
 }
 
+function getIconPath() {
+  // In packaged apps, resources are under process.resourcesPath
+  // In dev, resolve relative to project directory (build/../assets/icons)
+  const base = app.isPackaged
+    ? path.join(process.resourcesPath, 'assets', 'icons')
+    : path.resolve(__dirname, '..', 'assets', 'icons');
+
+  if (process.platform === 'win32') return path.join(base, 'win', 'icon.ico');
+  if (process.platform === 'darwin') return path.join(base, 'mac', 'icon.icns');
+  return path.join(base, 'png', '512x512.png'); // Linux
+}
+
 function createMainWindow() {
+  const iconPath = getIconPath();
   const window = new BrowserWindow({
-    width: 1200,
-    height: 675,
+    width: 1000,
+    height: 800,
+    // On Windows/Linux, the window icon sets the taskbar/alt-tab icon.
+    icon: process.platform === 'darwin' ? undefined : iconPath,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: true,
@@ -61,6 +76,15 @@ function createMainWindow() {
       .catch((err: unknown) => {
         throw err;
       });
+  }
+
+  // On macOS, BrowserWindow icon is ignored; set Dock icon instead.
+  if (process.platform === 'darwin') {
+    try {
+      app.dock?.setIcon(nativeImage.createFromPath(iconPath));
+    } catch (e) {
+      console.warn('Failed to set macOS dock icon:', e);
+    }
   }
 }
 

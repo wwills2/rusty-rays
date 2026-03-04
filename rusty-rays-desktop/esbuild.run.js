@@ -42,7 +42,7 @@ async function main() {
           gitignore: false,
         },
         assets: {
-          from: ['./node_modules/rusty-rays-napi-node/dist/bindings/**/*'],
+          from: ['./node_modules/rusty-rays-napi-node/bindings/**/*'],
           to: [resolve(__dirname, 'build/bindings')],
         },
         verbose: true,

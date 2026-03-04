@@ -50,6 +50,7 @@ const RenderedImageLayout: React.FC = () => {
     null,
   );
   const [dialogMessage, setDialogMessage] = useState<string | null>(null);
+  const [dialogObjectType, setDialogObjectType] = useState('unknown object');
 
   useEffect(() => {
     const execute = async () => {
@@ -101,6 +102,7 @@ const RenderedImageLayout: React.FC = () => {
             case 'sphere': {
               const sphere = spheresMap ? spheresMap[uuid] : undefined;
               if (sphere) {
+                setDialogObjectType('sphere');
                 setDialogMessage(JSON.stringify(sphere, null, 2));
               }
               break;
@@ -108,6 +110,7 @@ const RenderedImageLayout: React.FC = () => {
             case 'cone': {
               const cone = conesMap ? conesMap[uuid] : undefined;
               if (cone) {
+                setDialogObjectType('cone');
                 setDialogMessage(JSON.stringify(cone, null, 2));
               }
               break;
@@ -116,6 +119,7 @@ const RenderedImageLayout: React.FC = () => {
               const triangle = trianglesMap ? trianglesMap[uuid] : undefined;
               if (triangle) {
                 const { derived: _derived, ...triangleRest } = triangle;
+                setDialogObjectType('triangle');
                 setDialogMessage(JSON.stringify(triangleRest, null, 2));
               }
               break;
@@ -124,11 +128,13 @@ const RenderedImageLayout: React.FC = () => {
               const polygon = polygonsMap ? polygonsMap[uuid] : undefined;
               if (polygon) {
                 const { derived: _derived, ...polygonRest } = polygon;
+                setDialogObjectType('polygon');
                 setDialogMessage(JSON.stringify(polygonRest, null, 2));
               }
               break;
             }
             default: {
+              setDialogObjectType('unknown object');
               setDialogMessage(
                 'The object information could not be retrieved.',
               );
@@ -136,6 +142,7 @@ const RenderedImageLayout: React.FC = () => {
           }
         } catch {
           // on IPC error, show retrieval message
+          setDialogObjectType('unknown object');
           setDialogMessage('The object information could not be retrieved.');
         }
       };
@@ -213,16 +220,13 @@ const RenderedImageLayout: React.FC = () => {
                       setDialogMessage(null);
                     }}
                   >
-                    <Dialog.Content>
-                      <Dialog.Header>Sphere info</Dialog.Header>
-                      <Dialog.Description
-                        style={{
-                          whiteSpace: 'pre-wrap',
-                          fontSize: 12,
-                        }}
-                      >
-                        {dialogMessage || null}
-                      </Dialog.Description>
+                    <Dialog.Content size="md">
+                      <Dialog.Header className="capitalize">{`${dialogObjectType} info`}</Dialog.Header>
+                      <div className="h-[70vh] overflow-y-auto">
+                        <div className="whitespace-pre-wrap font-medium">
+                          {dialogMessage}
+                        </div>
+                      </div>
                     </Dialog.Content>
                   </Dialog>
                 )}

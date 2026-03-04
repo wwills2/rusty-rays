@@ -1,6 +1,6 @@
 // tracer-subprocess-shared.ts
 import type { Cone, IntersectedObjectInfo, Polygon, RenderEvent, Sphere, Triangle } from 'rusty-rays-napi-node';
-import type { RenderStatus } from '#/ipc/shared';
+import type { RenderStatus } from '#/electron-ipc/shared';
 
 /**
  * RPC schema: method name -> args + result types.

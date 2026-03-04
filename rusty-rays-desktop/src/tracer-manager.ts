@@ -1,7 +1,7 @@
 // tracer-manager.ts
 import * as _ from 'lodash';
 import type { RenderEvent } from 'rusty-rays-napi-node';
-import type { RenderStatus } from '#/ipc/shared';
+import type { RenderStatus } from '#/electron-ipc/shared';
 import { TracerSubprocessClient } from '#/tracer-subprocess-client';
 
 const client = new TracerSubprocessClient();
