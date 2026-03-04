@@ -19,7 +19,8 @@
     "dist:mac": "npm run clean && npm run build && npx electron-builder --mac",
     "electron:dev": "npm run build && npx cross-env SPA_SRC=vite npx electron .",
     "electron": "npm run build && npx electron .",
-    "lint": "npx eslint . --fix && npx prettier . --write",
+    "lint-fix": "npx eslint . --fix && npx prettier . --write",
+    "lint-check": "npx eslint . --max-warnings=0 && npx prettier . --check",
     "clean": "npx rimraf ./dist && npx rimraf ./build",
     "ui-add": "node retro-ui-add-component.js"
   },

@@ -8,7 +8,7 @@ import {
   getTracerInstance,
   setModel,
   setModelFromFilePath,
-  setModelFromFileTextString
+  setModelFromFileTextString,
 } from '#/tracer-manager';
 import { toIpcError } from '#/electron-ipc/shared';
 

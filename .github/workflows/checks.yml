@@ -2,7 +2,7 @@ name: PR Checks (Rust + Desktop Lint)
 
 on:
   pull_request:
-    branches: ['**']
+    branches: [ '**' ]
 
 jobs:
   rust-checks:
@@ -33,11 +33,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
-          cache: 'npm'
-          cache-dependency-path: |
-            rusty-rays-napi-node/package-lock.json
-            rusty-rays-desktop/package-lock.json
+          node-version: '24'
 
       - name: Set up Rust (for napi preinstall/build)
         uses: dtolnay/rust-toolchain@stable
@@ -52,4 +48,4 @@ jobs:
 
       - name: Run desktop lint
         working-directory: rusty-rays-desktop
-        run: npm run lint
+        run: npm run lint-check

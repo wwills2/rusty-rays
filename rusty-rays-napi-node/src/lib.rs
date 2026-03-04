@@ -10,36 +10,41 @@ mod bindings {
     use std::str::FromStr;
     use std::sync::Arc;
     #[napi]
-
+    #[allow(dead_code)]
     pub fn log_error(message: String) -> napi::Result<()> {
         rusty_rays_core::logger::error!(rusty_rays_core::logger::LOG, "{}", message);
         Ok(())
     }
 
+    #[allow(dead_code)]
     #[napi]
     pub fn log_warn(message: String) -> napi::Result<()> {
         rusty_rays_core::logger::warn!(rusty_rays_core::logger::LOG, "{}", message);
         Ok(())
     }
 
+    #[allow(dead_code)]
     #[napi]
     pub fn log_info(message: String) -> napi::Result<()> {
         rusty_rays_core::logger::info!(rusty_rays_core::logger::LOG, "{}", message);
         Ok(())
     }
 
+    #[allow(dead_code)]
     #[napi]
     pub fn log_debug(message: String) -> napi::Result<()> {
         rusty_rays_core::logger::debug!(rusty_rays_core::logger::LOG, "{}", message);
         Ok(())
     }
 
+    #[allow(dead_code)]
     #[napi]
     pub fn log_trace(message: String) -> napi::Result<()> {
         rusty_rays_core::logger::trace!(rusty_rays_core::logger::LOG, "{}", message);
         Ok(())
     }
 
+    #[allow(dead_code)]
     #[napi]
     pub fn shutdown_logger() -> napi::Result<()> {
         rusty_rays_core::logger::shutdown_logger();
@@ -53,6 +58,7 @@ mod bindings {
         pub object_type: String,
     }
 
+    #[allow(dead_code)]
     #[napi(object)]
     pub struct Config {
         #[napi(ts_type = "\"trace\" | \"debug\" | \"info\" | \"warn\" | \"error\"")]
@@ -64,6 +70,7 @@ mod bindings {
     }
 
     /// Non-NAPI utility function
+    #[allow(dead_code)]
     fn core_config_to_js_config(config: rusty_rays_core::Config) -> Config {
         Config {
             log_level: config.log_level.to_string(),
@@ -76,17 +83,20 @@ mod bindings {
         }
     }
 
+    #[allow(dead_code)]
     #[napi]
     pub fn get_default_config() -> Config {
         core_config_to_js_config(rusty_rays_core::Config::default())
     }
 
+    #[allow(dead_code)]
     #[napi]
     pub fn get_config() -> napi::Result<Config> {
         let config = rusty_rays_core::Config::get();
         Ok(core_config_to_js_config(config))
     }
 
+    #[allow(dead_code)]
     #[napi]
     pub async fn set_config(new_config: Config) -> napi::Result<()> {
         // run blocking set on a background thread as requested

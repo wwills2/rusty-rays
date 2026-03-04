@@ -1,23 +1,72 @@
 name: Release Build (CLI + Desktop)
 
 on:
-  pull_request:
-    types: [closed]
-    branches: [main]
+  workflow_run:
+    workflows: ["PR Checks (Rust + Desktop Lint)"]
+    types: [completed]
 
 jobs:
   verify-version-bumps:
-    if: >-
-      ${{ github.event.pull_request.merged == true &&
-          github.event.pull_request.base.ref == 'main' &&
-          github.event.pull_request.head.ref == 'develop' }}
+    # Only proceed if the Checks workflow concluded successfully
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     name: Verify version bumps
     runs-on: ubuntu-latest
+    outputs:
+      pr_number: ${{ steps.prinfo.outputs.pr_number }}
+      merged: ${{ steps.prinfo.outputs.merged }}
+      base_ref: ${{ steps.prinfo.outputs.base_ref }}
+      head_ref: ${{ steps.prinfo.outputs.head_ref }}
+      base_sha: ${{ steps.prinfo.outputs.base_sha }}
+      head_sha: ${{ steps.prinfo.outputs.head_sha }}
+      merge_sha: ${{ steps.prinfo.outputs.merge_sha }}
+      old_cargo: ${{ steps.versions.outputs.old_cargo }}
+      new_cargo: ${{ steps.versions.outputs.new_cargo }}
+      old_pkg: ${{ steps.versions.outputs.old_pkg }}
+      new_pkg: ${{ steps.versions.outputs.new_pkg }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+
+      - name: Gather PR info from workflow_run
+        id: prinfo
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const wr = context.payload.workflow_run
+            if (!wr || !wr.pull_requests || wr.pull_requests.length === 0) {
+              core.setFailed('No pull_request context found on workflow_run event')
+              return
+            }
+            const prLite = wr.pull_requests[0]
+            const { data: pr } = await github.rest.pulls.get({
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              pull_number: prLite.number,
+            })
+            core.setOutput('pr_number', String(pr.number))
+            core.setOutput('merged', String(pr.merged))
+            core.setOutput('base_ref', pr.base.ref)
+            core.setOutput('head_ref', pr.head.ref)
+            core.setOutput('base_sha', pr.base.sha)
+            core.setOutput('head_sha', pr.head.sha)
+            core.setOutput('merge_sha', pr.merge_commit_sha || '')
+
+      - name: Ensure PR is merged develop -> main
+        run: |
+          set -euo pipefail
+          echo "PR #: ${{ steps.prinfo.outputs.pr_number }}"
+          echo "Merged: ${{ steps.prinfo.outputs.merged }}"
+          echo "Base: ${{ steps.prinfo.outputs.base_ref }}  Head: ${{ steps.prinfo.outputs.head_ref }}"
+          if [ "${{ steps.prinfo.outputs.merged }}" != "true" ]; then
+            echo "PR is not merged. Exiting." >&2
+            exit 1
+          fi
+          if [ "${{ steps.prinfo.outputs.base_ref }}" != "main" ] || [ "${{ steps.prinfo.outputs.head_ref }}" != "develop" ]; then
+            echo "PR is not from develop -> main. Exiting." >&2
+            exit 1
+          fi
 
       - name: Set up Node.js (for reading package.json)
         uses: actions/setup-node@v4
@@ -28,8 +77,8 @@ jobs:
         id: versions
         run: |
           set -euo pipefail
-          BASE_SHA='${{ github.event.pull_request.base.sha }}'
-          HEAD_SHA='${{ github.event.pull_request.head.sha }}'
+          BASE_SHA='${{ steps.prinfo.outputs.base_sha }}'
+          HEAD_SHA='${{ steps.prinfo.outputs.head_sha }}'
 
           echo "Base SHA: $BASE_SHA"
           echo "Head SHA: $HEAD_SHA"
@@ -76,6 +125,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify-version-bumps.outputs.merge_sha || 'main' }}
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -122,6 +173,8 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.verify-version-bumps.outputs.merge_sha || 'main' }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
