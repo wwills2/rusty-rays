@@ -2,8 +2,8 @@ name: Release Build (CLI + Desktop)
 
 on:
   workflow_run:
-    workflows: ["PR Checks (Rust + Desktop Lint)"]
-    types: [completed]
+    workflows: [ "PR Checks (Rust + Desktop Lint)" ]
+    types: [ completed ]
 
 jobs:
   verify-version-bumps:
@@ -120,7 +120,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13]
+        os: [ ubuntu-latest, windows-latest, macos-13 ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -168,7 +168,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ubuntu-latest, windows-latest, macos-13]
+        os: [ ubuntu-latest, windows-latest, macos-13 ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -179,7 +179,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
-          node-version: '20'
+          node-version: '24'
           cache: 'npm'
           cache-dependency-path: |
             rusty-rays-napi-node/package-lock.json
