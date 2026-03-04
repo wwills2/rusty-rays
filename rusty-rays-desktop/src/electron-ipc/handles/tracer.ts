@@ -1,5 +1,5 @@
-// src/ipc/handles/tracer.ts
-import { handle } from '#/ipc/handles/index';
+// src/electron-ipc/handles/tracer.ts
+import { handle } from '#/electron-ipc/handles/index';
 import {
   getIntersectedUuidByPixelPos,
   getRenderStatus,
@@ -7,7 +7,7 @@ import {
   takeRenderImageData,
   triggerRender,
 } from '#/tracer-manager';
-import { toIpcError } from '#/ipc/shared';
+import { toIpcError } from '#/electron-ipc/shared';
 
 function initTracerChannels() {
   handle('tracer:GetInstanceUuid', () => {

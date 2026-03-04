@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from 'uuid';
 import * as _ from 'lodash';
 import type { RenderEvent } from 'rusty-rays-napi-node';
 import { Model, Tracer } from 'rusty-rays-napi-node';
-import type { RenderStatus } from '#/ipc/shared';
+import type { RenderStatus } from '#/electron-ipc/shared';
 
 import type {
   RenderEventEnvelope,

@@ -1,4 +1,4 @@
-// src/ipc/handles/model.ts
+// src/electron-ipc/handles/model.ts
 import { handle } from './index';
 import {
   getAllCones,
@@ -8,9 +8,9 @@ import {
   getTracerInstance,
   setModel,
   setModelFromFilePath,
-  setModelFromFileTextString,
+  setModelFromFileTextString
 } from '#/tracer-manager';
-import { toIpcError } from '#/ipc/shared';
+import { toIpcError } from '#/electron-ipc/shared';
 
 function initModelChannels() {
   handle('model:InitFromFilePath', async (_, args) => {

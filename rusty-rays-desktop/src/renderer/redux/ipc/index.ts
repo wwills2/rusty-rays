@@ -10,7 +10,7 @@ import {
   type DataType,
   type Result,
   toIpcError,
-} from '../../../ipc/shared';
+} from '../../../electron-ipc/shared';
 
 function processIpcResult<CN extends ChannelNames, R>(
   channelName: CN,
@@ -52,10 +52,13 @@ async function invoke<CN extends ChannelNames>(
       args,
     )) as unknown as Result<CN>;
 
-    console.debug('ipc channel and returned data', channel, result);
+    console.debug('electron-ipc channel and returned data', channel, result);
     return result;
   } catch (error) {
-    return toIpcError(error, 'an error occurred during ipc invocation');
+    return toIpcError(
+      error,
+      'an error occurred during electron-ipc invocation',
+    );
   }
 }
 

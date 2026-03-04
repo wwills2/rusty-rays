@@ -1,7 +1,7 @@
 import { ipcMain, type IpcMainInvokeEvent } from 'electron';
 import { initModelChannels } from './model';
-import type { Args, ChannelNames, Result } from '#/ipc/shared';
-import { initTracerChannels } from '#/ipc/handles/tracer';
+import type { Args, ChannelNames, Result } from '#/electron-ipc/shared';
+import { initTracerChannels } from '#/electron-ipc/handles/tracer';
 
 type ChannelListener<CN extends ChannelNames> = (
   event: IpcMainInvokeEvent,

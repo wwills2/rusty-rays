@@ -1,7 +1,7 @@
 // See the Electron documentation for details on how to use preload scripts:
 // https://www.electronjs.org/docs/latest/tutorial/process-model#preload-scripts
-import { ipcRenderer, contextBridge } from 'electron/renderer';
-import { allowedChannelNames } from '#/ipc/shared';
+import { contextBridge, ipcRenderer } from 'electron/renderer';
+import { allowedChannelNames } from '#/electron-ipc/shared';
 
 contextBridge.exposeInMainWorld('electronAPI', {
   allowedChannelInvoke: async (channel: string, args: unknown) => {

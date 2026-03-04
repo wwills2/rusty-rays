@@ -25,11 +25,13 @@ const EditorPage: React.FC = () => {
 
   return (
     <div className="grid grid-rows-1 grid-cols-6 gap-4 p-4 w-full h-full bg-accent dark:bg-background">
-      <div className="flex flex-col col-span-4 col-start-1 row-start-1 row-span-1 space-y-4">
+      {/* todo set to span 4 */}
+      <div className="flex flex-col col-span-6 col-start-1 row-start-1 row-span-1 space-y-4">
         <RenderImageActionHeaderLayout />
         <RenderedImageLayout />
       </div>
-      <div className="col-span-2 col-start-5 row-start-1 row-span-1">
+      {/* todo to remove the hidden prop when explorer layout implemented */}
+      <div className="hidden col-span-2 col-start-5 row-start-1 row-span-1">
         <ModelObjectExplorerLayout />
       </div>
     </div>
