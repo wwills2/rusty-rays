@@ -5,6 +5,9 @@ on:
     workflows: [ "PR Checks (Rust + Desktop Lint)" ]
     types: [ completed ]
 
+permissions:
+  contents: write  # required to create and push tags/releases
+
 jobs:
   verify-version-bumps:
     # Only proceed if the Checks workflow concluded successfully
@@ -222,3 +225,155 @@ jobs:
           name: rusty-rays-desktop-dist-${{ runner.os }}
           path: |
             rusty-rays-desktop/dist/**
+
+  create-tags:
+    name: Create release tags (CLI and Desktop)
+    needs: [verify-version-bumps, build-cli, build-desktop]
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare versions and target SHA
+        id: prep
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLI_VER='${{ needs.verify-version-bumps.outputs.new_cargo }}'
+          DESKTOP_VER='${{ needs.verify-version-bumps.outputs.new_pkg }}'
+          TARGET_SHA='${{ needs.verify-version-bumps.outputs.merge_sha }}'
+          if [[ -z "$TARGET_SHA" ]]; then
+            TARGET_SHA="$(git rev-parse origin/main || git rev-parse HEAD)"
+          fi
+          echo "cli_tag=cli-v${CLI_VER}" >> $GITHUB_OUTPUT
+          echo "desktop_tag=desktop-v${DESKTOP_VER}" >> $GITHUB_OUTPUT
+          echo "target_sha=${TARGET_SHA}" >> $GITHUB_OUTPUT
+          echo "CLI version: $CLI_VER"
+          echo "Desktop version: $DESKTOP_VER"
+          echo "Tag target SHA: $TARGET_SHA"
+
+      - name: Create and push CLI tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG='${{ steps.prep.outputs.cli_tag }}'
+          TARGET='${{ steps.prep.outputs.target_sha }}'
+          if git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
+            echo "Tag ${TAG} already exists; skipping."
+          else
+            git config user.name "github-actions"
+            git config user.email "github-actions@users.noreply.github.com"
+            git tag -a "${TAG}" -m "Release ${TAG}" "${TARGET}"
+            git push origin "${TAG}"
+          fi
+
+      - name: Create and push Desktop tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG='${{ steps.prep.outputs.desktop_tag }}'
+          TARGET='${{ steps.prep.outputs.target_sha }}'
+          if git ls-remote --tags origin | grep -q "refs/tags/${TAG}$"; then
+            echo "Tag ${TAG} already exists; skipping."
+          else
+            git config user.name "github-actions"
+            git config user.email "github-actions@users.noreply.github.com"
+            git tag -a "${TAG}" -m "Release ${TAG}" "${TARGET}"
+            git push origin "${TAG}"
+          fi
+
+  publish-releases:
+    name: Publish GitHub Releases (attach assets)
+    needs: [verify-version-bumps, build-cli, build-desktop, create-tags]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Prepare versions and tags
+        id: prep
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLI_VER='${{ needs.verify-version-bumps.outputs.new_cargo }}'
+          DESKTOP_VER='${{ needs.verify-version-bumps.outputs.new_pkg }}'
+          echo "cli_ver=${CLI_VER}" >> $GITHUB_OUTPUT
+          echo "desktop_ver=${DESKTOP_VER}" >> $GITHUB_OUTPUT
+          echo "cli_tag=cli-v${CLI_VER}" >> $GITHUB_OUTPUT
+          echo "desktop_tag=desktop-v${DESKTOP_VER}" >> $GITHUB_OUTPUT
+
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: artifacts
+          merge-multiple: false
+
+      - name: Normalize/rename assets for release
+        id: organize
+        shell: bash
+        run: |
+          set -euo pipefail
+          CLI_VER='${{ steps.prep.outputs.cli_ver }}'
+          DESKTOP_VER='${{ steps.prep.outputs.desktop_ver }}'
+          mkdir -p release-assets/cli release-assets/desktop
+
+          echo "Listing downloaded artifacts:"
+          find artifacts -maxdepth 3 -type f -printf '%P\n' || true
+
+          # CLI binaries -> versioned filenames by OS
+          if compgen -G "artifacts/rusty-rays-cli-Windows-*/rusty-rays-cli.exe" > /dev/null; then
+            cp artifacts/rusty-rays-cli-Windows-*/rusty-rays-cli.exe \
+               release-assets/cli/rusty-rays-cli-v${CLI_VER}-windows-x64.exe
+          fi
+          if compgen -G "artifacts/rusty-rays-cli-Linux-*/rusty-rays-cli" > /dev/null; then
+            cp artifacts/rusty-rays-cli-Linux-*/rusty-rays-cli \
+               release-assets/cli/rusty-rays-cli-v${CLI_VER}-linux-x64
+            chmod +x release-assets/cli/rusty-rays-cli-v${CLI_VER}-linux-x64
+          fi
+          if compgen -G "artifacts/rusty-rays-cli-macOS-*/rusty-rays-cli" > /dev/null; then
+            cp artifacts/rusty-rays-cli-macOS-*/rusty-rays-cli \
+               release-assets/cli/rusty-rays-cli-v${CLI_VER}-macos-x64
+            chmod +x release-assets/cli/rusty-rays-cli-v${CLI_VER}-macos-x64
+          fi
+
+          # Desktop installers -> copy installers from dist folders
+          if compgen -G "artifacts/rusty-rays-desktop-dist-Windows-*/**/*" > /dev/null; then
+            find artifacts/rusty-rays-desktop-dist-Windows-*/ -type f -name "*.exe" -exec cp {} release-assets/desktop/ \;
+          fi
+          if compgen -G "artifacts/rusty-rays-desktop-dist-macOS-*/**/*" > /dev/null; then
+            find artifacts/rusty-rays-desktop-dist-macOS-*/ -type f -name "*.dmg" -exec cp {} release-assets/desktop/ \;
+          fi
+          if compgen -G "artifacts/rusty-rays-desktop-dist-Linux-*/**/*" > /dev/null; then
+            find artifacts/rusty-rays-desktop-dist-Linux-*/ -type f -name "*.deb" -exec cp {} release-assets/desktop/ \;
+          fi
+
+          echo "CLI assets ready:" && ls -l release-assets/cli || true
+          echo "Desktop assets ready:" && ls -l release-assets/desktop || true
+
+      - name: Create/Update CLI Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.prep.outputs.cli_tag }}
+          name: Rusty Rays CLI v${{ steps.prep.outputs.cli_ver }}
+          generate_release_notes: true
+          files: |
+            release-assets/cli/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Create/Update Desktop Release and upload assets
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.prep.outputs.desktop_tag }}
+          name: Rusty Rays Desktop v${{ steps.prep.outputs.desktop_ver }}
+          generate_release_notes: true
+          files: |
+            release-assets/desktop/*
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
