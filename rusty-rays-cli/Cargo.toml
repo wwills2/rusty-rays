@@ -1,6 +1,6 @@
 [package]
 name = "rusty-rays-cli"
-version = "0.2.0"
+version = "0.3.0"
 edition = "2024"
 authors = ['William Wills']
 
@@ -14,5 +14,5 @@ path = "src/main.rs"
 [dependencies]
 rusty-rays-core = { path = "../rusty-rays-core" }
 clap = { version = "4.5.14", features = ["derive"] }
-signal-hook = { version = "0.4.3",features = ["iterator"] }
+signal-hook = { version = "0.4.3", features = ["iterator"] }
 ctrlc = "3.5.2"

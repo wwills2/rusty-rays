@@ -4,7 +4,7 @@
   "description": "Rust based Rayshade4 ray tracer",
   "author": "William Wills <wwills2@protonmail.com>",
   "private": true,
-  "version": "0.0.1",
+  "version": "0.0.2",
   "type": "module",
   "main": "build/index.js",
   "scripts": {
