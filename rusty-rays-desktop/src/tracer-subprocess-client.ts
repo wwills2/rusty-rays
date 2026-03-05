@@ -53,6 +53,7 @@ export class TracerSubprocessClient {
       stdio: ['inherit', 'inherit', 'inherit', 'ipc'],
       env: process.env,
       serialization: 'advanced',
+      detached: true,
     });
 
     this.child = child;
