@@ -56,7 +56,7 @@ jobs:
             core.setOutput('head_sha', pr.head.sha)
             core.setOutput('merge_sha', pr.merge_commit_sha || '')
 
-      - name: Ensure PR is merged develop -> main
+      - name: Ensure PR is merged develop -> master
         run: |
           set -euo pipefail
           echo "PR #: ${{ steps.prinfo.outputs.pr_number }}"
@@ -66,8 +66,8 @@ jobs:
             echo "PR is not merged. Exiting." >&2
             exit 1
           fi
-          if [ "${{ steps.prinfo.outputs.base_ref }}" != "main" ] || [ "${{ steps.prinfo.outputs.head_ref }}" != "develop" ]; then
-            echo "PR is not from develop -> main. Exiting." >&2
+          if [ "${{ steps.prinfo.outputs.base_ref }}" != "master" ] || [ "${{ steps.prinfo.outputs.head_ref }}" != "develop" ]; then
+            echo "PR is not from develop -> master. Exiting." >&2
             exit 1
           fi
 
@@ -129,7 +129,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.verify-version-bumps.outputs.merge_sha || 'main' }}
+          ref: ${{ needs.verify-version-bumps.outputs.merge_sha || 'master' }}
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -177,7 +177,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          ref: ${{ needs.verify-version-bumps.outputs.merge_sha || 'main' }}
+          ref: ${{ needs.verify-version-bumps.outputs.merge_sha || 'master' }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -228,7 +228,7 @@ jobs:
 
   create-tags:
     name: Create release tags (CLI and Desktop)
-    needs: [verify-version-bumps, build-cli, build-desktop]
+    needs: [ verify-version-bumps, build-cli, build-desktop ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -245,7 +245,7 @@ jobs:
           DESKTOP_VER='${{ needs.verify-version-bumps.outputs.new_pkg }}'
           TARGET_SHA='${{ needs.verify-version-bumps.outputs.merge_sha }}'
           if [[ -z "$TARGET_SHA" ]]; then
-            TARGET_SHA="$(git rev-parse origin/main || git rev-parse HEAD)"
+            TARGET_SHA="$(git rev-parse origin/master || git rev-parse HEAD)"
           fi
           echo "cli_tag=cli-v${CLI_VER}" >> $GITHUB_OUTPUT
           echo "desktop_tag=desktop-v${DESKTOP_VER}" >> $GITHUB_OUTPUT
@@ -286,7 +286,7 @@ jobs:
 
   publish-releases:
     name: Publish GitHub Releases (attach assets)
-    needs: [verify-version-bumps, build-cli, build-desktop, create-tags]
+    needs: [ verify-version-bumps, build-cli, build-desktop, create-tags ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
