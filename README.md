@@ -1,9 +1,30 @@
 ## Rusty Rays
 
-A simple cross-platform, still image raytracer implementing a phong shading model and five-bounce reflections with
-attenuation.
+A simple cross-platform, still image raytracer implementing a Phong shading model and five-bounce reflections with
+attenuation. This repository contains multiple targets:
 
-### Quick Start
+- A Rust command-line interface (CLI)
+- A desktop GUI application (Electron + React)
+- A Node.js N-API package that exposes the Rust core to JavaScript
+
+See Project Overview below for details.
+
+### Project Overview
+
+- rusty-rays-core (Rust library)
+    - The rendering engine and scene parser written in Rust.
+    - Consumed by the CLI and by the N-API bindings used in the desktop app.
+- rusty-rays-cli (Rust binary)
+    - Command-line tool to render `.ray` scenes using `rusty-rays-core`.
+- rusty-rays-napi-node (Node N-API bindings)
+    - Builds native Node bindings to call the Rust core from JavaScript/TypeScript.
+    - Published locally into `dist/` and consumed by the desktop app via a file path dependency.
+- rusty-rays-desktop (Electron + React)
+    - Cross-platform desktop UI that uses the N-API bindings to render scenes and manage jobs.
+
+---
+
+### Quick Start (CLI)
 
 - Clone the project
 - Render with a one-liner from the project directory:
@@ -16,7 +37,7 @@ attenuation.
     - optimized release build: `cargo build --release`
     - binaries in the `target` directory
 
-### Usage
+### Usage (CLI)
 
 Input files utilize a [simplified version of the Rayshade 4.0 `.ray` file format](#simplified-rayshade-40-file-format).
 
@@ -35,7 +56,7 @@ Sample run command (using windows paths for inclusivity):
 .\rusty-rays -i .\input-file-name.ray -o .\Pictures\renders\output-file-name.png
 ```
 
-### Logging
+### Logging (CLI)
 
 * The application will create a log folder in the users cache directory
     * win: `C:\Users\<user>\AppData\Local\rusty-rays\logs\`
@@ -43,7 +64,7 @@ Sample run command (using windows paths for inclusivity):
     * mac: `$HOME/Libary/Caches/rusty-rays/logs/`
 * The logger will default to console only logging if unable to create the log folder or file
 
-### Config
+### Config (CLI)
 
 * The application will create a `config.json` file in the users config directory
     * win: `C:\Users\<user>\AppData\Roaming\rusty-rays\`
@@ -54,7 +75,7 @@ Sample run command (using windows paths for inclusivity):
 * If `max_render_threads` option is set to a value less than 1 or greater than the number of physical cores,
   it will default to the number of physical cores.
 
-### Generating Additional Input Files
+### Generating Additional Input Files (CLI)
 
 Simple input files can be written by hand.
 
@@ -99,4 +120,91 @@ Rusty-Rays can parse and render the bare-bone basics of the specification. Below
 - polygon
 - triangle
 - light
+
+---
+
+## Desktop Application
+
+The desktop application lives in `rusty-rays-desktop` and uses an Electron + React UI. It depends on the local
+N-API package (`rusty-rays-napi-node`) via a file path dependency, so you must build/install the N-API project first
+before installing the desktop app.
+
+### Prerequisites
+
+- Rust toolchain (for building the core and N-API native module)
+- Node.js >= 24.11 and npm
+- On Linux: system dependencies required by Electron may be needed (refer to your distribution docs)
+
+### One-time setup
+
+1) Build and install the N-API package
+
+``` shell
+cd rusty-rays-napi-node
+npm install
+cd ../
+```
+
+2) Install the desktop app dependencies
+
+``` shell
+cd rusty-rays-desktop
+npm install
+```
+
+Note: The desktop app references the N-API package using
+`"rusty-rays-napi-node": "file:../rusty-rays-napi-node/dist"`. If you clean or rebuild the N-API project, re-run
+`npm install` in the desktop folder so the dependency stays in sync.
+
+### Run the desktop app (development)
+
+There are two options:
+
+- Fast dev loop with Vite renderer + Hot Module Reload (HMR) and Electron:
+
+```
+cd rusty-rays-desktop
+npm run dev
+```
+
+### Build the desktop app
+
+```
+cd rusty-rays-desktop
+npm run build
+```
+
+### Package installers
+
+Use Electron Builder targets provided in `package.json`:
+
+- Windows (NSIS):
+
+```
+cd rusty-rays-desktop
+npm run dist:windows
+```
+
+- macOS (DMG):
+
+```
+cd rusty-rays-desktop
+npm run dist:mac
+```
+
+- Linux (Deb):
+
+```
+cd rusty-rays-desktop
+npm run dist:linux:deb
+```
+
+Artifacts are written to `rusty-rays-desktop/dist/`.
+
+### Troubleshooting
+
+- If Electron cannot find native bindings, ensure that `rusty-rays-napi-node/dist` contains `bindings/` with the correct
+  `.node` binary for your platform. If it doesnt run `npm run build` in the napi project, then re-run `npm install` in
+  `rusty-rays-desktop`.
+- If your Node.js version is older, upgrade to >= 24.11 to satisfy the N-API package engine requirement.
 
