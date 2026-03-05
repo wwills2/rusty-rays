@@ -1,135 +1,23 @@
 name: Release Build (CLI + Desktop)
 
 on:
-  workflow_run:
-    workflows: [ "PR Checks (Rust + Desktop Lint)" ]
-    types: [ completed ]
+  push:
+    branches: [ master ]
 
 permissions:
   contents: write  # required to create and push tags/releases
 
 jobs:
-  verify-version-bumps:
-    # Only proceed if the Checks workflow concluded successfully
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
-    name: Verify version bumps
-    runs-on: ubuntu-latest
-    outputs:
-      pr_number: ${{ steps.prinfo.outputs.pr_number }}
-      merged: ${{ steps.prinfo.outputs.merged }}
-      base_ref: ${{ steps.prinfo.outputs.base_ref }}
-      head_ref: ${{ steps.prinfo.outputs.head_ref }}
-      base_sha: ${{ steps.prinfo.outputs.base_sha }}
-      head_sha: ${{ steps.prinfo.outputs.head_sha }}
-      merge_sha: ${{ steps.prinfo.outputs.merge_sha }}
-      old_cargo: ${{ steps.versions.outputs.old_cargo }}
-      new_cargo: ${{ steps.versions.outputs.new_cargo }}
-      old_pkg: ${{ steps.versions.outputs.old_pkg }}
-      new_pkg: ${{ steps.versions.outputs.new_pkg }}
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-
-      - name: Gather PR info from workflow_run
-        id: prinfo
-        uses: actions/github-script@v7
-        with:
-          script: |
-            const wr = context.payload.workflow_run
-            if (!wr || !wr.pull_requests || wr.pull_requests.length === 0) {
-              core.setFailed('No pull_request context found on workflow_run event')
-              return
-            }
-            const prLite = wr.pull_requests[0]
-            const { data: pr } = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: prLite.number,
-            })
-            core.setOutput('pr_number', String(pr.number))
-            core.setOutput('merged', String(pr.merged))
-            core.setOutput('base_ref', pr.base.ref)
-            core.setOutput('head_ref', pr.head.ref)
-            core.setOutput('base_sha', pr.base.sha)
-            core.setOutput('head_sha', pr.head.sha)
-            core.setOutput('merge_sha', pr.merge_commit_sha || '')
-
-      - name: Ensure PR is merged develop -> master
-        run: |
-          set -euo pipefail
-          echo "PR #: ${{ steps.prinfo.outputs.pr_number }}"
-          echo "Merged: ${{ steps.prinfo.outputs.merged }}"
-          echo "Base: ${{ steps.prinfo.outputs.base_ref }}  Head: ${{ steps.prinfo.outputs.head_ref }}"
-          if [ "${{ steps.prinfo.outputs.merged }}" != "true" ]; then
-            echo "PR is not merged. Exiting." >&2
-            exit 1
-          fi
-          if [ "${{ steps.prinfo.outputs.base_ref }}" != "master" ] || [ "${{ steps.prinfo.outputs.head_ref }}" != "develop" ]; then
-            echo "PR is not from develop -> master. Exiting." >&2
-            exit 1
-          fi
-
-      - name: Set up Node.js (for reading package.json)
-        uses: actions/setup-node@v4
-        with:
-          node-version: '24'
-
-      - name: Read versions from base and head
-        id: versions
-        run: |
-          set -euo pipefail
-          BASE_SHA='${{ steps.prinfo.outputs.base_sha }}'
-          HEAD_SHA='${{ steps.prinfo.outputs.head_sha }}'
-
-          echo "Base SHA: $BASE_SHA"
-          echo "Head SHA: $HEAD_SHA"
-
-          # Extract Cargo.toml versions
-          OLD_CARGO_VER=$(git show "$BASE_SHA:rusty-rays-cli/Cargo.toml" | sed -n 's/^version\s*=\s*"\(.*\)"/\1/p' | head -n1)
-          NEW_CARGO_VER=$(git show "$HEAD_SHA:rusty-rays-cli/Cargo.toml" | sed -n 's/^version\s*=\s*"\(.*\)"/\1/p' | head -n1)
-
-          # Extract package.json versions using Node from stdin to avoid jq dependency
-          OLD_PKG_VER=$(git show "$BASE_SHA:rusty-rays-desktop/package.json" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).version))")
-          NEW_PKG_VER=$(git show "$HEAD_SHA:rusty-rays-desktop/package.json" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).version))")
-
-          echo "old_cargo=$OLD_CARGO_VER" >> $GITHUB_OUTPUT
-          echo "new_cargo=$NEW_CARGO_VER" >> $GITHUB_OUTPUT
-          echo "old_pkg=$OLD_PKG_VER" >> $GITHUB_OUTPUT
-          echo "new_pkg=$NEW_PKG_VER" >> $GITHUB_OUTPUT
-
-          echo "Old CLI Cargo version: $OLD_CARGO_VER"
-          echo "New CLI Cargo version: $NEW_CARGO_VER"
-          echo "Old Desktop package version: $OLD_PKG_VER"
-          echo "New Desktop package version: $NEW_PKG_VER"
-
-      - name: Enforce version bumps
-        run: |
-          set -euo pipefail
-          if [ "${{ steps.versions.outputs.old_cargo }}" = "${{ steps.versions.outputs.new_cargo }}" ]; then
-            echo "ERROR: rusty-rays-cli Cargo.toml version was not bumped." >&2
-            exit 1
-          fi
-          if [ "${{ steps.versions.outputs.old_pkg }}" = "${{ steps.versions.outputs.new_pkg }}" ]; then
-            echo "ERROR: rusty-rays-desktop package.json version was not bumped." >&2
-            exit 1
-          fi
-          echo "Version bump checks passed."
-
   build-cli:
     name: Build Rust CLI
-    needs: verify-version-bumps
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest, macos-13 ]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.verify-version-bumps.outputs.merge_sha || 'master' }}
 
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
@@ -154,9 +42,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            echo "bin=rusty-rays-cli/target/release/rusty-rays-cli.exe" >> $GITHUB_OUTPUT
+            echo "bin=target/release/rusty-rays-cli.exe" >> $GITHUB_OUTPUT
           else
-            echo "bin=rusty-rays-cli/target/release/rusty-rays-cli" >> $GITHUB_OUTPUT
+            echo "bin=target/release/rusty-rays-cli" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload CLI binary artifact
@@ -167,17 +55,14 @@ jobs:
 
   build-desktop:
     name: Build Electron Desktop
-    needs: verify-version-bumps
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest, macos-13 ]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.verify-version-bumps.outputs.merge_sha || 'master' }}
 
       - name: Set up Node.js
         uses: actions/setup-node@v4
@@ -213,7 +98,7 @@ jobs:
         run: npm run dist:windows
         shell: bash
 
-      - name: Package desktop (macOS Intel)
+      - name: Package desktop (macOS)
         if: startsWith(matrix.os, 'macos')
         working-directory: rusty-rays-desktop
         run: npm run dist:mac
@@ -228,7 +113,7 @@ jobs:
 
   create-tags:
     name: Create release tags (CLI and Desktop)
-    needs: [ verify-version-bumps, build-cli, build-desktop ]
+    needs: [ build-cli, build-desktop ]
     runs-on: ubuntu-latest
     steps:
       - name: Checkout repository
@@ -236,17 +121,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Node.js (for reading package.json)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - name: Prepare versions and target SHA
         id: prep
         shell: bash
         run: |
           set -euo pipefail
-          CLI_VER='${{ needs.verify-version-bumps.outputs.new_cargo }}'
-          DESKTOP_VER='${{ needs.verify-version-bumps.outputs.new_pkg }}'
-          TARGET_SHA='${{ needs.verify-version-bumps.outputs.merge_sha }}'
-          if [[ -z "$TARGET_SHA" ]]; then
-            TARGET_SHA="$(git rev-parse origin/master || git rev-parse HEAD)"
-          fi
+          CLI_VER=$(sed -n 's/^version\s*=\s*"\(.*\)"/\1/p' rusty-rays-cli/Cargo.toml | head -n1)
+          DESKTOP_VER=$(node -e "console.log(require('./rusty-rays-desktop/package.json').version)")
+          TARGET_SHA="${GITHUB_SHA}"
           echo "cli_tag=cli-v${CLI_VER}" >> $GITHUB_OUTPUT
           echo "desktop_tag=desktop-v${DESKTOP_VER}" >> $GITHUB_OUTPUT
           echo "target_sha=${TARGET_SHA}" >> $GITHUB_OUTPUT
@@ -286,7 +173,7 @@ jobs:
 
   publish-releases:
     name: Publish GitHub Releases (attach assets)
-    needs: [ verify-version-bumps, build-cli, build-desktop, create-tags ]
+    needs: [ build-cli, build-desktop, create-tags ]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -296,13 +183,18 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Node.js (for reading package.json)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
       - name: Prepare versions and tags
         id: prep
         shell: bash
         run: |
           set -euo pipefail
-          CLI_VER='${{ needs.verify-version-bumps.outputs.new_cargo }}'
-          DESKTOP_VER='${{ needs.verify-version-bumps.outputs.new_pkg }}'
+          CLI_VER=$(sed -n 's/^version\s*=\s*"\(.*\)"/\1/p' rusty-rays-cli/Cargo.toml | head -n1)
+          DESKTOP_VER=$(node -e "console.log(require('./rusty-rays-desktop/package.json').version)")
           echo "cli_ver=${CLI_VER}" >> $GITHUB_OUTPUT
           echo "desktop_ver=${DESKTOP_VER}" >> $GITHUB_OUTPUT
           echo "cli_tag=cli-v${CLI_VER}" >> $GITHUB_OUTPUT

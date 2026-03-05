@@ -1,0 +1,70 @@
+name: Version Bump Checks (develop -> master PRs)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [ master ]
+
+jobs:
+  enforce-version-bumps:
+    name: Enforce CLI/Desktop version bumps
+    if: |
+      github.event.pull_request.base.ref == 'master' &&
+      github.event.pull_request.head.ref == 'develop'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Node.js (for reading package.json)
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Read versions from base and head
+        id: versions
+        shell: bash
+        run: |
+          set -euo pipefail
+          BASE_SHA='${{ github.event.pull_request.base.sha }}'
+          HEAD_SHA='${{ github.event.pull_request.head.sha }}'
+
+          echo "Base SHA: $BASE_SHA"
+          echo "Head SHA: $HEAD_SHA"
+
+          # Ensure we have both SHAs locally (in case of shallow clone)
+          git fetch --no-tags --prune --progress origin "+$BASE_SHA:$BASE_SHA" "+$HEAD_SHA:$HEAD_SHA" || true
+
+          # Extract Cargo.toml versions from CLI
+          OLD_CARGO_VER=$(git show "$BASE_SHA:rusty-rays-cli/Cargo.toml" | sed -n 's/^version\s*=\s*"\(.*\)"/\1/p' | head -n1)
+          NEW_CARGO_VER=$(git show "$HEAD_SHA:rusty-rays-cli/Cargo.toml" | sed -n 's/^version\s*=\s*"\(.*\)"/\1/p' | head -n1)
+
+          # Extract package.json versions for Desktop using Node via stdin
+          OLD_PKG_VER=$(git show "$BASE_SHA:rusty-rays-desktop/package.json" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).version))")
+          NEW_PKG_VER=$(git show "$HEAD_SHA:rusty-rays-desktop/package.json" | node -e "let d='';process.stdin.on('data',c=>d+=c).on('end',()=>console.log(JSON.parse(d).version))")
+
+          echo "old_cargo=$OLD_CARGO_VER" >> $GITHUB_OUTPUT
+          echo "new_cargo=$NEW_CARGO_VER" >> $GITHUB_OUTPUT
+          echo "old_pkg=$OLD_PKG_VER" >> $GITHUB_OUTPUT
+          echo "new_pkg=$NEW_PKG_VER" >> $GITHUB_OUTPUT
+
+          echo "Old CLI Cargo version: $OLD_CARGO_VER"
+          echo "New CLI Cargo version: $NEW_CARGO_VER"
+          echo "Old Desktop package version: $OLD_PKG_VER"
+          echo "New Desktop package version: $NEW_PKG_VER"
+
+      - name: Enforce version bumps
+        shell: bash
+        run: |
+          set -euo pipefail
+          if [ "${{ steps.versions.outputs.old_cargo }}" = "${{ steps.versions.outputs.new_cargo }}" ]; then
+            echo "ERROR: rusty-rays-cli Cargo.toml version was not bumped." >&2
+            exit 1
+          fi
+          if [ "${{ steps.versions.outputs.old_pkg }}" = "${{ steps.versions.outputs.new_pkg }}" ]; then
+            echo "ERROR: rusty-rays-desktop package.json version was not bumped." >&2
+            exit 1
+          fi
+          echo "Version bump checks passed."
