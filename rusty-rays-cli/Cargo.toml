@@ -14,5 +14,4 @@ path = "src/main.rs"
 [dependencies]
 rusty-rays-core = { path = "../rusty-rays-core" }
 clap = { version = "4.5.14", features = ["derive"] }
-signal-hook = { version = "0.4.3", features = ["iterator"] }
 ctrlc = "3.5.2"
