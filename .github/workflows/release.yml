@@ -235,14 +235,20 @@ jobs:
           fi
 
           # Desktop installers -> copy installers from dist folders
-          if compgen -G "artifacts/rusty-rays-desktop-dist-Windows-*/**/*" > /dev/null; then
-            find artifacts/rusty-rays-desktop-dist-Windows-*/ -type f -name "*.exe" -exec cp {} release-assets/desktop/ \;
+          # Note: actions/download-artifact creates folders named exactly after the artifact.
+          if [ -d artifacts/rusty-rays-desktop-dist-Windows ]; then
+            # Copy NSIS installer and blockmap if present
+            find artifacts/rusty-rays-desktop-dist-Windows -type f \
+              \( -name "*.exe" -o -name "*.exe.blockmap" \) -exec cp {} release-assets/desktop/ \;
           fi
-          if compgen -G "artifacts/rusty-rays-desktop-dist-macOS-*/**/*" > /dev/null; then
-            find artifacts/rusty-rays-desktop-dist-macOS-*/ -type f -name "*.dmg" -exec cp {} release-assets/desktop/ \;
+          if [ -d artifacts/rusty-rays-desktop-dist-macOS ]; then
+            # Copy DMG and blockmap if present
+            find artifacts/rusty-rays-desktop-dist-macOS -type f \
+              \( -name "*.dmg" -o -name "*.dmg.blockmap" \) -exec cp {} release-assets/desktop/ \;
           fi
-          if compgen -G "artifacts/rusty-rays-desktop-dist-Linux-*/**/*" > /dev/null; then
-            find artifacts/rusty-rays-desktop-dist-Linux-*/ -type f -name "*.deb" -exec cp {} release-assets/desktop/ \;
+          if [ -d artifacts/rusty-rays-desktop-dist-Linux ]; then
+            # Copy Debian package if present
+            find artifacts/rusty-rays-desktop-dist-Linux -type f -name "*.deb" -exec cp {} release-assets/desktop/ \;
           fi
 
           echo "CLI assets ready:" && ls -l release-assets/cli || true
