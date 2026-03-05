@@ -1,0 +1,35 @@
+{
+  "name": "rusty-rays-napi-node",
+  "author": "William Wills <wwills2@protonmail.com>",
+  "version": "2.0.0",
+  "description": "NAPI bindings for rusty-rays",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build:napi": "rimraf bindings && napi build -o bindings --release --platform --js index.cjs",
+    "build": "npm run clean && rimraf dist && npm run build:napi && tsup && shx cp -r bindings dist/",
+    "test": "npm run build && tsc --module nodenext test.ts && node test.js",
+    "clean": "rimraf --glob bindings dist test.js rusty-rays-napi-node-*.tgz",
+    "lint": "cargo clippy"
+  },
+  "type": "module",
+  "engines": {
+    "node": ">=24.11"
+  },
+  "files": [
+    "dist/index.js",
+    "dist/index.d.ts",
+    "dist/bindings/**/*"
+  ],
+  "devDependencies": {
+    "@napi-rs/cli": "^3.1.5",
+    "@types/node": "^24.3.1",
+    "rimraf": "^6.0.1",
+    "shx": "^0.4.0",
+    "tsup": "^8.5.1",
+    "typescript": "^5.9.2"
+  },
+  "dependencies": {
+    "uuid": "^13.0.0"
+  }
+}

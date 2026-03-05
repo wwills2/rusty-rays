@@ -1,0 +1,6 @@
+node_modules/
+dist/
+bindings/
+test-artifacts/
+test.js
+rusty-rays-napi-node-*.tgz
