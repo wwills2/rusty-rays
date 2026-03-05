@@ -13,7 +13,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest, macos-13 ]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -42,9 +42,9 @@ jobs:
         run: |
           set -euo pipefail
           if [[ "${{ runner.os }}" == "Windows" ]]; then
-            echo "bin=rusty-rays-cli/target/release/rusty-rays-cli.exe" >> $GITHUB_OUTPUT
+            echo "bin=target/release/rusty-rays-cli.exe" >> $GITHUB_OUTPUT
           else
-            echo "bin=rusty-rays-cli/target/release/rusty-rays-cli" >> $GITHUB_OUTPUT
+            echo "bin=target/release/rusty-rays-cli" >> $GITHUB_OUTPUT
           fi
 
       - name: Upload CLI binary artifact
@@ -58,7 +58,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        os: [ ubuntu-latest, windows-latest, macos-13 ]
+        os: [ ubuntu-latest, windows-latest, macos-latest ]
     runs-on: ${{ matrix.os }}
     steps:
       - name: Checkout code
@@ -98,7 +98,7 @@ jobs:
         run: npm run dist:windows
         shell: bash
 
-      - name: Package desktop (macOS Intel)
+      - name: Package desktop (macOS)
         if: startsWith(matrix.os, 'macos')
         working-directory: rusty-rays-desktop
         run: npm run dist:mac
