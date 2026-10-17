@@ -66,7 +66,6 @@ export const modelsIpcApi = ipcApi.injectEndpoints({
         'model:getAllTriangles',
         'model:getAllPolygons',
         'tracer:GetInstanceUuid',
-        '',
       ],
     }),
     setModel: builder.mutation<DataType<'model:SetModel'>, string | undefined>({

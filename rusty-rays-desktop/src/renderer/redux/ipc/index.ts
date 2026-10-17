@@ -22,7 +22,7 @@ function processIpcResult<CN extends ChannelNames, R>(
   } else {
     if (result.error instanceof Error) {
       throw new Error(
-        `IPC channel ${channelName} returned error: ${result.error.message}`,
+        `IPC channel ${channelName} returned Error: ${result.error.message}`,
         {
           cause: result.error,
         },
@@ -65,7 +65,7 @@ async function invoke<CN extends ChannelNames>(
 const ipcApi = createApi({
   reducerPath: 'ipcApi',
   endpoints: () => ({}),
-  baseQuery: fakeBaseQuery(),
+  baseQuery: fakeBaseQuery<Error>(),
   tagTypes: [...allowedChannelNames],
 });
 
