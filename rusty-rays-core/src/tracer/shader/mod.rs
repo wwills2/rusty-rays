@@ -1,8 +1,10 @@
+use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::shader::light::Light;
 use crate::tracer::Bvh;
 use crate::tracer::Coords;
 use crate::tracer::Model;
-use crate::tracer::misc_types::{Intersection, Ray, Surface};
-use crate::tracer::shader::light::Light;
+use rand::{Rng, RngExt, SeedableRng};
+
 mod color;
 pub mod light;
 
@@ -17,7 +19,6 @@ static NUM_SHADOW_RAYS: u8 = 16;
 
 pub fn process_ray(trace_depth: u8, ray: &Ray, model: &Model, bvh: &Bvh) -> Color {
     if let Some(intersection) = bvh.intersect(ray) {
-        // Get the primitive from the model's collections using the UUID
         let maybe_intersected_primitive = model
             .get_all_primitives()
             .get(&intersection.intersected_primitive_uuid);
@@ -51,146 +52,30 @@ fn calculate_color(
 
     let mut point_color = surface.ambient.clone();
 
-    for light_source in &model.light_sources {
-        // If radius is 0 or very small, treat as a point light (hard shadows)
-        if light_source.radius <= 1e-5 {
-            let mut shadow_ray_direction = &light_source.position - &starting_intersection.position;
-            let shadow_ray_length = shadow_ray_direction.calc_vector_length();
-            shadow_ray_direction.normalize_vector();
-
-            /*  move the origin just off the intersected object along the shadow ray to protect against
-              intersection with the originally intersected object
-            */
-            let offset_shadow_ray_origin =
-                &starting_intersection.position + &(&shadow_ray_direction * 10e-5);
-
-            let shadow_ray = Ray {
-                origin: offset_shadow_ray_origin,
-                direction: shadow_ray_direction,
-                i: 0,
-                j: 0,
-            };
-
-            let shadow_ray_intersection = match bvh.intersect(&shadow_ray) {
-                Some(intersection) => intersection,
-                None => {
-                    adjust_color_for_diffuse_and_specular(
-                        &mut point_color,
-                        light_source,
-                        &shadow_ray.direction,
-                        &starting_intersection.surface_normal_at_intersection,
-                        &ray_from_intersection_back_to_source,
-                        surface,
-                    );
-                    continue;
-                }
-            };
-
-            if shadow_ray_intersection.distance_along_ray > shadow_ray_length {
-                adjust_color_for_diffuse_and_specular(
+    for (light_index, light_source) in model.light_sources.iter().enumerate() {
+        match light_source.source_type {
+            crate::tracer::shader::light::LightSourceType::Extended => {
+                process_extended_light(
                     &mut point_color,
                     light_source,
-                    &shadow_ray.direction,
-                    &starting_intersection.surface_normal_at_intersection,
+                    light_index,
+                    starting_intersection,
                     &ray_from_intersection_back_to_source,
                     surface,
-                )
+                    bvh,
+                );
             }
-        } else {
-            // Area light (soft shadows)
-            // Calculate the main direction to the light center
-            let mut main_shadow_ray_direction =
-                &light_source.position - &starting_intersection.position;
-            let _shadow_ray_length = main_shadow_ray_direction.calc_vector_length();
-            main_shadow_ray_direction.normalize_vector();
-
-            // Create a coordinate system around the main direction
-            // Find two vectors perpendicular to the main direction
-            let mut tangent1 = Coords {
-                x: 1.0,
-                y: 0.0,
-                z: 0.0,
-            };
-            if main_shadow_ray_direction.x.abs() > 0.9 {
-                tangent1 = Coords {
-                    x: 0.0,
-                    y: 1.0,
-                    z: 0.0,
-                };
+            crate::tracer::shader::light::LightSourceType::Ambient => {
+                // Ambient light contributes via surface.ambient; skip per-light shading.
             }
-
-            // Gram-Schmidt process to make tangent1 perpendicular to main_shadow_ray_direction
-            let dot_product = &tangent1 * &main_shadow_ray_direction;
-            let scaled_main_dir = &main_shadow_ray_direction * dot_product;
-            let tangent1 = (&tangent1 - &scaled_main_dir).calc_normalized_vector();
-            let tangent2 = main_shadow_ray_direction
-                .cross(&tangent1)
-                .calc_normalized_vector();
-
-            // Number of shadow rays to cast (more rays = smoother shadows but slower)
-            let mut visible_samples = 0;
-
-            for i in 0..NUM_SHADOW_RAYS {
-                // Generate random point on the disk
-                // Using stratified sampling for better distribution
-                let angle = 2.0 * std::f64::consts::PI * (i as f64 / NUM_SHADOW_RAYS as f64);
-                let distance = light_source.radius * (i as f64 / NUM_SHADOW_RAYS as f64).sqrt();
-
-                // Calculate the offset from the light center
-                let offset = &(&tangent1 * (distance * angle.cos()))
-                    + &(&tangent2 * (distance * angle.sin()));
-
-                // Calculate the position of the sample on the light
-                let light_sample_position = &light_source.position + &offset;
-
-                // Calculate direction to the light sample
-                let mut shadow_ray_direction =
-                    &light_sample_position - &starting_intersection.position;
-                let sample_ray_length = shadow_ray_direction.calc_vector_length();
-                shadow_ray_direction.normalize_vector();
-
-                // Move the origin slightly off the surface
-                let offset_shadow_ray_origin =
-                    &starting_intersection.position + &(&shadow_ray_direction * 10e-5);
-
-                let shadow_ray = Ray {
-                    origin: offset_shadow_ray_origin,
-                    direction: shadow_ray_direction,
-                    i: 0,
-                    j: 0,
-                };
-
-                // Check if this ray is blocked
-                let shadow_ray_intersection = match bvh.intersect(&shadow_ray) {
-                    Some(intersection) => intersection,
-                    None => {
-                        // This ray is not blocked
-                        visible_samples += 1;
-                        continue;
-                    }
-                };
-
-                if shadow_ray_intersection.distance_along_ray > sample_ray_length {
-                    // This ray reaches the light
-                    visible_samples += 1;
-                }
-            }
-
-            // Calculate the visibility factor (percentage of rays that reach the light)
-            let visibility = visible_samples as f64 / NUM_SHADOW_RAYS as f64;
-
-            if visibility > 0.0 {
-                // Apply lighting with the visibility factor
-                let mut scaled_light = light_source.clone();
-                scaled_light.intensity *= visibility;
-
-                adjust_color_for_diffuse_and_specular(
+            _ => {
+                process_point_light(
                     &mut point_color,
-                    &scaled_light,
-                    &main_shadow_ray_direction,
-                    &starting_intersection.surface_normal_at_intersection,
+                    light_source,
+                    starting_intersection,
                     &ray_from_intersection_back_to_source,
                     surface,
+                    bvh,
                 );
             }
         }
@@ -205,9 +90,6 @@ fn calculate_color(
         let reflection_ray_direction =
             (&starting_intersection.ray.direction - &scaled_normal_vector).calc_normalized_vector();
 
-        /* move the origin just off the intersected object along the shadow ray to protect against
-          intersection with the originally intersected object
-        */
         let offset_reflection_ray_origin =
             &starting_intersection.position + &(&reflection_ray_direction * 10e-5);
 
@@ -217,6 +99,7 @@ fn calculate_color(
             i: 0,
             j: 0,
         };
+
         let reflection_color = process_ray(trace_depth + 1, &reflection_ray, model, bvh);
         let reflect_attenuation = 1.0 / (1.0 + trace_depth as f64);
         let reflection_contribution = reflection_color.scale(surface.reflect * reflect_attenuation);
@@ -225,6 +108,220 @@ fn calculate_color(
     }
 
     point_color
+}
+
+fn process_point_light(
+    point_color: &mut Color,
+    light_source: &Light,
+    starting_intersection: &Intersection,
+    ray_from_intersection_back_to_source: &Coords,
+    surface: &Surface,
+    bvh: &Bvh,
+) {
+    let mut shadow_ray_direction = &light_source.position - &starting_intersection.position;
+    let shadow_ray_length = shadow_ray_direction.calc_vector_length();
+    shadow_ray_direction.normalize_vector();
+
+    let offset_shadow_ray_origin =
+        &starting_intersection.position + &(&shadow_ray_direction * 10e-5);
+
+    let shadow_ray = Ray {
+        origin: offset_shadow_ray_origin,
+        direction: shadow_ray_direction,
+        i: 0,
+        j: 0,
+    };
+
+    let shadow_ray_intersection = match bvh.intersect(&shadow_ray) {
+        Some(intersection) => intersection,
+        None => {
+            adjust_color_for_diffuse_and_specular(
+                point_color,
+                light_source,
+                &shadow_ray.direction,
+                &starting_intersection.surface_normal_at_intersection,
+                ray_from_intersection_back_to_source,
+                surface,
+            );
+            return;
+        }
+    };
+
+    if shadow_ray_intersection.distance_along_ray > shadow_ray_length {
+        adjust_color_for_diffuse_and_specular(
+            point_color,
+            light_source,
+            &shadow_ray.direction,
+            &starting_intersection.surface_normal_at_intersection,
+            ray_from_intersection_back_to_source,
+            surface,
+        );
+    }
+}
+
+fn process_extended_light(
+    point_color: &mut Color,
+    light_source: &Light,
+    light_index: usize,
+    starting_intersection: &Intersection,
+    ray_from_intersection_back_to_source: &Coords,
+    surface: &Surface,
+    bvh: &Bvh,
+) {
+    let mut main_shadow_ray_direction = &light_source.position - &starting_intersection.position;
+    main_shadow_ray_direction.normalize_vector();
+
+    let (tangent1, tangent2) = build_orthonormal_basis(&main_shadow_ray_direction);
+
+    let seed = make_extended_light_seed(starting_intersection, light_source, light_index);
+    let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
+
+    let rotation_angle = 2.0 * std::f64::consts::PI * rng.random::<f64>();
+    let rotation_cos = rotation_angle.cos();
+    let rotation_sin = rotation_angle.sin();
+
+    let strata_side = (NUM_SHADOW_RAYS as f64).sqrt().ceil() as usize;
+    let target_samples = NUM_SHADOW_RAYS as usize;
+
+    // Each visible sample contributes 1 / target_samples of the light.
+    let per_sample_intensity = light_source.intensity / target_samples as f64;
+
+    let mut samples_taken = 0usize;
+
+    for sy in 0..strata_side {
+        for sx in 0..strata_side {
+            if samples_taken >= target_samples {
+                break;
+            }
+
+            let jx: f64 = rng.random();
+            let jy: f64 = rng.random();
+
+            let u1 = (sx as f64 + jx) / strata_side as f64;
+            let u2 = (sy as f64 + jy) / strata_side as f64;
+
+            let (mut dx, mut dy) = concentric_sample_disk(u1, u2);
+
+            let rotated_dx = dx * rotation_cos - dy * rotation_sin;
+            let rotated_dy = dx * rotation_sin + dy * rotation_cos;
+            dx = rotated_dx;
+            dy = rotated_dy;
+
+            let offset = &(&tangent1 * (dx * light_source.radius))
+                + &(&tangent2 * (dy * light_source.radius));
+
+            let light_sample_position = &light_source.position + &offset;
+
+            let mut shadow_ray_direction = &light_sample_position - &starting_intersection.position;
+            let sample_ray_length = shadow_ray_direction.calc_vector_length();
+            shadow_ray_direction.normalize_vector();
+
+            let offset_shadow_ray_origin =
+                &starting_intersection.position + &(&shadow_ray_direction * 10e-5);
+
+            let shadow_ray = Ray {
+                origin: offset_shadow_ray_origin,
+                direction: shadow_ray_direction,
+                i: 0,
+                j: 0,
+            };
+
+            let sample_visible = match bvh.intersect(&shadow_ray) {
+                Some(intersection) => intersection.distance_along_ray > sample_ray_length,
+                None => true,
+            };
+
+            if sample_visible {
+                let mut sample_light = light_source.clone();
+                sample_light.intensity = per_sample_intensity;
+
+                adjust_color_for_diffuse_and_specular(
+                    point_color,
+                    &sample_light,
+                    &shadow_ray.direction,
+                    &starting_intersection.surface_normal_at_intersection,
+                    ray_from_intersection_back_to_source,
+                    surface,
+                );
+            }
+
+            samples_taken += 1;
+        }
+    }
+}
+
+fn build_orthonormal_basis(direction: &Coords) -> (Coords, Coords) {
+    let mut tangent1 = if direction.x.abs() > 0.9 {
+        Coords {
+            x: 0.0,
+            y: 1.0,
+            z: 0.0,
+        }
+    } else {
+        Coords {
+            x: 1.0,
+            y: 0.0,
+            z: 0.0,
+        }
+    };
+
+    let dot_product = &tangent1 * direction;
+    let scaled_main_dir = direction * dot_product;
+    tangent1 = (&tangent1 - &scaled_main_dir).calc_normalized_vector();
+
+    let tangent2 = direction.cross(&tangent1).calc_normalized_vector();
+
+    (tangent1, tangent2)
+}
+
+fn concentric_sample_disk(u1: f64, u2: f64) -> (f64, f64) {
+    let sx = 2.0 * u1 - 1.0;
+    let sy = 2.0 * u2 - 1.0;
+
+    if sx == 0.0 && sy == 0.0 {
+        return (0.0, 0.0);
+    }
+
+    let (r, theta) = if sx.abs() > sy.abs() {
+        (sx, std::f64::consts::FRAC_PI_4 * (sy / sx))
+    } else {
+        (
+            sy,
+            std::f64::consts::FRAC_PI_2 - std::f64::consts::FRAC_PI_4 * (sx / sy),
+        )
+    };
+
+    (r * theta.cos(), r * theta.sin())
+}
+
+fn make_extended_light_seed(
+    starting_intersection: &Intersection,
+    light_source: &Light,
+    light_index: usize,
+) -> u64 {
+    let mut seed = 0u64;
+
+    seed ^= splitmix64(starting_intersection.ray.i as u64);
+    seed ^= splitmix64((starting_intersection.ray.j as u64).rotate_left(17));
+
+    seed ^= splitmix64(starting_intersection.position.x.to_bits());
+    seed ^= splitmix64(starting_intersection.position.y.to_bits().rotate_left(11));
+    seed ^= splitmix64(starting_intersection.position.z.to_bits().rotate_left(23));
+
+    seed ^= splitmix64(light_source.position.x.to_bits().rotate_left(7));
+    seed ^= splitmix64(light_source.position.y.to_bits().rotate_left(19));
+    seed ^= splitmix64(light_source.position.z.to_bits().rotate_left(29));
+
+    seed ^= splitmix64((light_index as u64).wrapping_mul(0x9E3779B97F4A7C15));
+
+    seed
+}
+
+fn splitmix64(mut x: u64) -> u64 {
+    x = x.wrapping_add(0x9E3779B97F4A7C15);
+    x = (x ^ (x >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
+    x = (x ^ (x >> 27)).wrapping_mul(0x94D049BB133111EB);
+    x ^ (x >> 31)
 }
 
 fn adjust_color_for_diffuse_and_specular(
