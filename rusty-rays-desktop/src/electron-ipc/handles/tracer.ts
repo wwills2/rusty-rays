@@ -7,7 +7,6 @@ import {
   takeRenderImageData,
   triggerRender,
 } from '#/tracer-manager';
-import { toIpcError } from '#/electron-ipc/shared';
 
 function initTracerChannels() {
   handle('tracer:GetInstanceUuid', () => {
@@ -24,13 +23,9 @@ function initTracerChannels() {
       };
     }
 
-    try {
-      // fire-and-forget; status updates and errors come from streamed events
-      triggerRender().catch(() => {});
-      return { data: true };
-    } catch (error: unknown) {
-      return toIpcError(error, 'Failed to start render.');
-    }
+    // fire-and-forget; status updates and errors come from streamed events
+    triggerRender().catch(() => {});
+    return { data: true };
   });
 
   handle('tracer:GetRenderStatus', () => {
@@ -39,12 +34,8 @@ function initTracerChannels() {
   });
 
   handle('tracer:GetRenderImageData', async () => {
-    try {
-      const data = await takeRenderImageData();
-      return { data };
-    } catch (error) {
-      return toIpcError(error, 'Render failed');
-    }
+    const data = await takeRenderImageData();
+    return { data };
   });
 
   handle('tracer:GetIntersectedUuidByPixelPos', async (_, args) => {
@@ -57,16 +48,9 @@ function initTracerChannels() {
       };
     }
 
-    try {
-      const [x, y] = args;
-      const data = await getIntersectedUuidByPixelPos(x, y);
-      return { data };
-    } catch (error: unknown) {
-      return toIpcError(
-        error,
-        'Failed to get intersected uuid by pixel position',
-      );
-    }
+    const [x, y] = args;
+    const data = await getIntersectedUuidByPixelPos(x, y);
+    return { data };
   });
 }
 

@@ -91,7 +91,7 @@ fn main() {
             }
         }
         Err(error) => {
-            error!(LOG, "failed to instantiate model. error: {}", error);
+            error!(LOG, "failed to instantiate model. Error: {}", error);
         }
     }
 
