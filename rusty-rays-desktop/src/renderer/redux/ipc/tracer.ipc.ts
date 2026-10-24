@@ -62,7 +62,7 @@ export const tracerIpcApi = ipcApi.injectEndpoints({
     >({
       queryFn: async ({ x, y }) => {
         const channelName = 'tracer:GetIntersectedUuidByPixelPos';
-        return  invoke(channelName, x, y);
+        return invoke(channelName, x, y);
       },
       providesTags: ['tracer:GetIntersectedUuidByPixelPos'],
     }),
