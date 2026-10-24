@@ -66,17 +66,11 @@ const ImportRayShadeFileButton: React.FC<Props> = ({ label }) => {
   const processedErrorMessage = useMemo(() => {
     let rawErrorMessage = loadModelError?.message;
     if (rawErrorMessage) {
-      const errorMessageParts = rawErrorMessage.split('Error: ');
-      const coreErrorMessage = errorMessageParts[errorMessageParts.length - 1];
-
-      return (
-        coreErrorMessage.charAt(0).toUpperCase() +
-        coreErrorMessage.slice(1) +
-        '.'
-      );
+      return rawErrorMessage;
     }
 
     rawErrorMessage = fileTextError?.message;
+
     if (rawErrorMessage) {
       const errorMessageParts = rawErrorMessage.split(' Got:');
       return errorMessageParts[0];

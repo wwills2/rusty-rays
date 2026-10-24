@@ -8,32 +8,10 @@ import {
   type Args,
   type ChannelNames,
   type DataType,
+  ElectronIpcMainProcessError,
   type Result,
-  toIpcError,
+  type SerializableResult,
 } from '../../../electron-ipc/shared';
-
-function processIpcResult<CN extends ChannelNames, R>(
-  channelName: CN,
-  result: Result<CN>,
-  operation: (data: DataType<CN>) => R,
-) {
-  if (result.data !== undefined && result.error === undefined) {
-    return { data: operation(result.data) };
-  } else {
-    if (result.error instanceof Error) {
-      throw new Error(
-        `IPC channel ${channelName} returned Error: ${result.error.message}`,
-        {
-          cause: result.error,
-        },
-      );
-    } else {
-      throw new Error(
-        `IPC channel ${channelName} returned unknown error: ${JSON.stringify(result.error)}`,
-      );
-    }
-  }
-}
 
 async function invoke<CN extends ChannelNames>(
   channel: CN,
@@ -50,15 +28,30 @@ async function invoke<CN extends ChannelNames>(
     const result = (await window.electronAPI.allowedChannelInvoke(
       channel,
       args,
-    )) as unknown as Result<CN>;
+    )) as unknown as SerializableResult<CN>;
 
-    console.debug('electron-ipc channel and returned data', channel, result);
+    console.debug(`electron-ipc channel ${channel} returned result:`, result);
+
+    if (result.error) {
+      return ElectronIpcMainProcessError.fromObject(result.error).asResult;
+    } else if (!result.data) {
+      return {
+        error: new ElectronIpcMainProcessError(
+          'Invalid result from electron-ipc invocation',
+          channel,
+        ),
+      };
+    }
+
     return result;
   } catch (error) {
-    return toIpcError(
+    const _error = ElectronIpcMainProcessError.fromCaught(
       error,
+      channel,
       'an error occurred during electron-ipc invocation',
     );
+
+    return { error: _error };
   }
 }
 
@@ -69,5 +62,5 @@ const ipcApi = createApi({
   tagTypes: [...allowedChannelNames],
 });
 
-export { ipcApi, invoke, processIpcResult };
+export { ipcApi, invoke };
 export type { DataType };

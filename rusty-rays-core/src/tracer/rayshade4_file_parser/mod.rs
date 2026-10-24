@@ -4,7 +4,7 @@ use std::iter::Peekable;
 use std::str::FromStr;
 
 use once_cell::sync::Lazy;
-use slog::{error, info};
+use slog::info;
 use uuid::Uuid;
 
 use crate::tracer::Coords;

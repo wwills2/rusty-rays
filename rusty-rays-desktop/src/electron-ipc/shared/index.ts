@@ -1,5 +1,9 @@
 import { ModelChannels } from './model-channels';
 import { TracerChannels } from './tracer-channels';
+import {
+  ElectronIpcMainProcessError,
+  type ElectronIpcMainProcessErrorDto,
+} from './electron-main-process-error';
 
 const allChannelDefinitions = {
   ...ModelChannels,
@@ -13,18 +17,25 @@ type ChannelNames = keyof ChannelDefinitionsType;
 type Args<CN extends ChannelNames> = ChannelDefinitionsType[CN]['args'];
 type DataType<CN extends ChannelNames> = ChannelDefinitionsType[CN]['dataType'];
 
-type Result<CN extends ChannelNames> = {
-  data?: DataType<CN>;
-  error?: Error;
-};
+type Result<CN extends ChannelNames> =
+  | {
+      data: DataType<CN>;
+      error?: never;
+    }
+  | {
+      data?: never;
+      error: Error;
+    };
 
-function toIpcError(error: unknown, altMsg: string) {
-  if (error instanceof Error) {
-    return { error };
-  } else {
-    return { error: new Error(altMsg) };
-  }
-}
+type SerializableResult<CN extends ChannelNames> =
+  | {
+      data: DataType<CN>;
+      error?: never;
+    }
+  | {
+      data?: never;
+      error: ElectronIpcMainProcessErrorDto;
+    };
 
 /**
  * Type for the status of the render process managed by the tracer manager
@@ -37,9 +48,10 @@ type RenderStatus = {
   renderImageAvailable: boolean;
 };
 
-export { ModelChannels, toIpcError, allowedChannelNames };
+export { ModelChannels, allowedChannelNames, ElectronIpcMainProcessError };
 export type {
   Result,
+  SerializableResult,
   Args,
   DataType,
   ChannelNames,

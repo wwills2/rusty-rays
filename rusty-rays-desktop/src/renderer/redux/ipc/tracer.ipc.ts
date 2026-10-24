@@ -1,5 +1,5 @@
 import type { DataType } from '@/redux/ipc/index.ts';
-import { invoke, ipcApi, processIpcResult } from '@/redux/ipc/index.ts';
+import { invoke, ipcApi } from '@/redux/ipc/index.ts';
 import { clearCache, saveLatestRender } from '@/indexed-db-image-cache.ts';
 import type { IntersectedObjectInfo } from 'rusty-rays-napi-node/index.ts';
 
@@ -8,8 +8,7 @@ export const tracerIpcApi = ipcApi.injectEndpoints({
     render: builder.mutation<DataType<'tracer:TriggerRender'>, null>({
       queryFn: async () => {
         const channelName = 'tracer:TriggerRender';
-        const result = await invoke(channelName);
-        return processIpcResult(channelName, result, (data) => data);
+        return invoke(channelName);
       },
       invalidatesTags: ['tracer:GetRenderStatus', 'tracer:GetRenderImageData'],
     }),
@@ -17,8 +16,7 @@ export const tracerIpcApi = ipcApi.injectEndpoints({
     getRenderStatus: builder.query<DataType<'tracer:GetRenderStatus'>, null>({
       queryFn: async () => {
         const channelName = 'tracer:GetRenderStatus';
-        const result = await invoke(channelName);
-        return processIpcResult(channelName, result, (data) => data);
+        return invoke(channelName);
       },
     }),
 
@@ -27,11 +25,12 @@ export const tracerIpcApi = ipcApi.injectEndpoints({
         const channelName = 'tracer:GetRenderImageData';
         const result = await invoke(channelName);
 
-        const { data: imageData } = processIpcResult(
-          channelName,
-          result,
-          (data) => new Uint8Array(data),
-        );
+        if (result.error) {
+          return { error: result.error };
+        }
+
+        const imageData = new Uint8Array(result.data);
+
         await clearCache();
         await saveLatestRender(instanceUuid, imageData);
         return { data: true };
@@ -42,11 +41,12 @@ export const tracerIpcApi = ipcApi.injectEndpoints({
       queryFn: async () => {
         const channelName = 'tracer:GetInstanceUuid';
         const result = await invoke(channelName);
-        const { data: tracerInstanceUuid } = processIpcResult(
-          channelName,
-          result,
-          (data) => data,
-        );
+
+        if (result.error) {
+          return { error: result.error };
+        }
+
+        const { data: tracerInstanceUuid } = result;
         if (tracerInstanceUuid === 'TRACER_INSTANCE_NOT_LOADED') {
           return { data: undefined };
         } else {
@@ -62,8 +62,7 @@ export const tracerIpcApi = ipcApi.injectEndpoints({
     >({
       queryFn: async ({ x, y }) => {
         const channelName = 'tracer:GetIntersectedUuidByPixelPos';
-        const result = await invoke(channelName, x, y);
-        return processIpcResult(channelName, result, (data) => data);
+        return  invoke(channelName, x, y);
       },
       providesTags: ['tracer:GetIntersectedUuidByPixelPos'],
     }),
