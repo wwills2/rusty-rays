@@ -26,7 +26,7 @@ function describeThrownValue(value: unknown): string {
 
 function serializeError(
   value: unknown,
-  seen = new WeakSet<object>(),
+  seen = new WeakSet(),
   depth = 0,
 ): ErrorDto {
   if (!(value instanceof Error)) {
