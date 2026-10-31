@@ -108,6 +108,31 @@ impl Coords {
 
         Coords { x, y, z }
     }
+
+    /// Constructs two orthonormal tangent vectors perpendicular to this direction vector.
+    pub fn build_orthonormal_basis(&self) -> (Coords, Coords) {
+        let mut tangent1 = if self.x.abs() > 0.9 {
+            Coords {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            }
+        } else {
+            Coords {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            }
+        };
+
+        let dot_product = &tangent1 * self;
+        let scaled_main_dir = self * dot_product;
+        tangent1 = (&tangent1 - &scaled_main_dir).calc_normalized_vector();
+
+        let tangent2 = self.cross(&tangent1).calc_normalized_vector();
+
+        (tangent1, tangent2)
+    }
 }
 
 impl Default for Coords {
@@ -223,6 +248,62 @@ impl Div for &Coords {
             x: self.x / rhs.x,
             y: self.y / rhs.y,
             z: self.z / rhs.z,
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_build_orthonormal_basis() {
+        let directions = [
+            Coords {
+                x: 1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Coords {
+                x: 0.0,
+                y: 1.0,
+                z: 0.0,
+            },
+            Coords {
+                x: 0.0,
+                y: 0.0,
+                z: 1.0,
+            },
+            Coords {
+                x: -1.0,
+                y: 0.0,
+                z: 0.0,
+            },
+            Coords {
+                x: 0.577,
+                y: 0.577,
+                z: 0.577,
+            }
+            .calc_normalized_vector(),
+            Coords {
+                x: 0.95,
+                y: 0.1,
+                z: 0.0,
+            }
+            .calc_normalized_vector(),
+        ];
+
+        for dir in directions.iter() {
+            let (t1, t2) = dir.build_orthonormal_basis();
+
+            // Lengths should be ~1
+            assert!((t1.calc_vector_length() - 1.0).abs() < 1e-6);
+            assert!((t2.calc_vector_length() - 1.0).abs() < 1e-6);
+
+            // Dot products with each other and dir should be ~0
+            assert!((&t1 * dir).abs() < 1e-6);
+            assert!((&t2 * dir).abs() < 1e-6);
+            assert!((&t1 * &t2).abs() < 1e-6);
         }
     }
 }

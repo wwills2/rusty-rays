@@ -8,7 +8,7 @@ pub struct Light {
     pub position: Coords,
     pub intensity: f64,
     pub source_type: LightSourceType,
-    pub radius: f64, // Radius for area lights (used for soft shadows)
+    pub radius: f64, // Radius for extended lights (used for soft shadows)
 }
 
 impl Clone for Light {
