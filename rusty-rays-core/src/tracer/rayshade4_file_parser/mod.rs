@@ -15,8 +15,8 @@ use crate::tracer::primitives::Cone;
 use crate::tracer::primitives::Polygon;
 use crate::tracer::primitives::Sphere;
 use crate::tracer::primitives::Triangle;
-use crate::tracer::shader::Color;
 use crate::tracer::shader::light::{Light, LightSourceType};
+use crate::tracer::shader::{Color, NUM_SHADOW_RAYS};
 use crate::utils::logger::{LOG, trace, warn};
 
 mod parse_cone;
@@ -202,7 +202,7 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                     // iterate past peeked keyword
                     line_words_iter.next();
 
-                    let intensity = match line_words_iter.next() {
+                    let mut intensity = match line_words_iter.next() {
                         Some(intensity_str) => match intensity_str.parse::<f64>() {
                             Ok(intensity) => intensity,
                             Err(_) => {
@@ -300,6 +300,10 @@ pub fn iterate_input_data<R: BufRead + 'static>(
                                     ));
                                 }
                             };
+
+                            // extended lights cast soft shadows which are sampled multiple times
+                            // need to reduce intensity to the per sample intensity
+                            intensity /= NUM_SHADOW_RAYS as f64;
 
                             (position, radius)
                         }

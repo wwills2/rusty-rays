@@ -1,17 +1,17 @@
-use crate::tracer::misc_types::{Intersection, Ray, Surface};
-use crate::tracer::shader::light::Light;
 use crate::tracer::Bvh;
 use crate::tracer::Coords;
 use crate::tracer::Model;
-use rand::{Rng, RngExt, SeedableRng};
+use crate::tracer::misc_types::{Intersection, Ray, Surface};
+use crate::tracer::shader::light::{Light, LightSourceType};
+use rand::{RngExt, SeedableRng};
 
 mod color;
 pub mod light;
 
 pub use color::Color;
 
+pub static NUM_SHADOW_RAYS: u8 = 32;
 static MAX_REFLECTIONS: u8 = 5;
-static NUM_SHADOW_RAYS: u8 = 16;
 
 // !!!
 // DO NOT USE model.eyep anywhere in this file
@@ -54,7 +54,7 @@ fn calculate_color(
 
     for (light_index, light_source) in model.light_sources.iter().enumerate() {
         match light_source.source_type {
-            crate::tracer::shader::light::LightSourceType::Extended => {
+            LightSourceType::Extended => {
                 process_extended_light(
                     &mut point_color,
                     light_source,
@@ -65,7 +65,7 @@ fn calculate_color(
                     bvh,
                 );
             }
-            crate::tracer::shader::light::LightSourceType::Ambient => {
+            LightSourceType::Ambient => {
                 // Ambient light contributes via surface.ambient; skip per-light shading.
             }
             _ => {
@@ -132,22 +132,9 @@ fn process_point_light(
         j: 0,
     };
 
-    let shadow_ray_intersection = match bvh.intersect(&shadow_ray) {
-        Some(intersection) => intersection,
-        None => {
-            adjust_color_for_diffuse_and_specular(
-                point_color,
-                light_source,
-                &shadow_ray.direction,
-                &starting_intersection.surface_normal_at_intersection,
-                ray_from_intersection_back_to_source,
-                surface,
-            );
-            return;
-        }
-    };
-
-    if shadow_ray_intersection.distance_along_ray > shadow_ray_length {
+    if let Some(intersection) = bvh.intersect(&shadow_ray)
+        && intersection.distance_along_ray > shadow_ray_length
+    {
         adjust_color_for_diffuse_and_specular(
             point_color,
             light_source,
@@ -182,9 +169,6 @@ fn process_extended_light(
 
     let strata_side = (NUM_SHADOW_RAYS as f64).sqrt().ceil() as usize;
     let target_samples = NUM_SHADOW_RAYS as usize;
-
-    // Each visible sample contributes 1 / target_samples of the light.
-    let per_sample_intensity = light_source.intensity / target_samples as f64;
 
     let mut samples_taken = 0usize;
 
@@ -232,12 +216,9 @@ fn process_extended_light(
             };
 
             if sample_visible {
-                let mut sample_light = light_source.clone();
-                sample_light.intensity = per_sample_intensity;
-
                 adjust_color_for_diffuse_and_specular(
                     point_color,
-                    &sample_light,
+                    light_source,
                     &shadow_ray.direction,
                     &starting_intersection.surface_normal_at_intersection,
                     ray_from_intersection_back_to_source,
@@ -346,7 +327,11 @@ fn adjust_color_for_diffuse_and_specular(
                     (surface_normal * specular_reflection_incidence) - shadow_ray_direction;
                 let specular_incidence = &specular_reflection_ray * ray_to_eyep;
                 if specular_incidence > 0.0 {
-                    let specular_intensity = specular_incidence.powf(surface.specpow);
+                    let mut specular_intensity = specular_incidence.powf(surface.specpow);
+                    if let LightSourceType::Extended = light.source_type {
+                        specular_intensity /= NUM_SHADOW_RAYS as f64;
+                    }
+
                     let specular_color_contribution = &surface.specular.scale(specular_intensity);
                     point_color.adjust_by(specular_color_contribution)
                 }
