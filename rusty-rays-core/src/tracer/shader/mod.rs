@@ -110,6 +110,41 @@ fn calculate_color(
     point_color
 }
 
+fn adjust_color_for_diffuse_and_specular(
+    point_color: &mut Color,
+    light: &Light,
+    shadow_ray_direction: &Coords,
+    surface_normal: &Coords,
+    ray_to_eyep: &Coords,
+    surface: &Surface,
+) {
+    let surface_normal_relative_angle: f64 = shadow_ray_direction * surface_normal;
+    if surface_normal_relative_angle > 0.0 {
+        let diffuse_intensity =
+            (1.0 - surface.reflect) * light.intensity * surface_normal_relative_angle;
+        let diffuse_color_contribution = &surface.diffuse.scale(diffuse_intensity);
+        point_color.adjust_by(diffuse_color_contribution);
+
+        if surface.specpow > 0.0 {
+            let specular_reflection_incidence: f64 = 2.0 * (surface_normal * shadow_ray_direction);
+            if specular_reflection_incidence > 0.0 {
+                let specular_reflection_ray =
+                    (surface_normal * specular_reflection_incidence) - shadow_ray_direction;
+                let specular_incidence = &specular_reflection_ray * ray_to_eyep;
+                if specular_incidence > 0.0 {
+                    let mut specular_intensity = specular_incidence.powf(surface.specpow);
+                    if let LightSourceType::Extended = light.source_type {
+                        specular_intensity /= NUM_SHADOW_RAYS as f64;
+                    }
+
+                    let specular_color_contribution = &surface.specular.scale(specular_intensity);
+                    point_color.adjust_by(specular_color_contribution)
+                }
+            }
+        }
+    }
+}
+
 fn process_point_light(
     point_color: &mut Color,
     light_source: &Light,
@@ -132,9 +167,12 @@ fn process_point_light(
         j: 0,
     };
 
-    if let Some(intersection) = bvh.intersect(&shadow_ray)
-        && intersection.distance_along_ray > shadow_ray_length
-    {
+    let light_visible = match bvh.intersect(&shadow_ray) {
+        Some(intersection) => intersection.distance_along_ray > shadow_ray_length,
+        None => true,
+    };
+
+    if light_visible {
         adjust_color_for_diffuse_and_specular(
             point_color,
             light_source,
@@ -158,7 +196,7 @@ fn process_extended_light(
     let mut main_shadow_ray_direction = &light_source.position - &starting_intersection.position;
     main_shadow_ray_direction.normalize_vector();
 
-    let (tangent1, tangent2) = build_orthonormal_basis(&main_shadow_ray_direction);
+    let (tangent1, tangent2) = main_shadow_ray_direction.build_orthonormal_basis();
 
     let seed = make_extended_light_seed(starting_intersection, light_source, light_index);
     let mut rng = rand::rngs::StdRng::seed_from_u64(seed);
@@ -231,30 +269,6 @@ fn process_extended_light(
     }
 }
 
-fn build_orthonormal_basis(direction: &Coords) -> (Coords, Coords) {
-    let mut tangent1 = if direction.x.abs() > 0.9 {
-        Coords {
-            x: 0.0,
-            y: 1.0,
-            z: 0.0,
-        }
-    } else {
-        Coords {
-            x: 1.0,
-            y: 0.0,
-            z: 0.0,
-        }
-    };
-
-    let dot_product = &tangent1 * direction;
-    let scaled_main_dir = direction * dot_product;
-    tangent1 = (&tangent1 - &scaled_main_dir).calc_normalized_vector();
-
-    let tangent2 = direction.cross(&tangent1).calc_normalized_vector();
-
-    (tangent1, tangent2)
-}
-
 fn concentric_sample_disk(u1: f64, u2: f64) -> (f64, f64) {
     let sx = 2.0 * u1 - 1.0;
     let sy = 2.0 * u2 - 1.0;
@@ -303,39 +317,4 @@ fn splitmix64(mut x: u64) -> u64 {
     x = (x ^ (x >> 30)).wrapping_mul(0xBF58476D1CE4E5B9);
     x = (x ^ (x >> 27)).wrapping_mul(0x94D049BB133111EB);
     x ^ (x >> 31)
-}
-
-fn adjust_color_for_diffuse_and_specular(
-    point_color: &mut Color,
-    light: &Light,
-    shadow_ray_direction: &Coords,
-    surface_normal: &Coords,
-    ray_to_eyep: &Coords,
-    surface: &Surface,
-) {
-    let surface_normal_relative_angle: f64 = shadow_ray_direction * surface_normal;
-    if surface_normal_relative_angle > 0.0 {
-        let diffuse_intensity =
-            (1.0 - surface.reflect) * light.intensity * surface_normal_relative_angle;
-        let diffuse_color_contribution = &surface.diffuse.scale(diffuse_intensity);
-        point_color.adjust_by(diffuse_color_contribution);
-
-        if surface.specpow > 0.0 {
-            let specular_reflection_incidence: f64 = 2.0 * (surface_normal * shadow_ray_direction);
-            if specular_reflection_incidence > 0.0 {
-                let specular_reflection_ray =
-                    (surface_normal * specular_reflection_incidence) - shadow_ray_direction;
-                let specular_incidence = &specular_reflection_ray * ray_to_eyep;
-                if specular_incidence > 0.0 {
-                    let mut specular_intensity = specular_incidence.powf(surface.specpow);
-                    if let LightSourceType::Extended = light.source_type {
-                        specular_intensity /= NUM_SHADOW_RAYS as f64;
-                    }
-
-                    let specular_color_contribution = &surface.specular.scale(specular_intensity);
-                    point_color.adjust_by(specular_color_contribution)
-                }
-            }
-        }
-    }
 }

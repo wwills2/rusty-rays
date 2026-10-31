@@ -157,24 +157,7 @@ impl Primitive for Cone {
         let axis = (&self.apex - &self.base).calc_normalized_vector();
 
         // Find two vectors perpendicular to the axis
-        let mut tangent1 = Coords {
-            x: 1.0,
-            y: 0.0,
-            z: 0.0,
-        };
-        if axis.x.abs() > 0.9 {
-            tangent1 = Coords {
-                x: 0.0,
-                y: 1.0,
-                z: 0.0,
-            };
-        }
-
-        // Make tangent1 perpendicular to axis
-        let dot_product = &tangent1 * &axis;
-        let scaled_axis = &axis * dot_product;
-        let tangent1 = (&tangent1 - &scaled_axis).calc_normalized_vector();
-        let tangent2 = axis.cross(&tangent1).calc_normalized_vector();
+        let (tangent1, tangent2) = axis.build_orthonormal_basis();
 
         // Create points on the base circle
         let mut points = Vec::new();
